@@ -386,7 +386,13 @@ Future<void> addJob(BuildContext context, WidgetRef ref) async {
             ? 'Paste the advert, or leave it empty and the AI reads the link.'
             : 'Paste the job description, responsibilities and person specification.',
       ),
-      if (!hasAi) ...[Field(title, 'Job title'), Field(company, 'Employer'), Field(location, 'Location')],
+      Field(
+        title,
+        'Job title',
+        helper: hasAi ? 'Found it through a referral or a company site? Type the role here instead.' : null,
+      ),
+      Field(company, 'Employer'),
+      Field(location, 'Location'),
     ],
     onSave: () async {
       final link = url.text.trim();
@@ -396,7 +402,7 @@ Future<void> addJob(BuildContext context, WidgetRef ref) async {
       }
       final p = await ref.read(profileProvider.future);
       Posting posting;
-      if (hasAi && (link.isNotEmpty || text.isNotEmpty)) {
+      if (title.text.trim().isEmpty && hasAi && (link.isNotEmpty || text.isNotEmpty)) {
         final advisor = await requireAdvisor(ref);
         final a = await advisor.readAdvert(url: link, text: text);
         posting = Posting(
@@ -416,12 +422,10 @@ Future<void> addJob(BuildContext context, WidgetRef ref) async {
         if (posting.title.isEmpty) return 'The AI could not read a job advert there. Paste the text instead.';
       } else {
         if (title.text.trim().isEmpty) return 'Enter the job title.';
-        posting = Posting(
-          source: 'manual',
-          sourceId: link.isNotEmpty ? link : newId(),
-          title: title.text.trim(),
-          company: company.text.trim(),
-          location: location.text.trim(),
+        posting = manualPosting(
+          title: title.text,
+          company: company.text,
+          location: location.text,
           country: p.country,
           url: link,
           description: text,
@@ -438,3 +442,23 @@ Future<void> addJob(BuildContext context, WidgetRef ref) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => JobPage(id!)));
   }
 }
+
+/// A job typed in by hand (a referral, a company site), outside the feeds.
+/// With no link it gets a fresh id, so two typed roles never collide.
+Posting manualPosting({
+  required String title,
+  String company = '',
+  String location = '',
+  String country = '',
+  String url = '',
+  String description = '',
+}) => Posting(
+  source: 'manual',
+  sourceId: url.isNotEmpty ? url : newId(),
+  title: title.trim(),
+  company: company.trim(),
+  location: location.trim(),
+  country: country,
+  url: url,
+  description: description,
+);
