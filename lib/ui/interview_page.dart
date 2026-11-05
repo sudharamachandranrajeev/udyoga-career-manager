@@ -479,9 +479,14 @@ class ReviewView extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
-                  onPressed: () => copyText(context, r.better),
-                  icon: const Icon(Icons.copy),
-                  label: const Text('Copy'),
+                  onPressed: () => reviewAiText(
+                    context,
+                    title: 'A stronger answer',
+                    text: r.better,
+                    basis: 'your answer, the question and the role you are practising for',
+                  ),
+                  icon: const Icon(Icons.edit_note),
+                  label: const Text('Review and use'),
                 ),
               ),
             ],

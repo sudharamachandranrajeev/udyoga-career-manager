@@ -119,9 +119,15 @@ class ResumePage extends ConsumerWidget {
                     onPressed: () => showHumanCheck(context, notes.coverLetter),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.copy),
-                    tooltip: 'Copy',
-                    onPressed: () => copyText(context, notes.coverLetter, what: 'Cover letter copied.'),
+                    icon: const Icon(Icons.edit_note),
+                    tooltip: 'Review and use',
+                    onPressed: () => reviewAiText(
+                      context,
+                      title: 'Cover letter',
+                      text: notes.coverLetter,
+                      basis: 'your CV and the job advert it was tailored to',
+                      what: 'Cover letter copied.',
+                    ),
                   ),
                 ],
               ),

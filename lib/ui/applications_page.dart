@@ -855,23 +855,20 @@ class ApplicationPage extends ConsumerWidget {
     };
     final p = await ref.read(profileProvider.future);
     if (!context.mounted) return;
+    final basis = [
+      'Job: ${a.title}${a.company.isEmpty ? '' : ' at ${a.company}'}',
+      if (a.reference.isNotEmpty) 'Reference: ${a.reference}',
+      if (a.applied != null) 'Applied: ${a.applied}',
+      'Stage: ${stage.label}',
+      for (final e in events.take(8)) '${e.at}: ${eventKinds[e.kind]?.$1 ?? e.kind}: ${e.summary}',
+    ].join('\n');
     final d = await runAi(
       context,
       title: 'Drafting',
-      task: (_) async => (await requireAdvisor(ref)).draft(
-        p,
-        purpose: purpose,
-        context: [
-          'Job: ${a.title}${a.company.isEmpty ? '' : ' at ${a.company}'}',
-          if (a.reference.isNotEmpty) 'Reference: ${a.reference}',
-          if (a.applied != null) 'Applied: ${a.applied}',
-          'Stage: ${stage.label}',
-          for (final e in events.take(8)) '${e.at}: ${eventKinds[e.kind]?.$1 ?? e.kind}: ${e.summary}',
-        ].join('\n'),
-      ),
+      task: (_) async => (await requireAdvisor(ref)).draft(p, purpose: purpose, context: basis),
     );
     if (d == null || !context.mounted) return;
-    await showDraft(context, d.subject, d.message);
+    await showDraft(context, d.subject, d.message, basis: '$basis\nand your profile');
   }
 
   Future<void> _removeEvent(BuildContext context, WidgetRef ref, JobEvent e) async {
@@ -907,38 +904,14 @@ class ApplicationPage extends ConsumerWidget {
   }
 }
 
-/// A drafted message to copy into e-mail or LinkedIn.
-Future<void> showDraft(BuildContext context, String subject, String message) => showDialog<void>(
-  context: context,
-  builder: (context) => AlertDialog(
-    title: const Text('Draft'),
-    scrollable: true,
-    content: SizedBox(
-      width: 560,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (subject.isNotEmpty) ...[
-            Text('Subject: $subject', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
-          ],
-          SelectableText(message),
-          const SizedBox(height: 8),
-          const Text('Read it through and make it yours before sending.'),
-        ],
-      ),
-    ),
-    actions: [
-      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-      FilledButton.icon(
-        onPressed: () => copyText(
-          context,
-          subject.isEmpty ? message : 'Subject: $subject\n\n$message',
-          what: 'Draft copied.',
-        ),
-        icon: const Icon(Icons.copy),
-        label: const Text('Copy'),
-      ),
-    ],
-  ),
-);
+/// An AI-drafted message, shown with what it was written from; it is copied
+/// only once the user has read, edited and chosen "Use this".
+Future<void> showDraft(BuildContext context, String subject, String message, {required String basis}) =>
+    reviewAiText(
+      context,
+      title: 'Draft',
+      subject: subject,
+      text: message,
+      basis: basis,
+      what: 'Draft copied.',
+    );

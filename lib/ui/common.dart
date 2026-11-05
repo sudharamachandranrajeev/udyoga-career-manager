@@ -49,6 +49,93 @@ Future<void> copyText(BuildContext context, String text, {String what = 'Copied.
   if (context.mounted) showMessage(context, what);
 }
 
+/// The gate every AI-written text passes before it leaves Udyoga: it says what
+/// the AI wrote it from, lets the user edit it, and copies it only when they
+/// tap "Use this". Udyoga never sends anything itself.
+Future<void> reviewAiText(
+  BuildContext context, {
+  required String title,
+  required String text,
+  required String basis,
+  String subject = '',
+  String what = 'Copied.',
+}) => showDialog<void>(
+  context: context,
+  builder: (_) => _AiGate(title: title, text: text, basis: basis, subject: subject, what: what),
+);
+
+class _AiGate extends StatefulWidget {
+  const _AiGate({
+    required this.title,
+    required this.text,
+    required this.basis,
+    required this.subject,
+    required this.what,
+  });
+  final String title, text, basis, subject, what;
+
+  @override
+  State<_AiGate> createState() => _AiGateState();
+}
+
+class _AiGateState extends State<_AiGate> {
+  late final subject = TextEditingController(text: widget.subject);
+  late final text = TextEditingController(text: widget.text);
+
+  @override
+  void dispose() {
+    subject.dispose();
+    text.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.title),
+    scrollable: true,
+    content: SizedBox(
+      width: 560,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Written by the AI from: ${widget.basis}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text('It can be wrong. Check every fact and make it yours; nothing is used until you tap "Use this".'),
+          const SizedBox(height: 12),
+          if (widget.subject.isNotEmpty) ...[
+            TextField(controller: subject, decoration: const InputDecoration(labelText: 'Subject')),
+            const SizedBox(height: 12),
+          ],
+          TextField(
+            controller: text,
+            minLines: 6,
+            maxLines: 16,
+            decoration: const InputDecoration(labelText: 'Text', alignLabelWithHint: true),
+          ),
+        ],
+      ),
+    ),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Discard')),
+      FilledButton.icon(
+        onPressed: () async {
+          final s = subject.text.trim();
+          final body = text.text.trim();
+          await copyText(context, s.isEmpty ? body : 'Subject: $s\n\n$body', what: widget.what);
+          if (context.mounted) Navigator.pop(context);
+        },
+        icon: const Icon(Icons.check),
+        label: const Text('Use this'),
+      ),
+    ],
+  );
+}
+
 /// Saves [bytes] where the user chooses; returns whether it was saved.
 Future<bool> saveBytes(BuildContext context, String fileName, Uint8List bytes, {String mime = ''}) async {
   try {

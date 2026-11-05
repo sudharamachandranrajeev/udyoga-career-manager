@@ -358,6 +358,13 @@ class LeadTile extends ConsumerWidget {
         ? null
         : (await ref.read(jobsProvider.future)).where((j) => j.id == l.jobId).firstOrNull;
     if (!context.mounted) return;
+    final basis = [
+      'To: ${l.name}, ${l.title} at ${l.company} (${leadKinds[l.kind] ?? l.kind})',
+      if (l.email.isNotEmpty) 'Channel: e-mail' else 'Channel: LinkedIn',
+      if (l.notes.isNotEmpty) 'Notes: ${l.notes}',
+      if (l.lastContact != null) 'Last contact: ${l.lastContact}',
+      if (job != null) 'About the job: ${job.title} at ${job.company}, ${job.url}',
+    ].join('\n');
     final d = await runAi(
       context,
       title: 'Drafting',
@@ -367,17 +374,11 @@ class LeadTile extends ConsumerWidget {
             ? 'a first message (short enough for a LinkedIn connection note, under 300 characters, unless e-mail '
                   'is the channel) introducing the candidate and asking a specific, easy question'
             : 'a brief, friendly follow-up to an earlier message, adding something useful',
-        context: [
-          'To: ${l.name}, ${l.title} at ${l.company} (${leadKinds[l.kind] ?? l.kind})',
-          if (l.email.isNotEmpty) 'Channel: e-mail' else 'Channel: LinkedIn',
-          if (l.notes.isNotEmpty) 'Notes: ${l.notes}',
-          if (l.lastContact != null) 'Last contact: ${l.lastContact}',
-          if (job != null) 'About the job: ${job.title} at ${job.company}, ${job.url}',
-        ].join('\n'),
+        context: basis,
       ),
     );
     if (d == null || !context.mounted) return;
-    await showDraft(context, d.subject, d.message);
+    await showDraft(context, d.subject, d.message, basis: '$basis\nand your profile');
   }
 }
 
