@@ -52,7 +52,17 @@ abstract final class LocalKeys {
 
   /// 'off' when Udyoga should not look for a new version at start.
   static const updateOnStart = 'udyoga.update.on_start';
+
+  /// 'on' once the user opts in to a [notificationKinds] category.
+  static String notify(String kind) => 'udyoga.notify.$kind';
 }
+
+/// Notification categories, all off until the user turns one on.
+const notificationKinds = {
+  'matches': ('New job matches', 'When a refresh finds jobs that fit your profile.'),
+  'followups': ('Follow-up reminders', 'When an application or contact is due a follow-up.'),
+  'digest': ('Weekly digest', 'A weekly summary of your applications and jobs.'),
+};
 
 /// Udyoga's write path and the reads screens share.
 class CareerBook {
@@ -271,6 +281,13 @@ class CareerBook {
   Future<bool> updateOnStart() async => await db.localSetting(LocalKeys.updateOnStart) != 'off';
 
   Future<void> setUpdateOnStart(bool on) => db.setLocalSetting(LocalKeys.updateOnStart, on ? 'on' : 'off');
+
+  /// Whether the user has opted in to notification category [kind], on this
+  /// device. Off unless explicitly turned on.
+  Future<bool> notifies(String kind) async => await db.localSetting(LocalKeys.notify(kind)) == 'on';
+
+  Future<void> setNotifies(String kind, bool on) =>
+      db.setLocalSetting(LocalKeys.notify(kind), on ? 'on' : 'off');
 
   Future<N8nLink> n8nLink() async =>
       N8nLink.fromJson(await pref<Map<String, Object?>>(PrefKeys.n8n, const {}));

@@ -170,6 +170,7 @@ class SettingsPage extends ConsumerWidget {
             ],
           ),
         ),
+        const _NotificationsCard(),
         if (ref.watch(updaterProvider) case final updater?) _UpdateCard(updater),
         const AppLockCard(),
         const HintsCard(),
@@ -305,6 +306,45 @@ final _updateOnStartProvider = FutureProvider<bool>((ref) {
   ref.watch(revisionProvider);
   return ref.watch(sessionProvider).book.updateOnStart();
 });
+
+/// Which notification categories are on, on this device.
+final _notifyProvider = FutureProvider<Map<String, bool>>((ref) async {
+  ref.watch(revisionProvider);
+  final book = ref.watch(sessionProvider).book;
+  return {for (final k in notificationKinds.keys) k: await book.notifies(k)};
+});
+
+/// One switch per notification category, all off until chosen.
+class _NotificationsCard extends ConsumerWidget {
+  const _NotificationsCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final on = ref.watch(_notifyProvider).value;
+    return SectionCard(
+      title: 'Notifications',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('Everything is off until you turn it on. This applies to this device only.'),
+          for (final e in notificationKinds.entries)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(e.value.$1),
+              subtitle: Text(e.value.$2),
+              value: on?[e.key] ?? false,
+              onChanged: on == null
+                  ? null
+                  : (v) async {
+                      await ref.read(sessionProvider).book.setNotifies(e.key, v);
+                      ref.invalidate(_notifyProvider);
+                    },
+            ),
+        ],
+      ),
+    );
+  }
+}
 
 /// This version, and a newer one when GitHub has it, installed from here.
 class _UpdateCard extends ConsumerWidget {
