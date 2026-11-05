@@ -7,6 +7,7 @@ import 'book.dart';
 import 'feeds.dart';
 import 'insights.dart';
 import 'json.dart';
+import 'matching.dart';
 import 'profile.dart';
 
 /// What a refresh did.
@@ -14,6 +15,7 @@ class RefreshReport {
   int found = 0;
   int added = 0;
   int ghosted = 0;
+  int filtered = 0;
   bool aiSearched = false;
   bool mapRefreshed = false;
   final problems = <String>[];
@@ -22,6 +24,7 @@ class RefreshReport {
     if (added > 0) '$added new ${added == 1 ? 'job' : 'jobs'}' else 'No new jobs',
     if (aiSearched) 'AI search done',
     if (mapRefreshed) 'career map updated',
+    if (filtered > 0) '$filtered hidden by your filters',
     if (ghosted > 0) '$ghosted marked no reply',
     if (problems.isNotEmpty) 'problems: ${problems.join('; ')}',
   ].join(' · ');
@@ -88,14 +91,14 @@ class Refresher {
 
   /// One query per target country (and town, if any), plus one for remote work.
   static List<FeedQuery> queries(CandidateProfile p) => [
-    for (final c in p.searchCountries)
+    for (final c in p.targets.remoteOnly ? const <String>[] : p.searchCountries)
       FeedQuery(
         terms: p.searchTerms,
         country: c,
         place: c == p.country && p.targets.locations.isNotEmpty ? p.targets.locations.first : '',
         remote: p.targets.remote,
       ),
-    if (p.targets.remote) FeedQuery(terms: p.searchTerms, country: '', remote: true),
+    if (p.targets.remote || p.targets.remoteOnly) FeedQuery(terms: p.searchTerms, country: '', remote: true),
   ];
 
   Future<List<String>> _feeds(CandidateProfile p, RefreshReport report, String today) async {
@@ -110,8 +113,16 @@ class Refresher {
         }
       }
     }
-    report.found += postings.length;
-    return book.importPostings(postings, p, today: today);
+    return book.importPostings(_filtered(postings, p, report), p, today: today);
+  }
+
+  /// The postings that pass the profile's search filters, counted in [report].
+  List<Posting> _filtered(List<Posting> postings, CandidateProfile p, RefreshReport report) {
+    final kept = postings.where((x) => passesFilters(p.targets, x)).toList();
+    report
+      ..found += kept.length
+      ..filtered += postings.length - kept.length;
+    return kept;
   }
 
   Future<void> _triage(CandidateProfile p, List<String> ids, RefreshReport report) async {
@@ -155,7 +166,8 @@ class Refresher {
             closing: str(j['closing']).length == 10 ? str(j['closing']) : null,
           ),
       ];
-      final added = await book.importPostings(postings, p, today: today);
+      final kept = _filtered(postings, p, report);
+      final added = await book.importPostings(kept, p, today: today);
       // The search scored its own finds; keep those scores for the new ones.
       final scores = <String, ({int fit, String why})>{};
       for (final id in added) {
@@ -167,7 +179,6 @@ class Refresher {
       }
       await book.saveTriage(scores);
       report
-        ..found += postings.length
         ..added += added.length
         ..aiSearched = true;
     } on Object catch (e) {

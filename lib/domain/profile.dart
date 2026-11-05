@@ -79,6 +79,10 @@ class Targets {
     this.salaryMin,
     this.salaryCurrency = '',
     this.notes = '',
+    this.remoteOnly = false,
+    this.strictSalary = false,
+    this.maxSeniority = '',
+    this.maxDegree = '',
   });
 
   /// Job titles to aim for.
@@ -101,6 +105,13 @@ class Targets {
   /// Right to work, notice period, relocation, hours, anything else.
   final String notes;
 
+  /// Search filters, kept with the targets and applied on every refresh:
+  /// only remote jobs; hide jobs that advertise less than [salaryMin];
+  /// hide jobs above this level (see `seniorityLevels`, '' for any); hide
+  /// jobs that require more than this degree (see `degreeLevels`, '' for any).
+  final bool remoteOnly, strictSalary;
+  final String maxSeniority, maxDegree;
+
   bool get remote => workModes.contains('remote');
 
   factory Targets.fromJson(Json j) => Targets(
@@ -115,6 +126,10 @@ class Targets {
     },
     salaryCurrency: str(j['salaryCurrency']),
     notes: str(j['notes']),
+    remoteOnly: j['remoteOnly'] == true,
+    strictSalary: j['strictSalary'] == true,
+    maxSeniority: str(j['maxSeniority']),
+    maxDegree: str(j['maxDegree']),
   );
 
   Json toJson() => {
@@ -126,6 +141,10 @@ class Targets {
     'salaryMin': salaryMin,
     'salaryCurrency': salaryCurrency,
     'notes': notes,
+    'remoteOnly': remoteOnly,
+    'strictSalary': strictSalary,
+    'maxSeniority': maxSeniority,
+    'maxDegree': maxDegree,
   };
 
   Targets copyWith({
@@ -138,6 +157,10 @@ class Targets {
     bool clearSalary = false,
     String? salaryCurrency,
     String? notes,
+    bool? remoteOnly,
+    bool? strictSalary,
+    String? maxSeniority,
+    String? maxDegree,
   }) => Targets(
     roles: roles ?? this.roles,
     keywords: keywords ?? this.keywords,
@@ -147,6 +170,10 @@ class Targets {
     salaryMin: clearSalary ? null : salaryMin ?? this.salaryMin,
     salaryCurrency: salaryCurrency ?? this.salaryCurrency,
     notes: notes ?? this.notes,
+    remoteOnly: remoteOnly ?? this.remoteOnly,
+    strictSalary: strictSalary ?? this.strictSalary,
+    maxSeniority: maxSeniority ?? this.maxSeniority,
+    maxDegree: maxDegree ?? this.maxDegree,
   );
 }
 

@@ -9,6 +9,7 @@ import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/advisor.dart';
 import '../domain/countries.dart';
+import '../domain/matching.dart';
 import '../domain/profile.dart';
 import '../domain/resume.dart';
 import 'common.dart';
@@ -128,6 +129,11 @@ class ProfilePage extends ConsumerWidget {
                       'Work: ${p.targets.workModes.map((m) => _workModes[m] ?? m).join(', ')}',
                     if (p.targets.salaryMin != null)
                       'Minimum pay: ${p.targets.salaryCurrency} ${p.targets.salaryMin} a year'.trim(),
+                    if (p.targets.remoteOnly) 'Remote only',
+                    if (p.targets.maxSeniority.isNotEmpty)
+                      'Up to ${seniorityLevels[p.targets.maxSeniority]?.toLowerCase()}',
+                    if (p.targets.maxDegree.isNotEmpty)
+                      'Degree: ${degreeLevels[p.targets.maxDegree]} at most',
                     if (p.targets.notes.isNotEmpty) p.targets.notes,
                   ].join('\n'),
                 ),
@@ -438,6 +444,10 @@ class ProfilePage extends ConsumerWidget {
       ...t.countries.isEmpty && p.country.isNotEmpty ? [p.country] : t.countries,
     ];
     final modes = {...t.workModes};
+    var remoteOnly = t.remoteOnly;
+    var strictSalary = t.strictSalary;
+    var maxSeniority = t.maxSeniority;
+    var maxDegree = t.maxDegree;
     return showFormDialog(
       context,
       title: 'What you are looking for',
@@ -484,6 +494,40 @@ class ProfilePage extends ConsumerWidget {
         const SizedBox(height: 12),
         Field(salary, 'Minimum yearly pay', number: true),
         Field(currency, 'Currency', hint: 'GBP'),
+        const Subhead('Hide jobs that do not fit'),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Remote jobs only'),
+          value: remoteOnly,
+          onChanged: (v) => setState(() => remoteOnly = v),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Hide jobs paying less than the minimum'),
+          subtitle: const Text('Jobs that do not state their pay stay.'),
+          value: strictSalary,
+          onChanged: (v) => setState(() => strictSalary = v),
+        ),
+        DropdownButtonFormField<String>(
+          initialValue: maxSeniority,
+          decoration: const InputDecoration(labelText: 'Highest level'),
+          items: [
+            const DropdownMenuItem(value: '', child: Text('Any')),
+            for (final l in seniorityLevels.entries) DropdownMenuItem(value: l.key, child: Text(l.value)),
+          ],
+          onChanged: (v) => maxSeniority = v ?? '',
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          initialValue: maxDegree,
+          decoration: const InputDecoration(labelText: 'Highest degree required'),
+          items: [
+            const DropdownMenuItem(value: '', child: Text('Any')),
+            for (final d in degreeLevels.entries) DropdownMenuItem(value: d.key, child: Text(d.value)),
+          ],
+          onChanged: (v) => maxDegree = v ?? '',
+        ),
+        const SizedBox(height: 12),
         Field(
           notes,
           'Anything else',
@@ -507,6 +551,10 @@ class ProfilePage extends ConsumerWidget {
                 salaryMin: intIn(salary),
                 salaryCurrency: currency.text.trim().toUpperCase(),
                 notes: notes.text.trim(),
+                remoteOnly: remoteOnly,
+                strictSalary: strictSalary,
+                maxSeniority: maxSeniority,
+                maxDegree: maxDegree,
               ),
             ),
           ),
