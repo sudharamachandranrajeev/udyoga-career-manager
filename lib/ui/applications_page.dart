@@ -47,6 +47,14 @@ class _ApplicationsPageState extends ConsumerState<ApplicationsPage> {
   /// Active applications as stage columns; by default on a wide window.
   bool? board;
 
+  final search = TextEditingController();
+
+  @override
+  void dispose() {
+    search.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => PageScaffold(
     title: 'Applications',
@@ -91,16 +99,35 @@ class _ApplicationsPageState extends ConsumerState<ApplicationsPage> {
         ],
       ),
       const SizedBox(height: 12),
+      TextField(
+        controller: search,
+        decoration: const InputDecoration(
+          prefixIcon: Icon(Icons.search),
+          hintText: 'Filter by title or employer',
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
+      const SizedBox(height: 12),
       AsyncView(
         ref.watch(applicationsProvider),
         builder: (all) {
-          final mine = all.where((a) => Stage.of(a.stage).open == open).toList();
+          final q = search.text.trim().toLowerCase();
+          final mine = all
+              .where((a) => Stage.of(a.stage).open == open)
+              .where((a) => q.isEmpty || '${a.title} ${a.company}'.toLowerCase().contains(q))
+              .toList();
           if (open && mine.isNotEmpty && _board(context)) return ApplicationBoard(mine);
           if (mine.isEmpty) {
             return EmptyState(
               icon: Icons.send_outlined,
-              title: open ? 'No active applications' : 'Nothing closed yet',
-              message: open ? 'Apply from a job on the Jobs page, or add one you made elsewhere.' : null,
+              title: q.isNotEmpty
+                  ? 'No matches'
+                  : open
+                  ? 'No active applications'
+                  : 'Nothing closed yet',
+              message: open && q.isEmpty
+                  ? 'Apply from a job on the Jobs page, or add one you made elsewhere.'
+                  : null,
             );
           }
           final stages = open ? Stage.openStages : Stage.values.where((s) => !s.open).toList();

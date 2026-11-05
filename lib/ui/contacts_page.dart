@@ -32,6 +32,13 @@ class ContactsPage extends ConsumerStatefulWidget {
 
 class _ContactsPageState extends ConsumerState<ContactsPage> {
   var filter = 'due';
+  final search = TextEditingController();
+
+  @override
+  void dispose() {
+    search.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,10 +85,20 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
           ],
         ),
         const SizedBox(height: 12),
+        TextField(
+          controller: search,
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.search),
+            hintText: 'Filter by name, role or organisation',
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 12),
         AsyncView(
           ref.watch(leadsProvider),
           builder: (all) {
             final now = today();
+            final q = search.text.trim().toLowerCase();
             final list = switch (filter) {
               'all' => all,
               'due' =>
@@ -89,12 +106,18 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
                     .where((l) => l.followUp != null && l.followUp!.compareTo(now) <= 0 && l.status != 'cold')
                     .toList(),
               _ => all.where((l) => l.status == filter).toList(),
-            };
+            }.where((l) => q.isEmpty || '${l.name} ${l.title} ${l.company}'.toLowerCase().contains(q)).toList();
             if (list.isEmpty) {
               return EmptyState(
                 icon: Icons.contacts_outlined,
-                title: filter == 'due' ? 'Nobody to follow up today' : 'No contacts here',
-                message: hasAi
+                title: q.isNotEmpty
+                    ? 'No matches'
+                    : filter == 'due'
+                    ? 'Nobody to follow up today'
+                    : 'No contacts here',
+                message: q.isNotEmpty
+                    ? null
+                    : hasAi
                     ? 'Find recruiters, hiring managers and agencies with the AI, from a job, or add people you know.'
                     : 'Add recruiters, hiring managers and people who could refer you.',
               );
