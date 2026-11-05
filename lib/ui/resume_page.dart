@@ -9,6 +9,7 @@ import '../db/database.dart';
 import '../domain/insights.dart';
 import '../domain/json.dart';
 import '../domain/resume.dart';
+import 'apply_helper_page.dart';
 import 'common.dart';
 import 'linkedin_page.dart';
 
@@ -63,6 +64,20 @@ class ResumePage extends ConsumerWidget {
               icon: const Icon(Icons.copy),
               label: const Text('Copy'),
             ),
+            if (applyHelperSupported)
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ApplyHelperPage(
+                      url: ref.read(jobsProvider).value?.where((j) => j.id == r.jobId).firstOrNull?.url ?? '',
+                      coverLetter: notes?.coverLetter ?? '',
+                      cv: doc.toText(),
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.open_in_browser),
+                label: const Text('Apply helper'),
+              ),
           ],
         ),
         const SizedBox(height: 16),
