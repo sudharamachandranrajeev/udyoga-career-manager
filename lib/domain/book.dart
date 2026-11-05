@@ -326,6 +326,16 @@ class CareerBook {
               (post.url.isEmpty ? null : byUrl[post.url]) ??
               (post.company.isEmpty ? null : byName[_key(post.title, post.company)]);
           final id = match?.id ?? newId();
+          // Posted again: the same board gave this role a new id and link, or
+          // the advert's posted date moved later.
+          final again =
+              match != null &&
+              ((match.source == post.source &&
+                      match.sourceId != post.sourceId &&
+                      (post.url.isEmpty || match.url != post.url)) ||
+                  (post.posted != null &&
+                      match.posted != null &&
+                      post.posted!.compareTo(addDays(match.posted!, repostGapDays)) >= 0));
           final row = JobListingsCompanion(
             id: Value(id),
             title: Value(post.title),
@@ -345,6 +355,7 @@ class CareerBook {
             ),
             posted: Value(post.posted ?? match?.posted),
             closing: Value(post.closing ?? match?.closing),
+            reposted: Value(again ? today : match?.reposted),
             source: Value(match?.source ?? post.source),
             sourceId: Value(match?.sourceId ?? post.sourceId),
             found: Value(match?.found ?? today),

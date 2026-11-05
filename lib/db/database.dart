@@ -45,7 +45,7 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
   ];
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -54,6 +54,9 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
       for (final sql in _indexes) {
         await customStatement(sql);
       }
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) await m.addColumn(jobListings, jobListings.reposted);
     },
   );
 

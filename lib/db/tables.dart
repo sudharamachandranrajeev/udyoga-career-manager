@@ -32,6 +32,10 @@ class JobListings extends Table with SyncedRow {
   TextColumn get posted => text().nullable()();
   TextColumn get closing => text().nullable()();
 
+  /// The day a refresh saw this advert posted again (a new id for the same
+  /// role, or a later posted date); null when it never was.
+  TextColumn get reposted => text().nullable()();
+
   /// adzuna | reed | arbeitnow | remotive | jobicy | ai | manual; with the
   /// source's own id, so a refresh updates instead of duplicating.
   TextColumn get source => text().withDefault(const Constant('manual'))();

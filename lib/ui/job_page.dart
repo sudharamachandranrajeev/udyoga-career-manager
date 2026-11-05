@@ -375,6 +375,13 @@ class _Header extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     final now = today();
+    final trust = listingTrust(
+      today: now,
+      found: j.found,
+      posted: j.posted,
+      closing: j.closing,
+      reposted: j.reposted,
+    );
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 16),
       child: Column(
@@ -403,6 +410,18 @@ class _Header extends StatelessWidget {
                 Pill(j.salaryText.ifEmpty(shortSalary(j)), icon: Icons.payments_outlined),
               if (j.remote) const Pill('Remote', icon: Icons.public),
               if (j.country.isNotEmpty) Pill(Country.nameOf(j.country), icon: Icons.place_outlined),
+              Tooltip(
+                message: trust.why,
+                child: Pill(
+                  trust.label,
+                  icon: Icons.verified_outlined,
+                  status: switch (trust) {
+                    ListingTrust.fresh => Status.good,
+                    ListingTrust.reposted => Status.warning,
+                    ListingTrust.stale => Status.serious,
+                  },
+                ),
+              ),
               if (j.posted != null) Pill('Posted ${niceDate(j.posted!)}'),
               if (j.closing != null)
                 Pill(

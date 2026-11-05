@@ -88,3 +88,36 @@ const growthStatuses = {
 };
 
 const jobStatuses = {'new': 'New', 'saved': 'Saved', 'dismissed': 'Dismissed', 'applied': 'Applied'};
+
+/// A posted date this many days later than the one held means the advert
+/// was posted again.
+const repostGapDays = 7;
+
+/// An advert this many days old (from its posted date, else when it was
+/// found) is stale: likely filled, or left up.
+const staleAfterDays = 45;
+
+/// How far to trust that a listing is a live, current opening.
+enum ListingTrust {
+  fresh('Fresh', 'Recent and not seen posted again.'),
+  reposted('Reposted', 'The same advert was posted again; it may have been open a while.'),
+  stale('Stale', 'Old or past its closing date; it may already be filled.');
+
+  const ListingTrust(this.label, this.why);
+  final String label, why;
+}
+
+/// Fresh, reposted or stale, from the advert's dates and whether a refresh
+/// saw it posted again.
+ListingTrust listingTrust({
+  required String today,
+  required String found,
+  String? posted,
+  String? closing,
+  String? reposted,
+}) {
+  if (closing != null && closing.compareTo(today) < 0) return ListingTrust.stale;
+  if (reposted != null) return ListingTrust.reposted;
+  if ((posted ?? found).compareTo(addDays(today, -staleAfterDays)) <= 0) return ListingTrust.stale;
+  return ListingTrust.fresh;
+}

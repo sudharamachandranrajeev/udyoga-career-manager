@@ -164,6 +164,15 @@ class $JobListingsTable extends JobListings with TableInfo<$JobListingsTable, Jo
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _repostedMeta = const VerificationMeta('reposted');
+  @override
+  late final GeneratedColumn<String> reposted = GeneratedColumn<String>(
+    'reposted',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _sourceMeta = const VerificationMeta('source');
   @override
   late final GeneratedColumn<String> source = GeneratedColumn<String>(
@@ -250,6 +259,7 @@ class $JobListingsTable extends JobListings with TableInfo<$JobListingsTable, Jo
     description,
     posted,
     closing,
+    reposted,
     source,
     sourceId,
     found,
@@ -325,6 +335,9 @@ class $JobListingsTable extends JobListings with TableInfo<$JobListingsTable, Jo
     if (data.containsKey('closing')) {
       context.handle(_closingMeta, closing.isAcceptableOrUnknown(data['closing']!, _closingMeta));
     }
+    if (data.containsKey('reposted')) {
+      context.handle(_repostedMeta, reposted.isAcceptableOrUnknown(data['reposted']!, _repostedMeta));
+    }
     if (data.containsKey('source')) {
       context.handle(_sourceMeta, source.isAcceptableOrUnknown(data['source']!, _sourceMeta));
     }
@@ -379,6 +392,7 @@ class $JobListingsTable extends JobListings with TableInfo<$JobListingsTable, Jo
       )!,
       posted: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}posted']),
       closing: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}closing']),
+      reposted: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}reposted']),
       source: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}source'])!,
       sourceId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}source_id'])!,
       found: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}found'])!,
@@ -422,6 +436,10 @@ class Job extends DataClass implements Insertable<Job> {
   final String? posted;
   final String? closing;
 
+  /// The day a refresh saw this advert posted again (a new id for the same
+  /// role, or a later posted date); null when it never was.
+  final String? reposted;
+
   /// adzuna | reed | arbeitnow | remotive | jobicy | ai | manual; with the
   /// source's own id, so a refresh updates instead of duplicating.
   final String source;
@@ -454,6 +472,7 @@ class Job extends DataClass implements Insertable<Job> {
     required this.description,
     this.posted,
     this.closing,
+    this.reposted,
     required this.source,
     required this.sourceId,
     required this.found,
@@ -489,6 +508,9 @@ class Job extends DataClass implements Insertable<Job> {
     if (!nullToAbsent || closing != null) {
       map['closing'] = Variable<String>(closing);
     }
+    if (!nullToAbsent || reposted != null) {
+      map['reposted'] = Variable<String>(reposted);
+    }
     map['source'] = Variable<String>(source);
     map['source_id'] = Variable<String>(sourceId);
     map['found'] = Variable<String>(found);
@@ -519,6 +541,7 @@ class Job extends DataClass implements Insertable<Job> {
       description: Value(description),
       posted: posted == null && nullToAbsent ? const Value.absent() : Value(posted),
       closing: closing == null && nullToAbsent ? const Value.absent() : Value(closing),
+      reposted: reposted == null && nullToAbsent ? const Value.absent() : Value(reposted),
       source: Value(source),
       sourceId: Value(sourceId),
       found: Value(found),
@@ -548,6 +571,7 @@ class Job extends DataClass implements Insertable<Job> {
       description: serializer.fromJson<String>(json['description']),
       posted: serializer.fromJson<String?>(json['posted']),
       closing: serializer.fromJson<String?>(json['closing']),
+      reposted: serializer.fromJson<String?>(json['reposted']),
       source: serializer.fromJson<String>(json['source']),
       sourceId: serializer.fromJson<String>(json['sourceId']),
       found: serializer.fromJson<String>(json['found']),
@@ -577,6 +601,7 @@ class Job extends DataClass implements Insertable<Job> {
       'description': serializer.toJson<String>(description),
       'posted': serializer.toJson<String?>(posted),
       'closing': serializer.toJson<String?>(closing),
+      'reposted': serializer.toJson<String?>(reposted),
       'source': serializer.toJson<String>(source),
       'sourceId': serializer.toJson<String>(sourceId),
       'found': serializer.toJson<String>(found),
@@ -604,6 +629,7 @@ class Job extends DataClass implements Insertable<Job> {
     String? description,
     Value<String?> posted = const Value.absent(),
     Value<String?> closing = const Value.absent(),
+    Value<String?> reposted = const Value.absent(),
     String? source,
     String? sourceId,
     String? found,
@@ -628,6 +654,7 @@ class Job extends DataClass implements Insertable<Job> {
     description: description ?? this.description,
     posted: posted.present ? posted.value : this.posted,
     closing: closing.present ? closing.value : this.closing,
+    reposted: reposted.present ? reposted.value : this.reposted,
     source: source ?? this.source,
     sourceId: sourceId ?? this.sourceId,
     found: found ?? this.found,
@@ -654,6 +681,7 @@ class Job extends DataClass implements Insertable<Job> {
       description: data.description.present ? data.description.value : this.description,
       posted: data.posted.present ? data.posted.value : this.posted,
       closing: data.closing.present ? data.closing.value : this.closing,
+      reposted: data.reposted.present ? data.reposted.value : this.reposted,
       source: data.source.present ? data.source.value : this.source,
       sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
       found: data.found.present ? data.found.value : this.found,
@@ -683,6 +711,7 @@ class Job extends DataClass implements Insertable<Job> {
           ..write('description: $description, ')
           ..write('posted: $posted, ')
           ..write('closing: $closing, ')
+          ..write('reposted: $reposted, ')
           ..write('source: $source, ')
           ..write('sourceId: $sourceId, ')
           ..write('found: $found, ')
@@ -712,6 +741,7 @@ class Job extends DataClass implements Insertable<Job> {
     description,
     posted,
     closing,
+    reposted,
     source,
     sourceId,
     found,
@@ -740,6 +770,7 @@ class Job extends DataClass implements Insertable<Job> {
           other.description == this.description &&
           other.posted == this.posted &&
           other.closing == this.closing &&
+          other.reposted == this.reposted &&
           other.source == this.source &&
           other.sourceId == this.sourceId &&
           other.found == this.found &&
@@ -766,6 +797,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
   final Value<String> description;
   final Value<String?> posted;
   final Value<String?> closing;
+  final Value<String?> reposted;
   final Value<String> source;
   final Value<String> sourceId;
   final Value<String> found;
@@ -791,6 +823,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
     this.description = const Value.absent(),
     this.posted = const Value.absent(),
     this.closing = const Value.absent(),
+    this.reposted = const Value.absent(),
     this.source = const Value.absent(),
     this.sourceId = const Value.absent(),
     this.found = const Value.absent(),
@@ -817,6 +850,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
     this.description = const Value.absent(),
     this.posted = const Value.absent(),
     this.closing = const Value.absent(),
+    this.reposted = const Value.absent(),
     this.source = const Value.absent(),
     this.sourceId = const Value.absent(),
     required String found,
@@ -845,6 +879,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
     Expression<String>? description,
     Expression<String>? posted,
     Expression<String>? closing,
+    Expression<String>? reposted,
     Expression<String>? source,
     Expression<String>? sourceId,
     Expression<String>? found,
@@ -871,6 +906,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
       if (description != null) 'description': description,
       if (posted != null) 'posted': posted,
       if (closing != null) 'closing': closing,
+      if (reposted != null) 'reposted': reposted,
       if (source != null) 'source': source,
       if (sourceId != null) 'source_id': sourceId,
       if (found != null) 'found': found,
@@ -899,6 +935,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
     Value<String>? description,
     Value<String?>? posted,
     Value<String?>? closing,
+    Value<String?>? reposted,
     Value<String>? source,
     Value<String>? sourceId,
     Value<String>? found,
@@ -925,6 +962,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
       description: description ?? this.description,
       posted: posted ?? this.posted,
       closing: closing ?? this.closing,
+      reposted: reposted ?? this.reposted,
       source: source ?? this.source,
       sourceId: sourceId ?? this.sourceId,
       found: found ?? this.found,
@@ -987,6 +1025,9 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
     if (closing.present) {
       map['closing'] = Variable<String>(closing.value);
     }
+    if (reposted.present) {
+      map['reposted'] = Variable<String>(reposted.value);
+    }
     if (source.present) {
       map['source'] = Variable<String>(source.value);
     }
@@ -1033,6 +1074,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
           ..write('description: $description, ')
           ..write('posted: $posted, ')
           ..write('closing: $closing, ')
+          ..write('reposted: $reposted, ')
           ..write('source: $source, ')
           ..write('sourceId: $sourceId, ')
           ..write('found: $found, ')
@@ -6355,6 +6397,7 @@ typedef $$JobListingsTableCreateCompanionBuilder = JobListingsCompanion Function
   Value<String> description,
   Value<String?> posted,
   Value<String?> closing,
+  Value<String?> reposted,
   Value<String> source,
   Value<String> sourceId,
   required String found,
@@ -6381,6 +6424,7 @@ typedef $$JobListingsTableUpdateCompanionBuilder = JobListingsCompanion Function
   Value<String> description,
   Value<String?> posted,
   Value<String?> closing,
+  Value<String?> reposted,
   Value<String> source,
   Value<String> sourceId,
   Value<String> found,
@@ -6446,6 +6490,9 @@ class $$JobListingsTableFilterComposer extends Composer<_$AppDatabase, $JobListi
 
   ColumnFilters<String> get closing =>
       $composableBuilder(column: $table.closing, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get reposted =>
+      $composableBuilder(column: $table.reposted, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get source =>
       $composableBuilder(column: $table.source, builder: (column) => ColumnFilters(column));
@@ -6525,6 +6572,9 @@ class $$JobListingsTableOrderingComposer extends Composer<_$AppDatabase, $JobLis
   ColumnOrderings<String> get closing =>
       $composableBuilder(column: $table.closing, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get reposted =>
+      $composableBuilder(column: $table.reposted, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get source =>
       $composableBuilder(column: $table.source, builder: (column) => ColumnOrderings(column));
 
@@ -6598,6 +6648,9 @@ class $$JobListingsTableAnnotationComposer extends Composer<_$AppDatabase, $JobL
   GeneratedColumn<String> get closing =>
       $composableBuilder(column: $table.closing, builder: (column) => column);
 
+  GeneratedColumn<String> get reposted =>
+      $composableBuilder(column: $table.reposted, builder: (column) => column);
+
   GeneratedColumn<String> get source =>
       $composableBuilder(column: $table.source, builder: (column) => column);
 
@@ -6658,6 +6711,7 @@ class $$JobListingsTableTableManager
                 Value<String> description = const Value.absent(),
                 Value<String?> posted = const Value.absent(),
                 Value<String?> closing = const Value.absent(),
+                Value<String?> reposted = const Value.absent(),
                 Value<String> source = const Value.absent(),
                 Value<String> sourceId = const Value.absent(),
                 Value<String> found = const Value.absent(),
@@ -6683,6 +6737,7 @@ class $$JobListingsTableTableManager
                 description: description,
                 posted: posted,
                 closing: closing,
+                reposted: reposted,
                 source: source,
                 sourceId: sourceId,
                 found: found,
@@ -6710,6 +6765,7 @@ class $$JobListingsTableTableManager
                 Value<String> description = const Value.absent(),
                 Value<String?> posted = const Value.absent(),
                 Value<String?> closing = const Value.absent(),
+                Value<String?> reposted = const Value.absent(),
                 Value<String> source = const Value.absent(),
                 Value<String> sourceId = const Value.absent(),
                 required String found,
@@ -6735,6 +6791,7 @@ class $$JobListingsTableTableManager
                 description: description,
                 posted: posted,
                 closing: closing,
+                reposted: reposted,
                 source: source,
                 sourceId: sourceId,
                 found: found,
