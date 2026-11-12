@@ -2198,6 +2198,1037 @@ class JobEventsCompanion extends UpdateCompanion<JobEvent> {
   }
 }
 
+class $JobChecksTable extends JobChecks with TableInfo<$JobChecksTable, JobCheck> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $JobChecksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hlcMeta = const VerificationMeta('hlc');
+  @override
+  late final GeneratedColumn<String> hlc = GeneratedColumn<String>(
+    'hlc',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta('deleted');
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("deleted" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _applicationIdMeta = const VerificationMeta('applicationId');
+  @override
+  late final GeneratedColumn<String> applicationId = GeneratedColumn<String>(
+    'application_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('todo'),
+  );
+  static const VerificationMeta _dueMeta = const VerificationMeta('due');
+  @override
+  late final GeneratedColumn<String> due = GeneratedColumn<String>(
+    'due',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _doneMeta = const VerificationMeta('done');
+  @override
+  late final GeneratedColumn<String> done = GeneratedColumn<String>(
+    'done',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    hlc,
+    deleted,
+    applicationId,
+    kind,
+    title,
+    status,
+    due,
+    done,
+    notes,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'job_checks';
+  @override
+  VerificationContext validateIntegrity(Insertable<JobCheck> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('hlc')) {
+      context.handle(_hlcMeta, hlc.isAcceptableOrUnknown(data['hlc']!, _hlcMeta));
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(_deletedMeta, deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta));
+    }
+    if (data.containsKey('application_id')) {
+      context.handle(
+        _applicationIdMeta,
+        applicationId.isAcceptableOrUnknown(data['application_id']!, _applicationIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_applicationIdMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(_kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(_titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta, status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    }
+    if (data.containsKey('due')) {
+      context.handle(_dueMeta, due.isAcceptableOrUnknown(data['due']!, _dueMeta));
+    }
+    if (data.containsKey('done')) {
+      context.handle(_doneMeta, done.isAcceptableOrUnknown(data['done']!, _doneMeta));
+    }
+    if (data.containsKey('notes')) {
+      context.handle(_notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  JobCheck map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return JobCheck(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      hlc: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}hlc'])!,
+      deleted: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}deleted'])!,
+      applicationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}application_id'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+      title: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      status: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      due: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}due']),
+      done: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}done']),
+      notes: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}notes'])!,
+    );
+  }
+
+  @override
+  $JobChecksTable createAlias(String alias) {
+    return $JobChecksTable(attachedDatabase, alias);
+  }
+}
+
+class JobCheck extends DataClass implements Insertable<JobCheck> {
+  final String id;
+  final String hlc;
+  final bool deleted;
+  final String applicationId;
+
+  /// identity | references | criminal_record | health | qualifications |
+  /// forms | contract | notice | start | other
+  final String kind;
+  final String title;
+
+  /// todo | sent | done | not_needed
+  final String status;
+  final String? due;
+  final String? done;
+  final String notes;
+  const JobCheck({
+    required this.id,
+    required this.hlc,
+    required this.deleted,
+    required this.applicationId,
+    required this.kind,
+    required this.title,
+    required this.status,
+    this.due,
+    this.done,
+    required this.notes,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['hlc'] = Variable<String>(hlc);
+    map['deleted'] = Variable<bool>(deleted);
+    map['application_id'] = Variable<String>(applicationId);
+    map['kind'] = Variable<String>(kind);
+    map['title'] = Variable<String>(title);
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || due != null) {
+      map['due'] = Variable<String>(due);
+    }
+    if (!nullToAbsent || done != null) {
+      map['done'] = Variable<String>(done);
+    }
+    map['notes'] = Variable<String>(notes);
+    return map;
+  }
+
+  JobChecksCompanion toCompanion(bool nullToAbsent) {
+    return JobChecksCompanion(
+      id: Value(id),
+      hlc: Value(hlc),
+      deleted: Value(deleted),
+      applicationId: Value(applicationId),
+      kind: Value(kind),
+      title: Value(title),
+      status: Value(status),
+      due: due == null && nullToAbsent ? const Value.absent() : Value(due),
+      done: done == null && nullToAbsent ? const Value.absent() : Value(done),
+      notes: Value(notes),
+    );
+  }
+
+  factory JobCheck.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return JobCheck(
+      id: serializer.fromJson<String>(json['id']),
+      hlc: serializer.fromJson<String>(json['hlc']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
+      applicationId: serializer.fromJson<String>(json['applicationId']),
+      kind: serializer.fromJson<String>(json['kind']),
+      title: serializer.fromJson<String>(json['title']),
+      status: serializer.fromJson<String>(json['status']),
+      due: serializer.fromJson<String?>(json['due']),
+      done: serializer.fromJson<String?>(json['done']),
+      notes: serializer.fromJson<String>(json['notes']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'hlc': serializer.toJson<String>(hlc),
+      'deleted': serializer.toJson<bool>(deleted),
+      'applicationId': serializer.toJson<String>(applicationId),
+      'kind': serializer.toJson<String>(kind),
+      'title': serializer.toJson<String>(title),
+      'status': serializer.toJson<String>(status),
+      'due': serializer.toJson<String?>(due),
+      'done': serializer.toJson<String?>(done),
+      'notes': serializer.toJson<String>(notes),
+    };
+  }
+
+  JobCheck copyWith({
+    String? id,
+    String? hlc,
+    bool? deleted,
+    String? applicationId,
+    String? kind,
+    String? title,
+    String? status,
+    Value<String?> due = const Value.absent(),
+    Value<String?> done = const Value.absent(),
+    String? notes,
+  }) => JobCheck(
+    id: id ?? this.id,
+    hlc: hlc ?? this.hlc,
+    deleted: deleted ?? this.deleted,
+    applicationId: applicationId ?? this.applicationId,
+    kind: kind ?? this.kind,
+    title: title ?? this.title,
+    status: status ?? this.status,
+    due: due.present ? due.value : this.due,
+    done: done.present ? done.value : this.done,
+    notes: notes ?? this.notes,
+  );
+  JobCheck copyWithCompanion(JobChecksCompanion data) {
+    return JobCheck(
+      id: data.id.present ? data.id.value : this.id,
+      hlc: data.hlc.present ? data.hlc.value : this.hlc,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+      applicationId: data.applicationId.present ? data.applicationId.value : this.applicationId,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      title: data.title.present ? data.title.value : this.title,
+      status: data.status.present ? data.status.value : this.status,
+      due: data.due.present ? data.due.value : this.due,
+      done: data.done.present ? data.done.value : this.done,
+      notes: data.notes.present ? data.notes.value : this.notes,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('JobCheck(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('kind: $kind, ')
+          ..write('title: $title, ')
+          ..write('status: $status, ')
+          ..write('due: $due, ')
+          ..write('done: $done, ')
+          ..write('notes: $notes')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, hlc, deleted, applicationId, kind, title, status, due, done, notes);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is JobCheck &&
+          other.id == this.id &&
+          other.hlc == this.hlc &&
+          other.deleted == this.deleted &&
+          other.applicationId == this.applicationId &&
+          other.kind == this.kind &&
+          other.title == this.title &&
+          other.status == this.status &&
+          other.due == this.due &&
+          other.done == this.done &&
+          other.notes == this.notes);
+}
+
+class JobChecksCompanion extends UpdateCompanion<JobCheck> {
+  final Value<String> id;
+  final Value<String> hlc;
+  final Value<bool> deleted;
+  final Value<String> applicationId;
+  final Value<String> kind;
+  final Value<String> title;
+  final Value<String> status;
+  final Value<String?> due;
+  final Value<String?> done;
+  final Value<String> notes;
+  final Value<int> rowid;
+  const JobChecksCompanion({
+    this.id = const Value.absent(),
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.title = const Value.absent(),
+    this.status = const Value.absent(),
+    this.due = const Value.absent(),
+    this.done = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  JobChecksCompanion.insert({
+    required String id,
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    required String applicationId,
+    required String kind,
+    required String title,
+    this.status = const Value.absent(),
+    this.due = const Value.absent(),
+    this.done = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       applicationId = Value(applicationId),
+       kind = Value(kind),
+       title = Value(title);
+  static Insertable<JobCheck> custom({
+    Expression<String>? id,
+    Expression<String>? hlc,
+    Expression<bool>? deleted,
+    Expression<String>? applicationId,
+    Expression<String>? kind,
+    Expression<String>? title,
+    Expression<String>? status,
+    Expression<String>? due,
+    Expression<String>? done,
+    Expression<String>? notes,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (hlc != null) 'hlc': hlc,
+      if (deleted != null) 'deleted': deleted,
+      if (applicationId != null) 'application_id': applicationId,
+      if (kind != null) 'kind': kind,
+      if (title != null) 'title': title,
+      if (status != null) 'status': status,
+      if (due != null) 'due': due,
+      if (done != null) 'done': done,
+      if (notes != null) 'notes': notes,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  JobChecksCompanion copyWith({
+    Value<String>? id,
+    Value<String>? hlc,
+    Value<bool>? deleted,
+    Value<String>? applicationId,
+    Value<String>? kind,
+    Value<String>? title,
+    Value<String>? status,
+    Value<String?>? due,
+    Value<String?>? done,
+    Value<String>? notes,
+    Value<int>? rowid,
+  }) {
+    return JobChecksCompanion(
+      id: id ?? this.id,
+      hlc: hlc ?? this.hlc,
+      deleted: deleted ?? this.deleted,
+      applicationId: applicationId ?? this.applicationId,
+      kind: kind ?? this.kind,
+      title: title ?? this.title,
+      status: status ?? this.status,
+      due: due ?? this.due,
+      done: done ?? this.done,
+      notes: notes ?? this.notes,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (hlc.present) {
+      map['hlc'] = Variable<String>(hlc.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
+    if (applicationId.present) {
+      map['application_id'] = Variable<String>(applicationId.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (due.present) {
+      map['due'] = Variable<String>(due.value);
+    }
+    if (done.present) {
+      map['done'] = Variable<String>(done.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('JobChecksCompanion(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('kind: $kind, ')
+          ..write('title: $title, ')
+          ..write('status: $status, ')
+          ..write('due: $due, ')
+          ..write('done: $done, ')
+          ..write('notes: $notes, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $JobArchiveTable extends JobArchive with TableInfo<$JobArchiveTable, Archived> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $JobArchiveTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hlcMeta = const VerificationMeta('hlc');
+  @override
+  late final GeneratedColumn<String> hlc = GeneratedColumn<String>(
+    'hlc',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta('deleted');
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("deleted" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _applicationIdMeta = const VerificationMeta('applicationId');
+  @override
+  late final GeneratedColumn<String> applicationId = GeneratedColumn<String>(
+    'application_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _jobIdMeta = const VerificationMeta('jobId');
+  @override
+  late final GeneratedColumn<String> jobId = GeneratedColumn<String>(
+    'job_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _atMeta = const VerificationMeta('at');
+  @override
+  late final GeneratedColumn<String> at = GeneratedColumn<String>(
+    'at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _urlMeta = const VerificationMeta('url');
+  @override
+  late final GeneratedColumn<String> url = GeneratedColumn<String>(
+    'url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta('content');
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    hlc,
+    deleted,
+    applicationId,
+    jobId,
+    kind,
+    at,
+    title,
+    url,
+    content,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'job_archive';
+  @override
+  VerificationContext validateIntegrity(Insertable<Archived> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('hlc')) {
+      context.handle(_hlcMeta, hlc.isAcceptableOrUnknown(data['hlc']!, _hlcMeta));
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(_deletedMeta, deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta));
+    }
+    if (data.containsKey('application_id')) {
+      context.handle(
+        _applicationIdMeta,
+        applicationId.isAcceptableOrUnknown(data['application_id']!, _applicationIdMeta),
+      );
+    }
+    if (data.containsKey('job_id')) {
+      context.handle(_jobIdMeta, jobId.isAcceptableOrUnknown(data['job_id']!, _jobIdMeta));
+    }
+    if (data.containsKey('kind')) {
+      context.handle(_kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('at')) {
+      context.handle(_atMeta, at.isAcceptableOrUnknown(data['at']!, _atMeta));
+    } else if (isInserting) {
+      context.missing(_atMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(_titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    }
+    if (data.containsKey('url')) {
+      context.handle(_urlMeta, url.isAcceptableOrUnknown(data['url']!, _urlMeta));
+    }
+    if (data.containsKey('content')) {
+      context.handle(_contentMeta, content.isAcceptableOrUnknown(data['content']!, _contentMeta));
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Archived map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Archived(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      hlc: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}hlc'])!,
+      deleted: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}deleted'])!,
+      applicationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}application_id'],
+      ),
+      jobId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}job_id']),
+      kind: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+      at: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}at'])!,
+      title: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      url: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}url'])!,
+      content: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}content'])!,
+    );
+  }
+
+  @override
+  $JobArchiveTable createAlias(String alias) {
+    return $JobArchiveTable(attachedDatabase, alias);
+  }
+}
+
+class Archived extends DataClass implements Insertable<Archived> {
+  final String id;
+  final String hlc;
+  final bool deleted;
+  final String? applicationId;
+  final String? jobId;
+
+  /// advert | application
+  final String kind;
+  final String at;
+  final String title;
+  final String url;
+  final String content;
+  const Archived({
+    required this.id,
+    required this.hlc,
+    required this.deleted,
+    this.applicationId,
+    this.jobId,
+    required this.kind,
+    required this.at,
+    required this.title,
+    required this.url,
+    required this.content,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['hlc'] = Variable<String>(hlc);
+    map['deleted'] = Variable<bool>(deleted);
+    if (!nullToAbsent || applicationId != null) {
+      map['application_id'] = Variable<String>(applicationId);
+    }
+    if (!nullToAbsent || jobId != null) {
+      map['job_id'] = Variable<String>(jobId);
+    }
+    map['kind'] = Variable<String>(kind);
+    map['at'] = Variable<String>(at);
+    map['title'] = Variable<String>(title);
+    map['url'] = Variable<String>(url);
+    map['content'] = Variable<String>(content);
+    return map;
+  }
+
+  JobArchiveCompanion toCompanion(bool nullToAbsent) {
+    return JobArchiveCompanion(
+      id: Value(id),
+      hlc: Value(hlc),
+      deleted: Value(deleted),
+      applicationId: applicationId == null && nullToAbsent ? const Value.absent() : Value(applicationId),
+      jobId: jobId == null && nullToAbsent ? const Value.absent() : Value(jobId),
+      kind: Value(kind),
+      at: Value(at),
+      title: Value(title),
+      url: Value(url),
+      content: Value(content),
+    );
+  }
+
+  factory Archived.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Archived(
+      id: serializer.fromJson<String>(json['id']),
+      hlc: serializer.fromJson<String>(json['hlc']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
+      applicationId: serializer.fromJson<String?>(json['applicationId']),
+      jobId: serializer.fromJson<String?>(json['jobId']),
+      kind: serializer.fromJson<String>(json['kind']),
+      at: serializer.fromJson<String>(json['at']),
+      title: serializer.fromJson<String>(json['title']),
+      url: serializer.fromJson<String>(json['url']),
+      content: serializer.fromJson<String>(json['content']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'hlc': serializer.toJson<String>(hlc),
+      'deleted': serializer.toJson<bool>(deleted),
+      'applicationId': serializer.toJson<String?>(applicationId),
+      'jobId': serializer.toJson<String?>(jobId),
+      'kind': serializer.toJson<String>(kind),
+      'at': serializer.toJson<String>(at),
+      'title': serializer.toJson<String>(title),
+      'url': serializer.toJson<String>(url),
+      'content': serializer.toJson<String>(content),
+    };
+  }
+
+  Archived copyWith({
+    String? id,
+    String? hlc,
+    bool? deleted,
+    Value<String?> applicationId = const Value.absent(),
+    Value<String?> jobId = const Value.absent(),
+    String? kind,
+    String? at,
+    String? title,
+    String? url,
+    String? content,
+  }) => Archived(
+    id: id ?? this.id,
+    hlc: hlc ?? this.hlc,
+    deleted: deleted ?? this.deleted,
+    applicationId: applicationId.present ? applicationId.value : this.applicationId,
+    jobId: jobId.present ? jobId.value : this.jobId,
+    kind: kind ?? this.kind,
+    at: at ?? this.at,
+    title: title ?? this.title,
+    url: url ?? this.url,
+    content: content ?? this.content,
+  );
+  Archived copyWithCompanion(JobArchiveCompanion data) {
+    return Archived(
+      id: data.id.present ? data.id.value : this.id,
+      hlc: data.hlc.present ? data.hlc.value : this.hlc,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+      applicationId: data.applicationId.present ? data.applicationId.value : this.applicationId,
+      jobId: data.jobId.present ? data.jobId.value : this.jobId,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      at: data.at.present ? data.at.value : this.at,
+      title: data.title.present ? data.title.value : this.title,
+      url: data.url.present ? data.url.value : this.url,
+      content: data.content.present ? data.content.value : this.content,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Archived(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('jobId: $jobId, ')
+          ..write('kind: $kind, ')
+          ..write('at: $at, ')
+          ..write('title: $title, ')
+          ..write('url: $url, ')
+          ..write('content: $content')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, hlc, deleted, applicationId, jobId, kind, at, title, url, content);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Archived &&
+          other.id == this.id &&
+          other.hlc == this.hlc &&
+          other.deleted == this.deleted &&
+          other.applicationId == this.applicationId &&
+          other.jobId == this.jobId &&
+          other.kind == this.kind &&
+          other.at == this.at &&
+          other.title == this.title &&
+          other.url == this.url &&
+          other.content == this.content);
+}
+
+class JobArchiveCompanion extends UpdateCompanion<Archived> {
+  final Value<String> id;
+  final Value<String> hlc;
+  final Value<bool> deleted;
+  final Value<String?> applicationId;
+  final Value<String?> jobId;
+  final Value<String> kind;
+  final Value<String> at;
+  final Value<String> title;
+  final Value<String> url;
+  final Value<String> content;
+  final Value<int> rowid;
+  const JobArchiveCompanion({
+    this.id = const Value.absent(),
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    this.jobId = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.at = const Value.absent(),
+    this.title = const Value.absent(),
+    this.url = const Value.absent(),
+    this.content = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  JobArchiveCompanion.insert({
+    required String id,
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    this.jobId = const Value.absent(),
+    required String kind,
+    required String at,
+    this.title = const Value.absent(),
+    this.url = const Value.absent(),
+    required String content,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       kind = Value(kind),
+       at = Value(at),
+       content = Value(content);
+  static Insertable<Archived> custom({
+    Expression<String>? id,
+    Expression<String>? hlc,
+    Expression<bool>? deleted,
+    Expression<String>? applicationId,
+    Expression<String>? jobId,
+    Expression<String>? kind,
+    Expression<String>? at,
+    Expression<String>? title,
+    Expression<String>? url,
+    Expression<String>? content,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (hlc != null) 'hlc': hlc,
+      if (deleted != null) 'deleted': deleted,
+      if (applicationId != null) 'application_id': applicationId,
+      if (jobId != null) 'job_id': jobId,
+      if (kind != null) 'kind': kind,
+      if (at != null) 'at': at,
+      if (title != null) 'title': title,
+      if (url != null) 'url': url,
+      if (content != null) 'content': content,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  JobArchiveCompanion copyWith({
+    Value<String>? id,
+    Value<String>? hlc,
+    Value<bool>? deleted,
+    Value<String?>? applicationId,
+    Value<String?>? jobId,
+    Value<String>? kind,
+    Value<String>? at,
+    Value<String>? title,
+    Value<String>? url,
+    Value<String>? content,
+    Value<int>? rowid,
+  }) {
+    return JobArchiveCompanion(
+      id: id ?? this.id,
+      hlc: hlc ?? this.hlc,
+      deleted: deleted ?? this.deleted,
+      applicationId: applicationId ?? this.applicationId,
+      jobId: jobId ?? this.jobId,
+      kind: kind ?? this.kind,
+      at: at ?? this.at,
+      title: title ?? this.title,
+      url: url ?? this.url,
+      content: content ?? this.content,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (hlc.present) {
+      map['hlc'] = Variable<String>(hlc.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
+    if (applicationId.present) {
+      map['application_id'] = Variable<String>(applicationId.value);
+    }
+    if (jobId.present) {
+      map['job_id'] = Variable<String>(jobId.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (at.present) {
+      map['at'] = Variable<String>(at.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (url.present) {
+      map['url'] = Variable<String>(url.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('JobArchiveCompanion(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('jobId: $jobId, ')
+          ..write('kind: $kind, ')
+          ..write('at: $at, ')
+          ..write('title: $title, ')
+          ..write('url: $url, ')
+          ..write('content: $content, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $CareerContactsTable extends CareerContacts with TableInfo<$CareerContactsTable, Lead> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -6307,6 +7338,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $JobListingsTable jobListings = $JobListingsTable(this);
   late final $JobApplicationsTable jobApplications = $JobApplicationsTable(this);
   late final $JobEventsTable jobEvents = $JobEventsTable(this);
+  late final $JobChecksTable jobChecks = $JobChecksTable(this);
+  late final $JobArchiveTable jobArchive = $JobArchiveTable(this);
   late final $CareerContactsTable careerContacts = $CareerContactsTable(this);
   late final $CareerResumesTable careerResumes = $CareerResumesTable(this);
   late final $CareerReportsTable careerReports = $CareerReportsTable(this);
@@ -6325,6 +7358,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     jobListings,
     jobApplications,
     jobEvents,
+    jobChecks,
+    jobArchive,
     careerContacts,
     careerResumes,
     careerReports,
@@ -7295,6 +8330,484 @@ typedef $$JobEventsTableProcessedTableManager =
       $$JobEventsTableUpdateCompanionBuilder,
       (JobEvent, BaseReferences<_$AppDatabase, $JobEventsTable, JobEvent>),
       JobEvent,
+      PrefetchHooks Function()
+    >;
+typedef $$JobChecksTableCreateCompanionBuilder = JobChecksCompanion Function({
+  required String id,
+  Value<String> hlc,
+  Value<bool> deleted,
+  required String applicationId,
+  required String kind,
+  required String title,
+  Value<String> status,
+  Value<String?> due,
+  Value<String?> done,
+  Value<String> notes,
+  Value<int> rowid,
+});
+typedef $$JobChecksTableUpdateCompanionBuilder = JobChecksCompanion Function({
+  Value<String> id,
+  Value<String> hlc,
+  Value<bool> deleted,
+  Value<String> applicationId,
+  Value<String> kind,
+  Value<String> title,
+  Value<String> status,
+  Value<String?> due,
+  Value<String?> done,
+  Value<String> notes,
+  Value<int> rowid,
+});
+
+class $$JobChecksTableFilterComposer extends Composer<_$AppDatabase, $JobChecksTable> {
+  $$JobChecksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get applicationId =>
+      $composableBuilder(column: $table.applicationId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get due =>
+      $composableBuilder(column: $table.due, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get done =>
+      $composableBuilder(column: $table.done, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => ColumnFilters(column));
+}
+
+class $$JobChecksTableOrderingComposer extends Composer<_$AppDatabase, $JobChecksTable> {
+  $$JobChecksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get applicationId =>
+      $composableBuilder(column: $table.applicationId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get due =>
+      $composableBuilder(column: $table.due, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get done =>
+      $composableBuilder(column: $table.done, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => ColumnOrderings(column));
+}
+
+class $$JobChecksTableAnnotationComposer extends Composer<_$AppDatabase, $JobChecksTable> {
+  $$JobChecksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get hlc => $composableBuilder(column: $table.hlc, builder: (column) => column);
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
+
+  GeneratedColumn<String> get applicationId =>
+      $composableBuilder(column: $table.applicationId, builder: (column) => column);
+
+  GeneratedColumn<String> get kind => $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get title => $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get due => $composableBuilder(column: $table.due, builder: (column) => column);
+
+  GeneratedColumn<String> get done => $composableBuilder(column: $table.done, builder: (column) => column);
+
+  GeneratedColumn<String> get notes => $composableBuilder(column: $table.notes, builder: (column) => column);
+}
+
+class $$JobChecksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $JobChecksTable,
+          JobCheck,
+          $$JobChecksTableFilterComposer,
+          $$JobChecksTableOrderingComposer,
+          $$JobChecksTableAnnotationComposer,
+          $$JobChecksTableCreateCompanionBuilder,
+          $$JobChecksTableUpdateCompanionBuilder,
+          (JobCheck, BaseReferences<_$AppDatabase, $JobChecksTable, JobCheck>),
+          JobCheck,
+          PrefetchHooks Function()
+        > {
+  $$JobChecksTableTableManager(_$AppDatabase db, $JobChecksTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$JobChecksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$JobChecksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$JobChecksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<String> applicationId = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> due = const Value.absent(),
+                Value<String?> done = const Value.absent(),
+                Value<String> notes = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => JobChecksCompanion(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                applicationId: applicationId,
+                kind: kind,
+                title: title,
+                status: status,
+                due: due,
+                done: done,
+                notes: notes,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                required String applicationId,
+                required String kind,
+                required String title,
+                Value<String> status = const Value.absent(),
+                Value<String?> due = const Value.absent(),
+                Value<String?> done = const Value.absent(),
+                Value<String> notes = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => JobChecksCompanion.insert(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                applicationId: applicationId,
+                kind: kind,
+                title: title,
+                status: status,
+                due: due,
+                done: done,
+                notes: notes,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$JobChecksTable, JobCheck>(table),
+                  BaseReferences<_$AppDatabase, $JobChecksTable, JobCheck>(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$JobChecksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $JobChecksTable,
+      JobCheck,
+      $$JobChecksTableFilterComposer,
+      $$JobChecksTableOrderingComposer,
+      $$JobChecksTableAnnotationComposer,
+      $$JobChecksTableCreateCompanionBuilder,
+      $$JobChecksTableUpdateCompanionBuilder,
+      (JobCheck, BaseReferences<_$AppDatabase, $JobChecksTable, JobCheck>),
+      JobCheck,
+      PrefetchHooks Function()
+    >;
+typedef $$JobArchiveTableCreateCompanionBuilder = JobArchiveCompanion Function({
+  required String id,
+  Value<String> hlc,
+  Value<bool> deleted,
+  Value<String?> applicationId,
+  Value<String?> jobId,
+  required String kind,
+  required String at,
+  Value<String> title,
+  Value<String> url,
+  required String content,
+  Value<int> rowid,
+});
+typedef $$JobArchiveTableUpdateCompanionBuilder = JobArchiveCompanion Function({
+  Value<String> id,
+  Value<String> hlc,
+  Value<bool> deleted,
+  Value<String?> applicationId,
+  Value<String?> jobId,
+  Value<String> kind,
+  Value<String> at,
+  Value<String> title,
+  Value<String> url,
+  Value<String> content,
+  Value<int> rowid,
+});
+
+class $$JobArchiveTableFilterComposer extends Composer<_$AppDatabase, $JobArchiveTable> {
+  $$JobArchiveTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get applicationId =>
+      $composableBuilder(column: $table.applicationId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get jobId =>
+      $composableBuilder(column: $table.jobId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get at =>
+      $composableBuilder(column: $table.at, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get url =>
+      $composableBuilder(column: $table.url, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => ColumnFilters(column));
+}
+
+class $$JobArchiveTableOrderingComposer extends Composer<_$AppDatabase, $JobArchiveTable> {
+  $$JobArchiveTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get applicationId =>
+      $composableBuilder(column: $table.applicationId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get jobId =>
+      $composableBuilder(column: $table.jobId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get at =>
+      $composableBuilder(column: $table.at, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get url =>
+      $composableBuilder(column: $table.url, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => ColumnOrderings(column));
+}
+
+class $$JobArchiveTableAnnotationComposer extends Composer<_$AppDatabase, $JobArchiveTable> {
+  $$JobArchiveTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get hlc => $composableBuilder(column: $table.hlc, builder: (column) => column);
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
+
+  GeneratedColumn<String> get applicationId =>
+      $composableBuilder(column: $table.applicationId, builder: (column) => column);
+
+  GeneratedColumn<String> get jobId => $composableBuilder(column: $table.jobId, builder: (column) => column);
+
+  GeneratedColumn<String> get kind => $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get at => $composableBuilder(column: $table.at, builder: (column) => column);
+
+  GeneratedColumn<String> get title => $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get url => $composableBuilder(column: $table.url, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+}
+
+class $$JobArchiveTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $JobArchiveTable,
+          Archived,
+          $$JobArchiveTableFilterComposer,
+          $$JobArchiveTableOrderingComposer,
+          $$JobArchiveTableAnnotationComposer,
+          $$JobArchiveTableCreateCompanionBuilder,
+          $$JobArchiveTableUpdateCompanionBuilder,
+          (Archived, BaseReferences<_$AppDatabase, $JobArchiveTable, Archived>),
+          Archived,
+          PrefetchHooks Function()
+        > {
+  $$JobArchiveTableTableManager(_$AppDatabase db, $JobArchiveTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$JobArchiveTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$JobArchiveTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$JobArchiveTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<String?> applicationId = const Value.absent(),
+                Value<String?> jobId = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> at = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> url = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => JobArchiveCompanion(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                applicationId: applicationId,
+                jobId: jobId,
+                kind: kind,
+                at: at,
+                title: title,
+                url: url,
+                content: content,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<String?> applicationId = const Value.absent(),
+                Value<String?> jobId = const Value.absent(),
+                required String kind,
+                required String at,
+                Value<String> title = const Value.absent(),
+                Value<String> url = const Value.absent(),
+                required String content,
+                Value<int> rowid = const Value.absent(),
+              }) => JobArchiveCompanion.insert(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                applicationId: applicationId,
+                jobId: jobId,
+                kind: kind,
+                at: at,
+                title: title,
+                url: url,
+                content: content,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$JobArchiveTable, Archived>(table),
+                  BaseReferences<_$AppDatabase, $JobArchiveTable, Archived>(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$JobArchiveTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $JobArchiveTable,
+      Archived,
+      $$JobArchiveTableFilterComposer,
+      $$JobArchiveTableOrderingComposer,
+      $$JobArchiveTableAnnotationComposer,
+      $$JobArchiveTableCreateCompanionBuilder,
+      $$JobArchiveTableUpdateCompanionBuilder,
+      (Archived, BaseReferences<_$AppDatabase, $JobArchiveTable, Archived>),
+      Archived,
       PrefetchHooks Function()
     >;
 typedef $$CareerContactsTableCreateCompanionBuilder = CareerContactsCompanion Function({
@@ -9315,6 +10828,8 @@ class $AppDatabaseManager {
   $$JobApplicationsTableTableManager get jobApplications =>
       $$JobApplicationsTableTableManager(_db, _db.jobApplications);
   $$JobEventsTableTableManager get jobEvents => $$JobEventsTableTableManager(_db, _db.jobEvents);
+  $$JobChecksTableTableManager get jobChecks => $$JobChecksTableTableManager(_db, _db.jobChecks);
+  $$JobArchiveTableTableManager get jobArchive => $$JobArchiveTableTableManager(_db, _db.jobArchive);
   $$CareerContactsTableTableManager get careerContacts =>
       $$CareerContactsTableTableManager(_db, _db.careerContacts);
   $$CareerResumesTableTableManager get careerResumes =>

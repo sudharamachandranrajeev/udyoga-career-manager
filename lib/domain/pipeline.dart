@@ -6,7 +6,12 @@ enum Stage {
   applied('Applied', open: true, chaseAfter: 10),
   screening('Screening', open: true, chaseAfter: 7),
   interview('Interview', open: true, chaseAfter: 5),
+  // Passed the interview but not yet placed: HSC (Northern Ireland) keeps
+  // ranked waiting lists for up to 12 months and offers posts from them.
+  waitingList('Waiting list', open: true, chaseAfter: 30),
   offer('Offer', open: true, chaseAfter: 3),
+  // A conditional offer accepted; pre-employment checks under way.
+  checks('Checks', open: true, chaseAfter: 7),
   accepted('Accepted', open: false),
   rejected('Rejected', open: false),
   withdrawn('Withdrawn', open: false),
@@ -33,6 +38,17 @@ String? followUpFor(Stage stage, String date) => switch (stage.chaseAfter) {
   null => null,
 };
 
+/// [date] moved on by [days] working days (Monday to Friday; bank holidays
+/// are not known here).
+String addWorkingDays(String date, int days) {
+  var d = date;
+  for (var left = days; left > 0;) {
+    d = addDays(d, 1);
+    if (DateTime.parse(d).weekday <= DateTime.friday) left--;
+  }
+  return d;
+}
+
 /// An application with no reply this many days after applying is marked as
 /// no reply (the user can still move it on).
 const ghostedAfterDays = 42;
@@ -43,7 +59,9 @@ const eventKinds = {
   'followup': ('Chased up', null),
   'reply': ('Heard back', Stage.screening),
   'interview': ('Interview', Stage.interview),
+  'waitlist': ('Placed on waiting list', Stage.waitingList),
   'offer': ('Offer', Stage.offer),
+  'checks': ('Accepted conditional offer', Stage.checks),
   'accepted': ('Accepted', Stage.accepted),
   'rejected': ('Rejected', Stage.rejected),
   'withdrawn': ('Withdrew', Stage.withdrawn),

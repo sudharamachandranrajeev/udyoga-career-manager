@@ -12,6 +12,8 @@ part 'database.g.dart';
     JobListings,
     JobApplications,
     JobEvents,
+    JobChecks,
+    JobArchive,
     CareerContacts,
     CareerResumes,
     CareerReports,
@@ -35,6 +37,8 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     'job_listings',
     'job_applications',
     'job_events',
+    'job_checks',
+    'job_archive',
     'career_contacts',
     'career_resumes',
     'career_reports',
@@ -45,7 +49,7 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
   ];
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -55,6 +59,15 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
         await customStatement(sql);
       }
     },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.createTable(jobChecks);
+        await m.createTable(jobArchive);
+        for (final sql in _v2Indexes) {
+          await customStatement(sql);
+        }
+      }
+    },
   );
 
   static const _indexes = [
@@ -62,5 +75,12 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     'CREATE INDEX job_events_application ON job_events (application_id)',
     'CREATE INDEX career_answers_session ON career_answers (session_id)',
     'CREATE INDEX career_reports_kind ON career_reports (kind, created)',
+    ..._v2Indexes,
+  ];
+
+  /// Added in schema 2 (pre-employment checks and the archive).
+  static const _v2Indexes = [
+    'CREATE INDEX job_checks_application ON job_checks (application_id)',
+    'CREATE INDEX job_archive_application ON job_archive (application_id)',
   ];
 }

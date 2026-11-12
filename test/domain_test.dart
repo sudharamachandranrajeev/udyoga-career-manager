@@ -517,10 +517,12 @@ void main() {
       await book.logEvent(app, 'reply', at: '2026-10-09T10:00');
       expect((await book.application(app)).stage, 'interview');
 
+      // Turned down after interview: a reminder to ask for feedback.
       await book.logEvent(app, 'rejected', at: '2026-10-20T10:00');
       a = await book.application(app);
       expect(a.stage, 'rejected');
-      expect(a.followUp, isNull);
+      expect(a.followUp, '2026-10-23');
+      expect(a.followUpNote, contains('feedback'));
     });
 
     test('silent applications go to No reply', () async {

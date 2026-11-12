@@ -171,8 +171,8 @@ class _ApplicationsPageState extends ConsumerState<ApplicationsPage> {
 
 /// Stage colours, as in the list: open stages neutral, outcomes tinted.
 Status? stageStatus(Stage s) => switch (s) {
-  Stage.interview || Stage.offer || Stage.accepted => Status.good,
-  Stage.screening => Status.info,
+  Stage.interview || Stage.offer || Stage.checks || Stage.accepted => Status.good,
+  Stage.screening || Stage.waitingList => Status.info,
   Stage.rejected => Status.serious,
   Stage.noReply || Stage.withdrawn => Status.warning,
   _ => null,
@@ -235,7 +235,7 @@ class ApplicationTile extends StatelessWidget {
                           style: t.bodySmall?.copyWith(color: muted),
                         ),
                       ),
-                      if (a.followUp != null && stage.open)
+                      if (a.followUp != null)
                         // Shrinks (the label ellipsizes) on narrow cards.
                         Flexible(
                           child: Pill(
@@ -445,7 +445,7 @@ Future<List<Reminder>> reminders(WidgetRef ref) async {
   final byId = {for (final a in apps) a.id: a};
   return [
     for (final a in apps)
-      if (a.followUp != null && Stage.of(a.stage).open)
+      if (a.followUp != null)
         (
           id: 'followup-${a.id}',
           title: 'Follow up: ${a.title}${a.company.isEmpty ? '' : ' at ${a.company}'}',
@@ -827,6 +827,9 @@ class ApplicationPage extends ConsumerWidget {
       Stage.interview =>
         'a thank-you to the interview panel that restates fit in one line and asks about timescales',
       Stage.offer => 'a reply to the job offer that thanks them and asks the open questions',
+      Stage.waitingList =>
+        'a short note confirming continued interest in posts from the waiting list and current availability',
+      Stage.checks => 'a polite update to the recruitment team on the pre-employment checks and documents still outstanding',
       _ => 'a polite follow-up asking for an update on the application and the timetable',
     };
     final p = await ref.read(profileProvider.future);

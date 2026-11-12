@@ -86,6 +86,38 @@ class JobEvents extends Table with SyncedRow {
   TextColumn get summary => text().withDefault(const Constant(''))();
 }
 
+/// One pre-employment check or step between an offer and the first day.
+@DataClassName('JobCheck')
+class JobChecks extends Table with SyncedRow {
+  TextColumn get applicationId => text()();
+
+  /// identity | references | criminal_record | health | qualifications |
+  /// forms | contract | notice | start | other
+  TextColumn get kind => text()();
+  TextColumn get title => text()();
+
+  /// todo | sent | done | not_needed
+  TextColumn get status => text().withDefault(const Constant('todo'))();
+  TextColumn get due => text().nullable()();
+  TextColumn get done => text().nullable()();
+  TextColumn get notes => text().withDefault(const Constant(''))();
+}
+
+/// A copy kept by the candidate: the advert as it read, or the application
+/// as sent. Job sites delete both after a while.
+@DataClassName('Archived')
+class JobArchive extends Table with SyncedRow {
+  TextColumn get applicationId => text().nullable()();
+  TextColumn get jobId => text().nullable()();
+
+  /// advert | application
+  TextColumn get kind => text()();
+  TextColumn get at => text()();
+  TextColumn get title => text().withDefault(const Constant(''))();
+  TextColumn get url => text().withDefault(const Constant(''))();
+  TextColumn get content => text()();
+}
+
 /// Recruiters, hiring managers, referrers and other leads.
 @DataClassName('Lead')
 class CareerContacts extends Table with SyncedRow {

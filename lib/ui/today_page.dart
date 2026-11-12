@@ -62,7 +62,7 @@ class TodayPage extends ConsumerWidget {
     final refresh = ref.watch(refreshProvider);
 
     final open = apps.where((a) => Stage.of(a.stage).open).toList();
-    final dueApps = open.where((a) => a.followUp != null && a.followUp!.compareTo(now) <= 0).toList();
+    final dueApps = apps.where((a) => a.followUp != null && a.followUp!.compareTo(now) <= 0).toList();
     final dueLeads = leads
         .where((l) => l.followUp != null && l.followUp!.compareTo(now) <= 0 && l.status != 'cold')
         .toList();
@@ -79,8 +79,14 @@ class TodayPage extends ConsumerWidget {
           ..sort((a, b) => a.at.compareTo(b.at));
     final fresh = jobs.where((j) => j.status == 'new').toList()
       ..sort((a, b) => (b.fit ?? -1).compareTo(a.fit ?? -1));
+    // Saved jobs, and jobs with an application still being written.
+    final unsent = {
+      for (final a in apps)
+        if (a.jobId != null && Stage.of(a.stage) == Stage.preparing) a.jobId!,
+    };
     final closing = jobs
-        .where((j) => j.status == 'saved' && j.closing != null && j.closing!.compareTo(now) >= 0)
+        .where((j) => j.status == 'saved' || unsent.contains(j.id))
+        .where((j) => j.closing != null && j.closing!.compareTo(now) >= 0)
         .where((j) => j.closing!.compareTo(addDays(now, 7)) <= 0)
         .toList();
     final steps = nextSteps(
@@ -94,11 +100,11 @@ class TodayPage extends ConsumerWidget {
       update: ref.watch(updateProvider).value?.version,
     );
     final sent = apps.where((a) => a.applied != null).length;
-    final heard = apps
-        .where(
-          (a) => a.applied != null && const ['screening', 'interview', 'offer', 'accepted'].contains(a.stage),
-        )
-        .length;
+    // Heard back: shortlisted or further, up to accepted.
+    final heard = apps.where((a) {
+      final i = Stage.of(a.stage).index;
+      return a.applied != null && i > Stage.applied.index && i <= Stage.accepted.index;
+    }).length;
 
     return PageScaffold(
       title: 'Today',
