@@ -122,8 +122,8 @@ Each release also has `SHA256SUMS.txt`, a list of fingerprints to check the file
    ```
 3. Open **Udyoga** from your app menu.
 
-It installs for your user only. It needs GTK 3, libsecret and the desktop keyring (the app that
-stores passwords) running. To remove it later: `./install.sh --uninstall`. Your data stays.
+It installs for your user only. It needs GTK 3, WebKitGTK 4.1 (job sites open in it), libsecret
+and the desktop keyring (the app that stores passwords) running. To remove it later: `./install.sh --uninstall`. Your data stays.
 
 </details>
 
