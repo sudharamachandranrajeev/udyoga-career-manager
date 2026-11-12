@@ -8,6 +8,7 @@ import '../domain/ai.dart';
 import '../domain/countries.dart';
 import '../domain/feeds.dart';
 import '../domain/json.dart';
+import '../domain/listing_check.dart';
 import '../domain/pipeline.dart';
 import '../domain/profile.dart';
 import 'common.dart';
@@ -178,6 +179,7 @@ class JobTile extends StatelessWidget {
     final pay = shortSalary(j);
     final closingSoon =
         j.closing != null && j.closing!.compareTo(addDays(now, 7)) <= 0 && j.closing!.compareTo(now) >= 0;
+    final check = checkListing(j, today: now);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Tilt(
@@ -237,6 +239,16 @@ class JobTile extends StatelessWidget {
                       if (j.remote) const Pill('Remote', icon: Icons.public),
                       if (j.country.isNotEmpty) Pill(Country.nameOf(j.country)),
                       Pill('via ${sourceName(j.source)}'),
+                      if (check.official)
+                        const Pill('Official site', status: Status.good, icon: Icons.verified_outlined),
+                      if (check.problems.isNotEmpty)
+                        const Pill('Closed', status: Status.serious, icon: Icons.event_busy)
+                      else if (check.cautions.isNotEmpty)
+                        const Pill(
+                          'Check it first',
+                          status: Status.warning,
+                          icon: Icons.warning_amber_rounded,
+                        ),
                       if (j.status == 'applied') const Pill('Applied', status: Status.good, icon: Icons.send),
                     ],
                   ),

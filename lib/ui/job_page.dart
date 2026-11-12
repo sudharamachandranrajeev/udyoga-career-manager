@@ -9,6 +9,7 @@ import '../db/database.dart';
 import '../domain/countries.dart';
 import '../domain/insights.dart';
 import '../domain/json.dart';
+import '../domain/listing_check.dart';
 import '../domain/n8n.dart';
 import '../domain/pipeline.dart';
 import '../domain/resume.dart';
@@ -104,6 +105,19 @@ class JobPage extends ConsumerWidget {
       ),
       children: [
         _Header(j, fit: fit, heroTag: heroTag),
+        if (checkListing(j, today: today()) case final check when !check.clear)
+          SectionCard(
+            title: check.problems.isEmpty ? 'Check before applying' : 'This job has closed',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final p in check.problems)
+                  Padding(padding: const EdgeInsets.only(bottom: 6), child: StatusLabel(Status.serious, p)),
+                for (final c in check.cautions)
+                  Padding(padding: const EdgeInsets.only(bottom: 6), child: StatusLabel(Status.warning, c)),
+              ],
+            ),
+          ),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -411,6 +425,8 @@ class _Header extends StatelessWidget {
               if (j.remote) const Pill('Remote', icon: Icons.public),
               if (j.country.isNotEmpty) Pill(Country.nameOf(j.country), icon: Icons.place_outlined),
               if (j.posted != null) Pill('Posted ${niceDate(j.posted!)}'),
+              if (checkListing(j, today: now).official)
+                const Pill('Official site', status: Status.good, icon: Icons.verified_outlined),
               if (j.closing != null)
                 Pill(
                   'Closes ${niceDate(j.closing!)} (${relativeDay(j.closing!, now)})',

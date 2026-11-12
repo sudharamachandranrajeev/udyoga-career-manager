@@ -115,6 +115,13 @@ final eventsProvider = _rows<$JobEventsTable, JobEvent>(
   orderBy: [(e) => OrderingTerm.desc(e.at)],
 );
 
+final checksProvider = _rows<$JobChecksTable, JobCheck>((db) => db.jobChecks);
+
+final archiveProvider = _rows<$JobArchiveTable, Archived>(
+  (db) => db.jobArchive,
+  orderBy: [(a) => OrderingTerm.desc(a.at)],
+);
+
 final leadsProvider = _rows<$CareerContactsTable, Lead>(
   (db) => db.careerContacts,
   orderBy: [(c) => OrderingTerm(expression: c.name)],

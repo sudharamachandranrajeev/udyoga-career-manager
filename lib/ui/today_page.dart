@@ -11,6 +11,7 @@ import 'common.dart';
 import 'contacts_page.dart';
 import 'jobs_page.dart';
 import 'look.dart';
+import 'offer_checks.dart';
 
 /// Next steps, from setting up to the day's chasing.
 List<({IconData icon, String text})> nextSteps({
@@ -67,6 +68,12 @@ class TodayPage extends ConsumerWidget {
         .where((l) => l.followUp != null && l.followUp!.compareTo(now) <= 0 && l.status != 'cold')
         .toList();
     final byId = {for (final a in apps) a.id: a};
+    // Offer paperwork has hard deadlines (HSC: 5 working days), so it shows
+    // two days ahead.
+    final checks = checksDue(
+      ref.watch(checksProvider).value ?? const <JobCheck>[],
+      addDays(now, 2),
+    ).where((c) => byId.containsKey(c.applicationId)).toList();
     final interviews =
         events
             .where(
@@ -192,6 +199,26 @@ class TodayPage extends ConsumerWidget {
             title: 'Follow up today',
             child: Column(
               children: [for (final a in dueApps) ApplicationTile(a), for (final l in dueLeads) LeadTile(l)],
+            ),
+          ),
+        if (checks.isNotEmpty)
+          SectionCard(
+            title: 'Offer checks due',
+            child: Column(
+              children: [
+                for (final c in checks)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(checkStatus(c, now).icon, color: checkStatus(c, now).color),
+                    title: Text(c.title),
+                    subtitle: Text(
+                      '${byId[c.applicationId]!.title} · due ${niceDate(c.due!)} (${relativeDay(c.due!, now)})',
+                    ),
+                    onTap: () =>
+                        Navigator.of(context)
+                            .push(MaterialPageRoute(builder: (_) => ApplicationPage(c.applicationId))),
+                  ),
+              ],
             ),
           ),
         if (closing.isNotEmpty)

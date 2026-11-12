@@ -466,7 +466,7 @@ class CareerBook {
         );
         final kind = eventKinds.entries.where((e) => e.value.$2 == stage).firstOrNull?.key ?? 'note';
         await _event(id, kind, summary.isNotEmpty ? summary : stage.label, at ?? '${date}T${_clock()}');
-        if (stage == Stage.checks && from != Stage.checks) await _startChecks(id, date);
+        if (stage == Stage.checks && from != Stage.checks) await startChecks(id, date);
         if (stage == Stage.accepted) await _flagOthers(a, date);
       });
 
@@ -525,7 +525,9 @@ class CareerBook {
 
   static const _formsDue = {'identity', 'references', 'criminal_record', 'health', 'qualifications', 'forms'};
 
-  Future<void> _startChecks(String applicationId, String date) async {
+  /// Adds the offer-to-start checklist ([offerSteps]) unless the
+  /// application has one; forms are due 5 working days after [date].
+  Future<void> startChecks(String applicationId, String date) async {
     final existing = await checks(applicationId);
     if (existing.isNotEmpty) return;
     for (final (kind, title) in offerSteps) {

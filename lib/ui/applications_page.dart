@@ -12,6 +12,7 @@ import '../domain/calendar.dart';
 import '../domain/pipeline.dart';
 import 'common.dart';
 import 'look.dart';
+import 'offer_checks.dart';
 import 'job_page.dart';
 import 'resume_page.dart';
 import 'site_page.dart';
@@ -21,7 +22,9 @@ const _eventIcons = {
   'followup': Icons.mark_email_read_outlined,
   'reply': Icons.mark_email_unread_outlined,
   'interview': Icons.record_voice_over_outlined,
+  'waitlist': Icons.format_list_numbered,
   'offer': Icons.celebration_outlined,
+  'checks': Icons.checklist,
   'accepted': Icons.handshake_outlined,
   'rejected': Icons.block,
   'withdrawn': Icons.undo,
@@ -582,7 +585,9 @@ class ApplicationPage extends ConsumerWidget {
             ],
           ),
         ),
-        if (stage.open)
+        // Closed applications keep a reminder too: ask for feedback after a
+        // rejection, withdraw the others after accepting.
+        if (stage.open || a.followUp != null)
           SectionCard(
             title: 'Follow-up',
             hint: 'apps.followup',
@@ -637,6 +642,7 @@ class ApplicationPage extends ConsumerWidget {
               ],
             ),
           ),
+        ChecksSection(a),
         if (stage == Stage.rejected && hasAi)
           SectionCard(
             title: 'Feedback',
@@ -678,6 +684,7 @@ class ApplicationPage extends ConsumerWidget {
                       Navigator.of(context).push(MaterialPageRoute(builder: (_) => ResumePage(cv.id))),
                 ),
         ),
+        KeptCopiesSection(id),
         SectionCard(
           title: 'Timeline',
           child: events.isEmpty

@@ -78,6 +78,9 @@ const leadKinds = {
   'other': 'Other',
 };
 
+/// Where a pre-employment check stands.
+const checkStatuses = {'todo': 'To do', 'sent': 'Sent, waiting', 'done': 'Done', 'not_needed': 'Not needed'};
+
 const leadStatuses = {
   'new': 'Not contacted',
   'contacted': 'Contacted',

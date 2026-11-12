@@ -13,9 +13,11 @@ import 'package:udyoga/db/database.dart';
 import 'package:udyoga/domain/answer_pack.dart';
 import 'package:udyoga/domain/book.dart';
 import 'package:udyoga/domain/feeds.dart';
+import 'package:udyoga/domain/listing_check.dart';
 import 'package:udyoga/domain/insights.dart';
 import 'package:udyoga/domain/pipeline.dart';
 import 'package:udyoga/domain/profile.dart';
+import 'package:udyoga/ui/applications_page.dart';
 import 'package:udyoga/ui/site_page.dart';
 
 import 'app_harness.dart';
@@ -413,5 +415,137 @@ void main() {
     await tester.runAsync(() async => jobs = await h.book.db.select(h.book.db.jobListings).get());
     expect(jobs, hasLength(1), reason: 'saving the same page twice keeps one job');
     await h.close();
+  });
+
+  testWidgets('the offer checklist and kept copies are managed on the application', (tester) async {
+    final h = AppHarness(tester)..desktop();
+    late String appId;
+    final now = today();
+    await h.open(
+      seed: (b) async {
+        await b.saveProfile(clerk);
+        final id = (await b.importPostings(
+          [nhs('e', 'Ward Clerk', 'Example Leeds Hospitals Trust', 'Leeds', closing: addDays(now, 10))],
+          clerk,
+          today: now,
+        )).single;
+        appId = await b.applyFor(await b.job(id), today: now, sent: true);
+        await b.moveTo(appId, Stage.offer, date: now);
+        await b.moveTo(appId, Stage.checks, date: now);
+      },
+    );
+    await h.run();
+    // Forms are due in 5 working days: not on Today yet.
+    expect(find.text('Offer checks due'), findsNothing);
+
+    unawaited(
+      Navigator.of(tester.element(find.byType(Scaffold).first))
+          .push(MaterialPageRoute<void>(builder: (_) => ApplicationPage(appId))),
+    );
+    await h.settle();
+    expect(find.text('Offer and checks'), findsOneWidget);
+    expect(find.text('0 of 9 done'), findsOneWidget);
+
+    await h.tap(find.textContaining('Identity and right to work').first);
+    await h.tap(find.text('To do').last);
+    await h.tapText('Done');
+    await h.tapText('Save');
+    expect(find.text('1 of 9 done'), findsOneWidget);
+
+    await h.tap(find.text('Advert').first);
+    expect(find.textContaining('Patient administration, appointment booking'), findsOneWidget);
+    expect(find.byTooltip('Copy the text'), findsOneWidget);
+
+    late List<JobCheck> checks;
+    await tester.runAsync(() async => checks = await h.book.checks(appId));
+    expect(checks.firstWhere((c) => c.kind == 'identity').status, 'done');
+    expect(checks.firstWhere((c) => c.kind == 'identity').done, now);
+    await h.close();
+  });
+
+  testWidgets('Today lists offer checks due in the next two days', (tester) async {
+    final h = AppHarness(tester)..desktop();
+    final now = today();
+    await h.open(
+      seed: (b) async {
+        final id = (await b.importPostings(
+          [nhs('f', 'Medical Secretary', 'Example Leeds Hospitals Trust', 'Leeds')],
+          clerk,
+          today: now,
+        )).single;
+        final app = await b.applyFor(await b.job(id), today: now, sent: true);
+        await b.addCheck(app, kind: 'other', title: 'Send the FRMPEC4 declaration', due: addDays(now, 1));
+        await b.addCheck(app, kind: 'other', title: 'Book the uniform fitting', due: addDays(now, 9));
+      },
+    );
+    await h.run();
+    expect(find.text('Offer checks due'), findsOneWidget);
+    expect(find.text('Send the FRMPEC4 declaration'), findsOneWidget);
+    expect(find.text('Book the uniform fitting'), findsNothing);
+    await h.close();
+  });
+
+  test('flags closed, stale and suspicious listings, and trusts official sites', () async {
+    Future<Job> add(Posting p) async => book.job(await job(p));
+
+    final live = checkListing(
+      await add(nhs('g', 'Ward Clerk', 'Example Leeds Hospitals Trust', 'Leeds', closing: '2026-11-20')),
+      today: '2026-11-12',
+    );
+    expect(live.official, isTrue);
+    expect(live.clear, isTrue);
+
+    final closed = checkListing(
+      await add(nhs('h', 'Medical Secretary', 'Example Trust', 'Leeds', closing: '2026-11-10')),
+      today: '2026-11-12',
+    );
+    expect(closed.problems.single, contains('Closed'));
+
+    final hsc = checkListing(
+      await add(
+        const Posting(
+          source: 'manual',
+          sourceId: 'x',
+          title: 'Admin Officer',
+          company: 'Belfast Trust',
+          url: 'https://jobs.hscni.net/Job/1/admin-officer',
+          posted: '2026-11-01',
+        ),
+      ),
+      today: '2026-11-12',
+    );
+    expect(hsc.official, isTrue);
+
+    final stale = checkListing(
+      await add(
+        const Posting(
+          source: 'reed',
+          sourceId: 'old',
+          title: 'Receptionist',
+          company: 'Example Clinic',
+          posted: '2026-09-01',
+        ),
+      ),
+      today: '2026-11-12',
+    );
+    expect(stale.official, isFalse);
+    expect(stale.cautions.single, contains('no closing date'));
+
+    final scam = checkListing(
+      await add(
+        const Posting(
+          source: 'adzuna',
+          sourceId: 'scam',
+          title: 'NHS Admin Assistant, start today',
+          company: 'Health Staffing',
+          description:
+              'No interview. Pay the DBS registration fee and send your bank details '
+              'to hr.healthjobs@gmail.com or message us on WhatsApp.',
+          posted: '2026-11-10',
+        ),
+      ),
+      today: '2026-11-12',
+    );
+    expect(scam.cautions, hasLength(5), reason: scam.cautions.join('\n'));
   });
 }
