@@ -74,6 +74,7 @@ const leadKinds = {
   'referral': 'Referral',
   'peer': 'Peer in the field',
   'mentor': 'Mentor',
+  'referee': 'Referee',
   'other': 'Other',
 };
 

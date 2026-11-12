@@ -13,6 +13,7 @@ import '../domain/profile.dart';
 import 'common.dart';
 import 'job_page.dart';
 import 'look.dart';
+import 'site_page.dart';
 
 class JobsPage extends ConsumerStatefulWidget {
   const JobsPage({super.key});
@@ -347,7 +348,8 @@ Future<void> showPortals(BuildContext context, WidgetRef ref) async {
                   leading: const Icon(Icons.open_in_new, size: 18),
                   title: Text(portal.name),
                   subtitle: portal.note.isEmpty ? null : Text(portal.note),
-                  onTap: () => openUri(context, portal.link(term, _place(p, c))),
+                  onTap: () =>
+                      openSite(context, url: '${portal.link(term, _place(p, c))}', title: portal.name),
                 ),
             ],
           ],
@@ -360,6 +362,60 @@ Future<void> showPortals(BuildContext context, WidgetRef ref) async {
 String _place(CandidateProfile p, String country) {
   if (country == p.country && p.targets.locations.isNotEmpty) return p.targets.locations.first;
   return Country.nameOf(country);
+}
+
+/// A job from its advert: read by the AI when one is set up (null when it
+/// finds no advert there), otherwise from what the user typed or the page
+/// title.
+Future<Posting?> readPosting(
+  WidgetRef ref, {
+  required String url,
+  required String text,
+  String title = '',
+  String company = '',
+  String location = '',
+}) async {
+  final p = await ref.read(profileProvider.future);
+  final sourceId = url.isNotEmpty ? url : newId();
+  if (await ref.read(advisorProvider.future) != null && (url.isNotEmpty || text.isNotEmpty)) {
+    final advisor = await requireAdvisor(ref);
+    final a = await advisor.readAdvert(url: url, text: text);
+    if (str(a['title']).isEmpty) return null;
+    return Posting(
+      source: 'manual',
+      sourceId: sourceId,
+      title: str(a['title']),
+      company: str(a['company']),
+      location: str(a['location']),
+      country: str(a['country']).toUpperCase(),
+      remote: a['remote'] == true,
+      salaryText: str(a['salaryText']),
+      url: url,
+      description: str(a['description']).isNotEmpty ? str(a['description']) : text,
+      posted: str(a['posted']).length == 10 ? str(a['posted']) : null,
+      closing: str(a['closing']).length == 10 ? str(a['closing']) : null,
+    );
+  }
+  return Posting(
+    source: 'manual',
+    sourceId: sourceId,
+    title: title,
+    company: company,
+    location: location,
+    country: p.country,
+    url: url,
+    description: text,
+  );
+}
+
+/// Saves [posting] to the user's jobs. Returns its id, or null when it is
+/// already on the list.
+Future<String?> saveAdvert(WidgetRef ref, Posting posting) async {
+  final p = await ref.read(profileProvider.future);
+  final added = await ref.mutate((s) => s.book.importPostings([posting], p, today: today()));
+  final id = added.firstOrNull;
+  if (id != null) await ref.mutate((s) => s.book.setJobStatus(id, 'saved'));
+  return id;
 }
 
 /// Adds a job from its link or advert text (read by the AI), or typed in.
@@ -395,44 +451,18 @@ Future<void> addJob(BuildContext context, WidgetRef ref) async {
       if (link.isNotEmpty && !(Uri.tryParse(link)?.hasScheme ?? false)) {
         return 'The link starts with https://';
       }
-      final p = await ref.read(profileProvider.future);
-      Posting posting;
-      if (hasAi && (link.isNotEmpty || text.isNotEmpty)) {
-        final advisor = await requireAdvisor(ref);
-        final a = await advisor.readAdvert(url: link, text: text);
-        posting = Posting(
-          source: 'manual',
-          sourceId: link.isNotEmpty ? link : newId(),
-          title: str(a['title']),
-          company: str(a['company']),
-          location: str(a['location']),
-          country: str(a['country']).toUpperCase(),
-          remote: a['remote'] == true,
-          salaryText: str(a['salaryText']),
-          url: link,
-          description: str(a['description']).isNotEmpty ? str(a['description']) : text,
-          posted: str(a['posted']).length == 10 ? str(a['posted']) : null,
-          closing: str(a['closing']).length == 10 ? str(a['closing']) : null,
-        );
-        if (posting.title.isEmpty) return 'The AI could not read a job advert there. Paste the text instead.';
-      } else {
-        if (title.text.trim().isEmpty) return 'Enter the job title.';
-        posting = Posting(
-          source: 'manual',
-          sourceId: link.isNotEmpty ? link : newId(),
-          title: title.text.trim(),
-          company: company.text.trim(),
-          location: location.text.trim(),
-          country: p.country,
-          url: link,
-          description: text,
-        );
-      }
-      final added = await ref.mutate((s) => s.book.importPostings([posting], p, today: today()));
-      id = added.firstOrNull;
-      if (id == null) return 'That job is already on your list.';
-      await ref.mutate((s) => s.book.setJobStatus(id!, 'saved'));
-      return null;
+      if (!hasAi && title.text.trim().isEmpty) return 'Enter the job title.';
+      final posting = await readPosting(
+        ref,
+        url: link,
+        text: text,
+        title: title.text.trim(),
+        company: company.text.trim(),
+        location: location.text.trim(),
+      );
+      if (posting == null) return 'The AI could not read a job advert there. Paste the text instead.';
+      id = await saveAdvert(ref, posting);
+      return id == null ? 'That job is already on your list.' : null;
     },
   );
   if (ok && id != null && context.mounted) {

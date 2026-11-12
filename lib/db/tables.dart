@@ -123,7 +123,7 @@ class JobArchive extends Table with SyncedRow {
 class CareerContacts extends Table with SyncedRow {
   TextColumn get name => text()();
 
-  /// recruiter | hiring_manager | referral | peer | mentor | other
+  /// recruiter | hiring_manager | referral | peer | mentor | referee | other
   TextColumn get kind => text().withDefault(const Constant('recruiter'))();
   TextColumn get title => text().withDefault(const Constant(''))();
   TextColumn get company => text().withDefault(const Constant(''))();

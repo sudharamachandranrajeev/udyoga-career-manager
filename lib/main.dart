@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
+import 'package:desktop_webview_window/desktop_webview_window.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,8 +15,11 @@ import 'app/session.dart';
 import 'domain/update.dart';
 import 'ui/look.dart';
 
-Future<void> main() async {
+Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+  // The in-app site window's title bar (back, forward, reload) runs as its
+  // own Flutter engine started through main.
+  if (runWebViewTitleBarWidget(args)) return;
   await _start();
 }
 

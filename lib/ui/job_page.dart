@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +19,7 @@ import 'interview_page.dart';
 import 'jobs_page.dart';
 import 'look.dart';
 import 'resume_page.dart';
+import 'site_page.dart';
 
 const _verdicts = {
   'strong': ('Strong fit', Status.good),
@@ -66,7 +69,7 @@ class JobPage extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.open_in_new),
             tooltip: 'Open the advert',
-            onPressed: () => openLink(context, j.url),
+            onPressed: () => openSite(context, url: j.url, title: j.title),
           ),
         PopupMenuButton<String>(
           onSelected: (v) => switch (v) {
@@ -327,9 +330,13 @@ class JobPage extends ConsumerWidget {
     );
     if (sent == null || !context.mounted) return;
     final appId = await ref.mutate((s) => s.book.applyFor(j, today: today(), sent: sent));
-    if (j.url.isNotEmpty && !sent && context.mounted) await openLink(context, j.url);
-    if (context.mounted) {
-      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ApplicationPage(appId)));
+    if (!context.mounted) return;
+    final nav = Navigator.of(context);
+    unawaited(nav.push(MaterialPageRoute(builder: (_) => ApplicationPage(appId))));
+    // Preparing: the site opens in Udyoga with the answers beside it, and
+    // closing it lands on the application.
+    if (j.url.isNotEmpty && !sent) {
+      unawaited(openSite(context, url: j.url, title: j.title, applicationId: appId));
     }
   }
 

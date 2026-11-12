@@ -1,17 +1,22 @@
 // Local capability check (2026-11-12): follow-up and tracking for a made-up
 // health-sector clerical candidate aiming at Leeds, with Northern Ireland as
 // a backup. Each test states what the candidate needs; a failure is a gap.
+import 'dart:async';
 import 'dart:io';
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:drift/native.dart';
+import 'package:drift/drift.dart' show Value;
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:udyoga/db/database.dart';
+import 'package:udyoga/domain/answer_pack.dart';
 import 'package:udyoga/domain/book.dart';
 import 'package:udyoga/domain/feeds.dart';
 import 'package:udyoga/domain/insights.dart';
 import 'package:udyoga/domain/pipeline.dart';
 import 'package:udyoga/domain/profile.dart';
+import 'package:udyoga/ui/site_page.dart';
 
 import 'app_harness.dart';
 import 'support.dart';
@@ -271,6 +276,142 @@ void main() {
       findsWidgets,
       reason: 'Today should warn that the advert closes before the application is sent',
     );
+    await h.close();
+  });
+
+  test('the answer pack fills the NHS form sections from the profile and referees', () async {
+    final referee = Lead(
+      id: 'r',
+      hlc: '',
+      deleted: false,
+      name: 'Sam Manager',
+      kind: 'referee',
+      title: 'Ward Manager',
+      company: 'Example Hospital',
+      email: 'sam@example.org',
+      phone: '',
+      linkedin: '',
+      source: '',
+      status: 'new',
+      notes: '',
+    );
+    final pack = answerPack(clerk, statement: 'I keep ward records accurate.', referees: [referee]);
+    final byTitle = {for (final s in pack) s.title: s};
+    expect(byTitle['Personal details']!.text, startsWith('Jordan Example'));
+    final history = byTitle['Employment history (most recent first)']!.text;
+    expect(history.indexOf('Ward Clerk'), lessThan(history.indexOf('Retail Supervisor')));
+    expect(history, contains('2022-01 to present'));
+    expect(byTitle['Supporting information']!.text, 'I keep ward records accurate.');
+    expect(byTitle['References']!.text, contains('Sam Manager\nWard Manager, Example Hospital'));
+    expect(byTitle.containsKey('Gaps in employment to explain'), isFalse, reason: 'no gap over 3 months');
+    expect(packText(pack), contains('Supporting information\nI keep ward records accurate.'));
+
+    final bare = answerPack(clerk);
+    expect(bare.firstWhere((s) => s.title == 'References').ready, isFalse);
+    expect(bare.firstWhere((s) => s.title == 'References').missing, contains('Referee'));
+  });
+
+  test('employment gaps over three months are listed to explain', () {
+    expect(
+      employmentGaps(const [
+        Experience(title: 'A', start: '2016-02', end: '2019-04'),
+        Experience(title: 'B', start: '2014-01', end: '2015-06'),
+        Experience(title: 'C', start: '2019-06'),
+      ]),
+      ['2015-07 to 2016-01'],
+    );
+  });
+
+  testWidgets('applies on the site in Udyoga: answers beside it, page copy kept, marked sent', (
+    tester,
+  ) async {
+    final h = AppHarness(tester)..desktop();
+    late String appId;
+    await h.open(
+      seed: (b) async {
+        await b.saveProfile(clerk);
+        final id = (await b.importPostings(
+          [nhs('d', 'Ward Clerk', 'Example Leeds Hospitals Trust', 'Leeds', closing: addDays(today(), 10))],
+          clerk,
+          today: today(),
+        )).single;
+        appId = await b.applyFor(await b.job(id), today: today());
+        await b.save(
+          b.db.careerContacts,
+          const CareerContactsCompanion(id: Value('r'), name: Value('Sam Manager'), kind: Value('referee')),
+          'r',
+        );
+      },
+    );
+    await h.run();
+    h.browser.current = (
+      url: 'https://example.org/vacancy/d',
+      title: 'Ward Clerk - NHS Jobs',
+      text: 'Ward Clerk. Closing date 10 days away.',
+    );
+    unawaited(
+      openSite(
+        tester.element(find.byType(Scaffold).first),
+        url: 'https://example.org/vacancy/d',
+        title: 'Ward Clerk',
+        applicationId: appId,
+      ),
+    );
+    await h.settle();
+    expect(h.browser.opened, ['https://example.org/vacancy/d']);
+    expect(find.text('Employment history (most recent first)'), findsOneWidget);
+    expect(find.textContaining('Sam Manager'), findsOneWidget);
+
+    await h.tap(find.byTooltip('Keep a copy of this page'));
+    await h.tapText('I have submitted it');
+    await h.tapText('It is sent');
+
+    late JobApplication a;
+    late List<Archived> kept;
+    await tester.runAsync(() async {
+      a = await h.book.application(appId);
+      kept = await h.book.archived(appId);
+    });
+    expect(a.stage, 'applied');
+    expect(a.applied, today());
+    expect(kept.map((k) => k.kind), containsAll(['advert', 'application']));
+    expect(
+      kept.firstWhere((k) => k.content.startsWith('Ward Clerk. Closing')).url,
+      'https://example.org/vacancy/d',
+    );
+    expect(kept.firstWhere((k) => k.kind == 'application').content, contains('Sam Manager'));
+    await h.close();
+  });
+
+  testWidgets('saves the HSC job on screen from the in-app browser', (tester) async {
+    final h = AppHarness(tester)..desktop();
+    await h.open(seed: (b) => b.saveProfile(clerk));
+    await h.run();
+    h.browser.current = (
+      url: 'https://jobs.hscni.net/Job/12345/ward-clerk',
+      title: 'Ward Clerk | HSC Jobs',
+      text: 'Ward Clerk, Belfast. Band 3. Closing date 1 December 2026.',
+    );
+    unawaited(
+      openSite(
+        tester.element(find.byType(Scaffold).first),
+        url: 'https://jobs.hscni.net/',
+        title: 'HSC Jobs',
+      ),
+    );
+    await h.settle();
+    await h.tap(find.byTooltip('Save this job'));
+    late List<Job> jobs;
+    await tester.runAsync(() async => jobs = await h.book.db.select(h.book.db.jobListings).get());
+    final saved = jobs.single;
+    expect(saved.title, 'Ward Clerk');
+    expect(saved.status, 'saved');
+    expect(saved.url, 'https://jobs.hscni.net/Job/12345/ward-clerk');
+    expect(saved.description, contains('Belfast'));
+
+    await h.tap(find.byTooltip('Save this job'));
+    await tester.runAsync(() async => jobs = await h.book.db.select(h.book.db.jobListings).get());
+    expect(jobs, hasLength(1), reason: 'saving the same page twice keeps one job');
     await h.close();
   });
 }

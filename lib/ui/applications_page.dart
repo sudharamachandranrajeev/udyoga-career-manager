@@ -14,6 +14,7 @@ import 'common.dart';
 import 'look.dart';
 import 'job_page.dart';
 import 'resume_page.dart';
+import 'site_page.dart';
 
 const _eventIcons = {
   'applied': Icons.send_outlined,
@@ -524,8 +525,8 @@ class ApplicationPage extends ConsumerWidget {
         if (a.url.isNotEmpty)
           IconButton(
             icon: const Icon(Icons.open_in_new),
-            tooltip: 'Open the advert',
-            onPressed: () => openLink(context, a.url),
+            tooltip: 'Open the site with your answers',
+            onPressed: () => openSite(context, url: a.url, title: a.title, applicationId: a.id),
           ),
         IconButton(
           icon: const Icon(Icons.delete_outline),
