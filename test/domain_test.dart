@@ -466,6 +466,47 @@ void main() {
       expect(p.description, isNot(contains('<')));
     });
 
+    test('NHS Jobs results become postings, filtered to the searched role', () async {
+      final asked = <Uri>[];
+      final client = MockClient((request) async {
+        asked.add(request.url);
+        return http.Response.bytes(
+          utf8.encode('''<?xml version='1.0' encoding='UTF-8'?><nhsJobs>
+<vacancyDetails><id>101</id><reference>C1-26-1</reference><title>Ward Clerk</title>
+<description>Join our ward team &amp; support patients</description><employer>Example Hospitals Trust</employer>
+<type>Permanent</type><salary>£25760.00 to £27476.00</salary><closeDate>2026-11-20</closeDate>
+<postDate>2026-11-06T16:35:24.809709009</postDate><url>https://www.jobs.nhs.uk/candidate/jobadvert/C1-26-1</url>
+<locations><location>Exampletown, EX1 1AA</location></locations></vacancyDetails>
+<vacancyDetails><id>102</id><title>Consultant Physician</title><employer>Example Hospitals Trust</employer>
+<salary>Negotiable</salary><closeDate>2026-11-21</closeDate><url>https://www.jobs.nhs.uk/candidate/jobadvert/C1-26-2</url>
+</vacancyDetails></nhsJobs>'''),
+          200,
+        );
+      });
+      final feed = NhsJobsFeed(client);
+      const q = FeedQuery(terms: ['ward clerk'], country: 'GB', place: 'Exampletown');
+      expect(feed.covers(q), isTrue);
+      expect(feed.covers(const FeedQuery(terms: ['x'], country: 'IE')), isFalse);
+      final p = (await feed.search(q)).single;
+      expect(asked.single.queryParameters, {
+        'keyword': 'ward clerk',
+        'location': 'Exampletown',
+        'distance': '15',
+        'countryCode': 'GB-ENG',
+        'page': '1',
+      });
+      expect((p.source, p.sourceId, p.company), ('nhs', '101', 'Example Hospitals Trust'));
+      expect((p.salaryMin, p.salaryMax, p.currency), (25760, 27476, 'GBP'));
+      expect((p.posted, p.closing), ('2026-11-06', '2026-11-20'));
+      expect(p.description, startsWith('Join our ward team & support patients'));
+      final hourly = NhsJobsFeed.parse(
+        '<nhsJobs><vacancyDetails><id>9</id><title>Receptionist</title><salary>£12.21 to £12.60</salary></vacancyDetails></nhsJobs>',
+      ).single;
+      expect((hourly.salaryMin, hourly.salaryMax, hourly.salaryText), (null, null, '£12.21 to £12.60'));
+      expect(NhsJobsFeed.parse('<nhsJobs/>'), isEmpty);
+      expect(() => NhsJobsFeed.parse('not xml'), throwsA(isA<FeedException>()));
+    });
+
     test('a rejected key is reported as such', () async {
       final feed = ReedFeed(MockClient((_) async => http.Response('', 401)), key: 'k');
       await expectLater(

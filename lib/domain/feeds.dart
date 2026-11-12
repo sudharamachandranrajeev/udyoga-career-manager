@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:xml/xml.dart';
 
 import 'countries.dart';
 import 'json.dart';
@@ -192,6 +193,101 @@ class ReedFeed extends JobFeed {
   }
 }
 
+/// NHS Jobs (England and Wales): the official public search feed
+/// (NHSBSA "Self-Serve Job Adverts API"), no key. Its terms allow extracts
+/// for personal, non-commercial use; each job opens on NHS Jobs.
+class NhsJobsFeed extends JobFeed {
+  NhsJobsFeed(this.client);
+  final http.Client client;
+
+  /// Pages of ten read per search term.
+  static const pages = 3;
+
+  @override
+  String get id => 'nhs';
+  @override
+  String get name => 'NHS Jobs';
+
+  @override
+  bool covers(FeedQuery q) => q.country == 'GB';
+
+  @override
+  Future<List<Posting>> search(FeedQuery q) async {
+    final out = <Posting>[];
+    for (final term in q.terms.take(4)) {
+      for (var page = 1; page <= pages; page++) {
+        final uri = Uri.https('www.jobs.nhs.uk', '/api/v1/search_xml', {
+          'keyword': term,
+          if (q.place.isNotEmpty) ...{'location': q.place, 'distance': '15', 'countryCode': 'GB-ENG'},
+          'page': '$page',
+        });
+        final r = await client
+            .get(uri, headers: {'accept': 'application/xml'})
+            .timeout(const Duration(seconds: 30));
+        if (r.statusCode != 200) throw FeedException('error ${r.statusCode}');
+        final found = parse(utf8.decode(r.bodyBytes));
+        out.addAll(found.where((p) => _mentions(p.title, [term])));
+        if (found.length < 10) break;
+      }
+    }
+    return out;
+  }
+
+  /// The postings in one search_xml response.
+  static List<Posting> parse(String body) {
+    final XmlDocument doc;
+    try {
+      doc = XmlDocument.parse(body);
+    } on XmlException {
+      throw FeedException('NHS Jobs sent something unreadable');
+    }
+    String text(XmlElement e, String name) => e.getElement(name)?.innerText.trim() ?? '';
+    return [
+      for (final v in doc.findAllElements('vacancyDetails'))
+        if (text(v, 'title').isNotEmpty)
+          () {
+            final (min, max) = _pounds(text(v, 'salary'));
+            final places = v
+                .findAllElements('location')
+                .map((l) => l.innerText.trim())
+                .where((l) => l.isNotEmpty);
+            return Posting(
+              source: 'nhs',
+              sourceId: text(v, 'id'),
+              title: text(v, 'title'),
+              company: text(v, 'employer'),
+              location: places.join('; '),
+              country: 'GB',
+              salaryMin: min,
+              salaryMax: max,
+              currency: 'GBP',
+              salaryText: text(v, 'salary'),
+              url: text(v, 'url'),
+              description: [
+                text(v, 'description'),
+                if (text(v, 'type').isNotEmpty) 'Contract: ${text(v, 'type')}.',
+                if (text(v, 'reference').isNotEmpty) 'Reference: ${text(v, 'reference')}.',
+              ].join('\n'),
+              posted: _date(text(v, 'postDate')),
+              closing: _date(text(v, 'closeDate')),
+            );
+          }(),
+    ];
+  }
+
+  /// "£25760.00 to £27476.00" or "£25272.00"; anything else (Negotiable,
+  /// an hourly rate) gives no figures.
+  static (int?, int?) _pounds(String s) {
+    final m = RegExp(r'£([\d,]+)(?:\.\d+)?(?:\s+to\s+£([\d,]+)(?:\.\d+)?)?$').firstMatch(s.trim());
+    if (m == null) return (null, null);
+    int? n(String? x) => x == null ? null : int.tryParse(x.replaceAll(',', ''));
+    final low = n(m[1]);
+    // Hourly rates (£12.21 to £12.60) stay as text only.
+    if (low == null || low < 1000) return (null, null);
+    return (low, n(m[2]) ?? low);
+  }
+}
+
 /// Remotive: remote jobs worldwide, no key. Its terms ask for a link back
 /// (each job opens on Remotive) and at most a few calls a day.
 class RemotiveFeed extends JobFeed {
@@ -346,6 +442,7 @@ class FeedKeys {
 List<JobFeed> allFeeds(http.Client client, FeedKeys keys) => [
   AdzunaFeed(client, appId: keys.adzunaId, appKey: keys.adzunaKey),
   ReedFeed(client, key: keys.reed),
+  NhsJobsFeed(client),
   RemotiveFeed(client),
   JobicyFeed(client),
   ArbeitnowFeed(client),
