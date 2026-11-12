@@ -45,6 +45,10 @@ fi
 if ! ldconfig -p 2>/dev/null | grep libsecret-1.so.0 >/dev/null; then
   echo "Warning: libsecret is not installed. Install it (e.g. libsecret / libsecret-1-0) or Udyoga cannot store its key." >&2
 fi
+# Job sites open in a WebKitGTK window; Udyoga does not start without it.
+if ! ldconfig -p 2>/dev/null | grep libwebkit2gtk-4.1.so.0 >/dev/null; then
+  echo "Warning: WebKitGTK 4.1 is not installed. Install it (e.g. webkit2gtk-4.1 / libwebkit2gtk-4.1-0) or Udyoga cannot start." >&2
+fi
 if command -v busctl >/dev/null && ! busctl --user list 2>/dev/null | grep org.freedesktop.secrets >/dev/null; then
   echo "Note: no keyring service is running right now (GNOME Keyring or KWallet). Udyoga needs one when it starts." >&2
 fi
