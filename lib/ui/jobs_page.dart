@@ -294,6 +294,7 @@ String shortSalary(Job j) {
 String sourceName(String source) => switch (source) {
   'adzuna' => 'Adzuna',
   'reed' => 'Reed',
+  'nhs' => 'NHS Jobs',
   'remotive' => 'Remotive',
   'jobicy' => 'Jobicy',
   'arbeitnow' => 'Arbeitnow',

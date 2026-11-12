@@ -128,7 +128,7 @@ class SettingsPage extends ConsumerWidget {
           ),
           child: Text(
             [
-              'Remotive, Jobicy and Arbeitnow need no key.',
+              'NHS Jobs, Remotive, Jobicy and Arbeitnow need no key.',
               (s?.feeds.adzunaId.isNotEmpty ?? false)
                   ? 'Adzuna is on.'
                   : 'Adzuna (UK, US, India, Australia, Canada, much of Europe) needs a free key.',
