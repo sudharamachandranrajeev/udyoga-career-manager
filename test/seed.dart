@@ -1,8 +1,11 @@
-import 'package:brahma_core/brahma_core.dart' show addDays, isoDate;
+import 'package:brahma_core/brahma_core.dart' show addDays, isoDate, newId;
+import 'package:drift/drift.dart' show Value;
+import 'package:udyoga/db/database.dart';
 import 'package:udyoga/domain/ai.dart';
 import 'package:udyoga/domain/book.dart';
 import 'package:udyoga/domain/companion.dart';
 import 'package:udyoga/domain/companion_book.dart';
+import 'package:udyoga/domain/conversations.dart';
 import 'package:udyoga/domain/insights.dart';
 import 'package:udyoga/domain/pay.dart';
 import 'package:udyoga/domain/pipeline.dart';
@@ -242,5 +245,67 @@ Future<void> seedBook(CareerBook book, {String today = '2026-10-24'}) async {
       sources: [(title: 'Staff survey', url: 'https://example.org/survey')],
     ),
     at: '${today}T09:00',
+  );
+}
+
+/// Conversations for the Conversations page: a LinkedIn thread with a
+/// reply, an e-mail to a personal address awaiting a reply, and an unknown
+/// sender in the Screener. Every person is made up.
+Future<void> seedConversations(CareerBook book) async {
+  Future<String> person(String name, String title, String email, String linkedin) async {
+    final id = newId();
+    await book.save(
+      book.db.careerContacts,
+      CareerContactsCompanion.insert(
+        id: id,
+        name: name,
+        title: Value(title),
+        company: const Value('Example Health Trust'),
+        email: Value(email),
+        linkedin: Value(linkedin),
+        source: const Value('NHS Jobs advert'),
+        sourceKind: const Value('advert'),
+        foundOn: const Value('2026-11-10'),
+      ),
+      id,
+    );
+    return id;
+  }
+
+  final jordan = await person(
+    'Jordan Example',
+    'Practice Manager',
+    '',
+    'https://www.linkedin.com/in/jordan-example-0000',
+  );
+  final sam = await person('Sam Sample', 'Recruitment Lead', 'sam.sample@gmail.com', '');
+  final li = await book.startConversation(contactId: jordan, channel: 'linkedin', at: '2026-11-11T09:00');
+  await book.logSent(
+    li,
+    'Hello Jordan, I saw the practice manager advert.',
+    at: '2026-11-11T09:05',
+    invite: true,
+  );
+  await book.logReply(li, 'Thanks, happy to talk next week.', at: '2026-11-12T16:20');
+  final mail = await book.startConversation(
+    contactId: sam,
+    channel: 'email',
+    account: 'you@example.org',
+    subject: 'Recruitment Lead role',
+    at: '2026-11-13T10:00',
+  );
+  await book.logSent(mail, 'Dear Sam, a question about the role.', at: '2026-11-13T10:00');
+  final unknown = await book.startConversation(
+    channel: 'email',
+    peer: 'someone@example.org',
+    mode: 'api',
+    at: '2026-11-14T08:00',
+  );
+  await book.addMessage(
+    unknown,
+    direction: 'in',
+    body: 'Are you open to new roles?',
+    at: '2026-11-14T08:00',
+    source: 'api',
   );
 }

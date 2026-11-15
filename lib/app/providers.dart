@@ -14,6 +14,7 @@ import '../domain/claude.dart';
 import '../domain/claude_code.dart';
 import '../domain/codex.dart';
 import '../domain/companion_service.dart';
+import '../domain/conversations.dart';
 import '../domain/gemini.dart';
 import '../domain/insights.dart';
 import '../domain/pay.dart';
@@ -183,6 +184,37 @@ final storiesProvider = _rows<$CareerStoriesTable, Story>(
     (s) => OrderingTerm.desc(s.added),
   ],
 );
+
+final handlesProvider = _rows<$ContactHandlesTable, ContactHandle>((db) => db.contactHandles);
+
+/// Every conversation with its person and newest message, newest first.
+final threadRowsProvider = FutureProvider<List<ThreadRow>>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.threadRows();
+});
+
+/// A thread's messages and notes, oldest first.
+final threadMessagesProvider = FutureProvider.family<List<ThreadMessage>, String>((ref, id) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.messagesIn(id);
+});
+
+/// What the user has sent by hand on LinkedIn lately (see [Pace]).
+final paceProvider = FutureProvider<Pace>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.pace(DateTime.now());
+});
+
+/// Contact records that look like the same person.
+final mergeSuggestionsProvider = FutureProvider<List<MergeSuggestion>>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.mergeSuggestions();
+});
+
+/// The channels Udyoga can send on by itself, once the user connects an
+/// account (e-mail, Bluesky). Empty until then: every message is sent by
+/// the user and logged. LinkedIn never has one.
+final channelSendersProvider = Provider<List<ChannelSender>>((ref) => const []);
 
 /// The folders this device reads documents from.
 final documentFoldersProvider = FutureProvider<List<String>>((ref) {
