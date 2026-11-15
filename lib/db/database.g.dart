@@ -10836,6 +10836,558 @@ class MessagesCompanion extends UpdateCompanion<ThreadMessage> {
   }
 }
 
+class $CareerPostsTable extends CareerPosts with TableInfo<$CareerPostsTable, PlannedPost> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CareerPostsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hlcMeta = const VerificationMeta('hlc');
+  @override
+  late final GeneratedColumn<String> hlc = GeneratedColumn<String>(
+    'hlc',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta('deleted');
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("deleted" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _channelMeta = const VerificationMeta('channel');
+  @override
+  late final GeneratedColumn<String> channel = GeneratedColumn<String>(
+    'channel',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('linkedin'),
+  );
+  static const VerificationMeta _atMeta = const VerificationMeta('at');
+  @override
+  late final GeneratedColumn<String> at = GeneratedColumn<String>(
+    'at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _topicMeta = const VerificationMeta('topic');
+  @override
+  late final GeneratedColumn<String> topic = GeneratedColumn<String>(
+    'topic',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _humanizedMeta = const VerificationMeta('humanized');
+  @override
+  late final GeneratedColumn<String> humanized = GeneratedColumn<String>(
+    'humanized',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('planned'),
+  );
+  static const VerificationMeta _postUrlMeta = const VerificationMeta('postUrl');
+  @override
+  late final GeneratedColumn<String> postUrl = GeneratedColumn<String>(
+    'post_url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _postedAtMeta = const VerificationMeta('postedAt');
+  @override
+  late final GeneratedColumn<String> postedAt = GeneratedColumn<String>(
+    'posted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    hlc,
+    deleted,
+    channel,
+    at,
+    topic,
+    body,
+    humanized,
+    status,
+    postUrl,
+    postedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'career_posts';
+  @override
+  VerificationContext validateIntegrity(Insertable<PlannedPost> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('hlc')) {
+      context.handle(_hlcMeta, hlc.isAcceptableOrUnknown(data['hlc']!, _hlcMeta));
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(_deletedMeta, deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta));
+    }
+    if (data.containsKey('channel')) {
+      context.handle(_channelMeta, channel.isAcceptableOrUnknown(data['channel']!, _channelMeta));
+    }
+    if (data.containsKey('at')) {
+      context.handle(_atMeta, at.isAcceptableOrUnknown(data['at']!, _atMeta));
+    } else if (isInserting) {
+      context.missing(_atMeta);
+    }
+    if (data.containsKey('topic')) {
+      context.handle(_topicMeta, topic.isAcceptableOrUnknown(data['topic']!, _topicMeta));
+    }
+    if (data.containsKey('body')) {
+      context.handle(_bodyMeta, body.isAcceptableOrUnknown(data['body']!, _bodyMeta));
+    }
+    if (data.containsKey('humanized')) {
+      context.handle(_humanizedMeta, humanized.isAcceptableOrUnknown(data['humanized']!, _humanizedMeta));
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta, status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    }
+    if (data.containsKey('post_url')) {
+      context.handle(_postUrlMeta, postUrl.isAcceptableOrUnknown(data['post_url']!, _postUrlMeta));
+    }
+    if (data.containsKey('posted_at')) {
+      context.handle(_postedAtMeta, postedAt.isAcceptableOrUnknown(data['posted_at']!, _postedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PlannedPost map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PlannedPost(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      hlc: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}hlc'])!,
+      deleted: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}deleted'])!,
+      channel: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}channel'])!,
+      at: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}at'])!,
+      topic: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}topic'])!,
+      body: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}body'])!,
+      humanized: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}humanized'])!,
+      status: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      postUrl: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}post_url'])!,
+      postedAt: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}posted_at']),
+    );
+  }
+
+  @override
+  $CareerPostsTable createAlias(String alias) {
+    return $CareerPostsTable(attachedDatabase, alias);
+  }
+}
+
+class PlannedPost extends DataClass implements Insertable<PlannedPost> {
+  final String id;
+  final String hlc;
+  final bool deleted;
+
+  /// linkedin | bluesky
+  final String channel;
+
+  /// The slot, local time (YYYY-MM-DDTHH:mm).
+  final String at;
+
+  /// What it is about, before there is a draft.
+  final String topic;
+  final String body;
+
+  /// The draft after the humanizer, when the user ran it.
+  final String humanized;
+
+  /// planned | posted | skipped ("due" is a planned post whose time has
+  /// come).
+  final String status;
+
+  /// The post's address, pasted by the user or given by Bluesky.
+  final String postUrl;
+  final String? postedAt;
+  const PlannedPost({
+    required this.id,
+    required this.hlc,
+    required this.deleted,
+    required this.channel,
+    required this.at,
+    required this.topic,
+    required this.body,
+    required this.humanized,
+    required this.status,
+    required this.postUrl,
+    this.postedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['hlc'] = Variable<String>(hlc);
+    map['deleted'] = Variable<bool>(deleted);
+    map['channel'] = Variable<String>(channel);
+    map['at'] = Variable<String>(at);
+    map['topic'] = Variable<String>(topic);
+    map['body'] = Variable<String>(body);
+    map['humanized'] = Variable<String>(humanized);
+    map['status'] = Variable<String>(status);
+    map['post_url'] = Variable<String>(postUrl);
+    if (!nullToAbsent || postedAt != null) {
+      map['posted_at'] = Variable<String>(postedAt);
+    }
+    return map;
+  }
+
+  CareerPostsCompanion toCompanion(bool nullToAbsent) {
+    return CareerPostsCompanion(
+      id: Value(id),
+      hlc: Value(hlc),
+      deleted: Value(deleted),
+      channel: Value(channel),
+      at: Value(at),
+      topic: Value(topic),
+      body: Value(body),
+      humanized: Value(humanized),
+      status: Value(status),
+      postUrl: Value(postUrl),
+      postedAt: postedAt == null && nullToAbsent ? const Value.absent() : Value(postedAt),
+    );
+  }
+
+  factory PlannedPost.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PlannedPost(
+      id: serializer.fromJson<String>(json['id']),
+      hlc: serializer.fromJson<String>(json['hlc']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
+      channel: serializer.fromJson<String>(json['channel']),
+      at: serializer.fromJson<String>(json['at']),
+      topic: serializer.fromJson<String>(json['topic']),
+      body: serializer.fromJson<String>(json['body']),
+      humanized: serializer.fromJson<String>(json['humanized']),
+      status: serializer.fromJson<String>(json['status']),
+      postUrl: serializer.fromJson<String>(json['postUrl']),
+      postedAt: serializer.fromJson<String?>(json['postedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'hlc': serializer.toJson<String>(hlc),
+      'deleted': serializer.toJson<bool>(deleted),
+      'channel': serializer.toJson<String>(channel),
+      'at': serializer.toJson<String>(at),
+      'topic': serializer.toJson<String>(topic),
+      'body': serializer.toJson<String>(body),
+      'humanized': serializer.toJson<String>(humanized),
+      'status': serializer.toJson<String>(status),
+      'postUrl': serializer.toJson<String>(postUrl),
+      'postedAt': serializer.toJson<String?>(postedAt),
+    };
+  }
+
+  PlannedPost copyWith({
+    String? id,
+    String? hlc,
+    bool? deleted,
+    String? channel,
+    String? at,
+    String? topic,
+    String? body,
+    String? humanized,
+    String? status,
+    String? postUrl,
+    Value<String?> postedAt = const Value.absent(),
+  }) => PlannedPost(
+    id: id ?? this.id,
+    hlc: hlc ?? this.hlc,
+    deleted: deleted ?? this.deleted,
+    channel: channel ?? this.channel,
+    at: at ?? this.at,
+    topic: topic ?? this.topic,
+    body: body ?? this.body,
+    humanized: humanized ?? this.humanized,
+    status: status ?? this.status,
+    postUrl: postUrl ?? this.postUrl,
+    postedAt: postedAt.present ? postedAt.value : this.postedAt,
+  );
+  PlannedPost copyWithCompanion(CareerPostsCompanion data) {
+    return PlannedPost(
+      id: data.id.present ? data.id.value : this.id,
+      hlc: data.hlc.present ? data.hlc.value : this.hlc,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+      channel: data.channel.present ? data.channel.value : this.channel,
+      at: data.at.present ? data.at.value : this.at,
+      topic: data.topic.present ? data.topic.value : this.topic,
+      body: data.body.present ? data.body.value : this.body,
+      humanized: data.humanized.present ? data.humanized.value : this.humanized,
+      status: data.status.present ? data.status.value : this.status,
+      postUrl: data.postUrl.present ? data.postUrl.value : this.postUrl,
+      postedAt: data.postedAt.present ? data.postedAt.value : this.postedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlannedPost(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('channel: $channel, ')
+          ..write('at: $at, ')
+          ..write('topic: $topic, ')
+          ..write('body: $body, ')
+          ..write('humanized: $humanized, ')
+          ..write('status: $status, ')
+          ..write('postUrl: $postUrl, ')
+          ..write('postedAt: $postedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, hlc, deleted, channel, at, topic, body, humanized, status, postUrl, postedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PlannedPost &&
+          other.id == this.id &&
+          other.hlc == this.hlc &&
+          other.deleted == this.deleted &&
+          other.channel == this.channel &&
+          other.at == this.at &&
+          other.topic == this.topic &&
+          other.body == this.body &&
+          other.humanized == this.humanized &&
+          other.status == this.status &&
+          other.postUrl == this.postUrl &&
+          other.postedAt == this.postedAt);
+}
+
+class CareerPostsCompanion extends UpdateCompanion<PlannedPost> {
+  final Value<String> id;
+  final Value<String> hlc;
+  final Value<bool> deleted;
+  final Value<String> channel;
+  final Value<String> at;
+  final Value<String> topic;
+  final Value<String> body;
+  final Value<String> humanized;
+  final Value<String> status;
+  final Value<String> postUrl;
+  final Value<String?> postedAt;
+  final Value<int> rowid;
+  const CareerPostsCompanion({
+    this.id = const Value.absent(),
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.channel = const Value.absent(),
+    this.at = const Value.absent(),
+    this.topic = const Value.absent(),
+    this.body = const Value.absent(),
+    this.humanized = const Value.absent(),
+    this.status = const Value.absent(),
+    this.postUrl = const Value.absent(),
+    this.postedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CareerPostsCompanion.insert({
+    required String id,
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.channel = const Value.absent(),
+    required String at,
+    this.topic = const Value.absent(),
+    this.body = const Value.absent(),
+    this.humanized = const Value.absent(),
+    this.status = const Value.absent(),
+    this.postUrl = const Value.absent(),
+    this.postedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       at = Value(at);
+  static Insertable<PlannedPost> custom({
+    Expression<String>? id,
+    Expression<String>? hlc,
+    Expression<bool>? deleted,
+    Expression<String>? channel,
+    Expression<String>? at,
+    Expression<String>? topic,
+    Expression<String>? body,
+    Expression<String>? humanized,
+    Expression<String>? status,
+    Expression<String>? postUrl,
+    Expression<String>? postedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (hlc != null) 'hlc': hlc,
+      if (deleted != null) 'deleted': deleted,
+      if (channel != null) 'channel': channel,
+      if (at != null) 'at': at,
+      if (topic != null) 'topic': topic,
+      if (body != null) 'body': body,
+      if (humanized != null) 'humanized': humanized,
+      if (status != null) 'status': status,
+      if (postUrl != null) 'post_url': postUrl,
+      if (postedAt != null) 'posted_at': postedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CareerPostsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? hlc,
+    Value<bool>? deleted,
+    Value<String>? channel,
+    Value<String>? at,
+    Value<String>? topic,
+    Value<String>? body,
+    Value<String>? humanized,
+    Value<String>? status,
+    Value<String>? postUrl,
+    Value<String?>? postedAt,
+    Value<int>? rowid,
+  }) {
+    return CareerPostsCompanion(
+      id: id ?? this.id,
+      hlc: hlc ?? this.hlc,
+      deleted: deleted ?? this.deleted,
+      channel: channel ?? this.channel,
+      at: at ?? this.at,
+      topic: topic ?? this.topic,
+      body: body ?? this.body,
+      humanized: humanized ?? this.humanized,
+      status: status ?? this.status,
+      postUrl: postUrl ?? this.postUrl,
+      postedAt: postedAt ?? this.postedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (hlc.present) {
+      map['hlc'] = Variable<String>(hlc.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
+    if (channel.present) {
+      map['channel'] = Variable<String>(channel.value);
+    }
+    if (at.present) {
+      map['at'] = Variable<String>(at.value);
+    }
+    if (topic.present) {
+      map['topic'] = Variable<String>(topic.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (humanized.present) {
+      map['humanized'] = Variable<String>(humanized.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (postUrl.present) {
+      map['post_url'] = Variable<String>(postUrl.value);
+    }
+    if (postedAt.present) {
+      map['posted_at'] = Variable<String>(postedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CareerPostsCompanion(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('channel: $channel, ')
+          ..write('at: $at, ')
+          ..write('topic: $topic, ')
+          ..write('body: $body, ')
+          ..write('humanized: $humanized, ')
+          ..write('status: $status, ')
+          ..write('postUrl: $postUrl, ')
+          ..write('postedAt: $postedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PrefsTable extends Prefs with TableInfo<$PrefsTable, Pref> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -11706,6 +12258,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ContactHandlesTable contactHandles = $ContactHandlesTable(this);
   late final $ConversationsTable conversations = $ConversationsTable(this);
   late final $MessagesTable messages = $MessagesTable(this);
+  late final $CareerPostsTable careerPosts = $CareerPostsTable(this);
   late final $PrefsTable prefs = $PrefsTable(this);
   late final $OutboxTable outbox = $OutboxTable(this);
   late final $SyncCursorsTable syncCursors = $SyncCursorsTable(this);
@@ -11733,6 +12286,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     contactHandles,
     conversations,
     messages,
+    careerPosts,
     prefs,
     outbox,
     syncCursors,
@@ -16634,6 +17188,262 @@ typedef $$MessagesTableProcessedTableManager =
       ThreadMessage,
       PrefetchHooks Function()
     >;
+typedef $$CareerPostsTableCreateCompanionBuilder = CareerPostsCompanion Function({
+  required String id,
+  Value<String> hlc,
+  Value<bool> deleted,
+  Value<String> channel,
+  required String at,
+  Value<String> topic,
+  Value<String> body,
+  Value<String> humanized,
+  Value<String> status,
+  Value<String> postUrl,
+  Value<String?> postedAt,
+  Value<int> rowid,
+});
+typedef $$CareerPostsTableUpdateCompanionBuilder = CareerPostsCompanion Function({
+  Value<String> id,
+  Value<String> hlc,
+  Value<bool> deleted,
+  Value<String> channel,
+  Value<String> at,
+  Value<String> topic,
+  Value<String> body,
+  Value<String> humanized,
+  Value<String> status,
+  Value<String> postUrl,
+  Value<String?> postedAt,
+  Value<int> rowid,
+});
+
+class $$CareerPostsTableFilterComposer extends Composer<_$AppDatabase, $CareerPostsTable> {
+  $$CareerPostsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get channel =>
+      $composableBuilder(column: $table.channel, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get at =>
+      $composableBuilder(column: $table.at, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get topic =>
+      $composableBuilder(column: $table.topic, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get humanized =>
+      $composableBuilder(column: $table.humanized, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get postUrl =>
+      $composableBuilder(column: $table.postUrl, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get postedAt =>
+      $composableBuilder(column: $table.postedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$CareerPostsTableOrderingComposer extends Composer<_$AppDatabase, $CareerPostsTable> {
+  $$CareerPostsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get channel =>
+      $composableBuilder(column: $table.channel, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get at =>
+      $composableBuilder(column: $table.at, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get topic =>
+      $composableBuilder(column: $table.topic, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get humanized =>
+      $composableBuilder(column: $table.humanized, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get postUrl =>
+      $composableBuilder(column: $table.postUrl, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get postedAt =>
+      $composableBuilder(column: $table.postedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$CareerPostsTableAnnotationComposer extends Composer<_$AppDatabase, $CareerPostsTable> {
+  $$CareerPostsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get hlc => $composableBuilder(column: $table.hlc, builder: (column) => column);
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
+
+  GeneratedColumn<String> get channel =>
+      $composableBuilder(column: $table.channel, builder: (column) => column);
+
+  GeneratedColumn<String> get at => $composableBuilder(column: $table.at, builder: (column) => column);
+
+  GeneratedColumn<String> get topic => $composableBuilder(column: $table.topic, builder: (column) => column);
+
+  GeneratedColumn<String> get body => $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<String> get humanized =>
+      $composableBuilder(column: $table.humanized, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get postUrl =>
+      $composableBuilder(column: $table.postUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get postedAt =>
+      $composableBuilder(column: $table.postedAt, builder: (column) => column);
+}
+
+class $$CareerPostsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CareerPostsTable,
+          PlannedPost,
+          $$CareerPostsTableFilterComposer,
+          $$CareerPostsTableOrderingComposer,
+          $$CareerPostsTableAnnotationComposer,
+          $$CareerPostsTableCreateCompanionBuilder,
+          $$CareerPostsTableUpdateCompanionBuilder,
+          (PlannedPost, BaseReferences<_$AppDatabase, $CareerPostsTable, PlannedPost>),
+          PlannedPost,
+          PrefetchHooks Function()
+        > {
+  $$CareerPostsTableTableManager(_$AppDatabase db, $CareerPostsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$CareerPostsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$CareerPostsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$CareerPostsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<String> channel = const Value.absent(),
+                Value<String> at = const Value.absent(),
+                Value<String> topic = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<String> humanized = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String> postUrl = const Value.absent(),
+                Value<String?> postedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CareerPostsCompanion(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                channel: channel,
+                at: at,
+                topic: topic,
+                body: body,
+                humanized: humanized,
+                status: status,
+                postUrl: postUrl,
+                postedAt: postedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<String> channel = const Value.absent(),
+                required String at,
+                Value<String> topic = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<String> humanized = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String> postUrl = const Value.absent(),
+                Value<String?> postedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CareerPostsCompanion.insert(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                channel: channel,
+                at: at,
+                topic: topic,
+                body: body,
+                humanized: humanized,
+                status: status,
+                postUrl: postUrl,
+                postedAt: postedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CareerPostsTable, PlannedPost>(table),
+                  BaseReferences<_$AppDatabase, $CareerPostsTable, PlannedPost>(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CareerPostsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CareerPostsTable,
+      PlannedPost,
+      $$CareerPostsTableFilterComposer,
+      $$CareerPostsTableOrderingComposer,
+      $$CareerPostsTableAnnotationComposer,
+      $$CareerPostsTableCreateCompanionBuilder,
+      $$CareerPostsTableUpdateCompanionBuilder,
+      (PlannedPost, BaseReferences<_$AppDatabase, $CareerPostsTable, PlannedPost>),
+      PlannedPost,
+      PrefetchHooks Function()
+    >;
 typedef $$PrefsTableCreateCompanionBuilder = PrefsCompanion Function({
   required String id,
   Value<String> hlc,
@@ -17163,6 +17973,7 @@ class $AppDatabaseManager {
   $$ConversationsTableTableManager get conversations =>
       $$ConversationsTableTableManager(_db, _db.conversations);
   $$MessagesTableTableManager get messages => $$MessagesTableTableManager(_db, _db.messages);
+  $$CareerPostsTableTableManager get careerPosts => $$CareerPostsTableTableManager(_db, _db.careerPosts);
   $$PrefsTableTableManager get prefs => $$PrefsTableTableManager(_db, _db.prefs);
   $$OutboxTableTableManager get outbox => $$OutboxTableTableManager(_db, _db.outbox);
   $$SyncCursorsTableTableManager get syncCursors => $$SyncCursorsTableTableManager(_db, _db.syncCursors);

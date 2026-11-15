@@ -27,6 +27,7 @@ part 'database.g.dart';
     ContactHandles,
     Conversations,
     Messages,
+    CareerPosts,
     Prefs,
     Outbox,
     SyncCursors,
@@ -59,11 +60,12 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     'career_handles',
     'career_conversations',
     'career_messages',
+    'career_posts',
     'prefs',
   ];
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -114,6 +116,12 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
           await customStatement(sql);
         }
       }
+      if (from < 5) {
+        await m.createTable(careerPosts);
+        for (final sql in _v5Indexes) {
+          await customStatement(sql);
+        }
+      }
     },
   );
 
@@ -125,6 +133,7 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     ..._v2Indexes,
     ..._v3Indexes,
     ..._v4Indexes,
+    ..._v5Indexes,
   ];
 
   /// Added in schema 2 (pre-employment checks and the archive).
@@ -147,4 +156,7 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     'CREATE INDEX IF NOT EXISTS career_conversations_last ON career_conversations (last_at)',
     'CREATE INDEX IF NOT EXISTS career_messages_conversation ON career_messages (conversation_id, sent_at)',
   ];
+
+  /// Added in schema 5 (the post plan).
+  static const _v5Indexes = ['CREATE INDEX IF NOT EXISTS career_posts_at ON career_posts (at)'];
 }

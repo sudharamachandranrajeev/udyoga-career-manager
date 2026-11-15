@@ -6,6 +6,7 @@ import '../ui/look.dart';
 import 'check_in_reminder.dart';
 import 'modules.dart';
 import 'navigation.dart';
+import 'post_reminders.dart';
 import 'providers.dart';
 import 'settings_page.dart';
 
@@ -82,10 +83,12 @@ class _RootState extends ConsumerState<_Root> {
         floating: true,
         // The routine refresh: at start-up, then hourly while open (it runs
         // only what is due), and
-        // the check-in reminders for the next two weeks are rescheduled.
+        // the check-in reminders for the next two weeks are rescheduled,
+        // with the post plan's.
         onStart: (ref) {
           Future.microtask(() => ref.read(refreshTickerProvider)).ignore();
           ref.syncReminders().ignore();
+          ref.syncPostPlanReminders().ignore();
         },
       ),
     ),
