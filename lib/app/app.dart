@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../ui/look.dart';
+import 'check_in_reminder.dart';
 import 'modules.dart';
 import 'providers.dart';
 import 'settings_page.dart';
@@ -76,8 +77,12 @@ class _RootState extends ConsumerState<_Root> {
       destinations: allDestinations,
       floating: true,
       // The routine refresh: at start-up, then hourly while open (it runs
-      // only what is due).
-      onStart: (ref) => Future.microtask(() => ref.read(refreshTickerProvider)).ignore(),
+      // only what is due), and
+      // the check-in reminders for the next two weeks are rescheduled.
+      onStart: (ref) {
+        Future.microtask(() => ref.read(refreshTickerProvider)).ignore();
+        ref.syncReminders().ignore();
+      },
     ),
   );
 }

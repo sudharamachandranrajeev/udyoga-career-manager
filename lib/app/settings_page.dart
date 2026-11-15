@@ -10,6 +10,7 @@ import '../domain/n8n.dart';
 import '../domain/subscription.dart';
 import '../domain/update.dart';
 import '../ui/common.dart';
+import 'check_in_reminder.dart';
 import 'providers.dart';
 
 /// Settings for the AI and the job sites, read together.
@@ -170,6 +171,7 @@ class SettingsPage extends ConsumerWidget {
             ],
           ),
         ),
+        const _CheckInCard(),
         if (ref.watch(updaterProvider) case final updater?) _UpdateCard(updater),
         const AppLockCard(),
         const HintsCard(),
@@ -296,6 +298,72 @@ class SettingsPage extends ConsumerWidget {
         );
         return null;
       },
+    );
+  }
+}
+
+/// The time of the daily check-in and, on Android, its reminder. Kept per
+/// device, so a phone can remind while a laptop only asks on the Today page.
+class _CheckInCard extends ConsumerWidget {
+  const _CheckInCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(checkInSettingsProvider).value;
+    final scheduler = ref.watch(checkInSchedulerProvider);
+    Future<void> set({String? time, bool? remind}) async {
+      await ref.mutate((x) => x.book.setCheckInSettings(time: time, remind: remind));
+      await ref.syncReminders();
+    }
+
+    return SectionCard(
+      title: 'Daily check-in',
+      trailing: TextButton(
+        onPressed: s == null
+            ? null
+            : () async {
+                final parts = s.time.split(':');
+                final picked = await showTimePicker(
+                  context: context,
+                  initialTime: TimeOfDay(
+                    hour: int.tryParse(parts.first) ?? 18,
+                    minute: int.tryParse(parts.last) ?? 30,
+                  ),
+                );
+                if (picked == null) return;
+                String two(int n) => n.toString().padLeft(2, '0');
+                await set(time: '${two(picked.hour)}:${two(picked.minute)}');
+              },
+        child: Text(s?.time ?? '18:30'),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Each day at ${s?.time ?? '18:30'} the Coach asks how your day went. Your answers become '
+            'interview stories and wins for your profile.',
+          ),
+          if (scheduler.supported && s != null)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Remind me on this phone'),
+              value: s.remind,
+              onChanged: (on) async {
+                if (on && !await scheduler.requestPermission()) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Notifications are off for Udyoga in the phone settings.'),
+                      ),
+                    );
+                  }
+                  return;
+                }
+                await set(remind: on);
+              },
+            ),
+        ],
+      ),
     );
   }
 }

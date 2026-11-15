@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../ui/applications_page.dart';
 import '../ui/career_page.dart';
+import '../ui/coach_page.dart';
 import '../ui/contacts_page.dart';
 import '../ui/growth_page.dart';
 import '../ui/interview_page.dart';
@@ -55,6 +56,13 @@ final careerModule = AppModule(
       selectedIcon: Icons.account_tree,
       primary: true,
       page: (_) => const CareerPage(),
+    ),
+    Destination(
+      id: 'coach',
+      label: 'Coach',
+      icon: Icons.psychology_alt_outlined,
+      selectedIcon: Icons.psychology_alt,
+      page: (_) => const CoachPage(),
     ),
     Destination(
       id: 'contacts',

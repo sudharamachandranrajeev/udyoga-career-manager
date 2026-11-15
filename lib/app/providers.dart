@@ -13,6 +13,7 @@ import '../domain/ai.dart';
 import '../domain/claude.dart';
 import '../domain/claude_code.dart';
 import '../domain/codex.dart';
+import '../domain/companion_service.dart';
 import '../domain/gemini.dart';
 import '../domain/profile.dart';
 import '../domain/refresh.dart';
@@ -154,6 +155,49 @@ final answersProvider = _rows<$CareerAnswersTable, PracticeAnswer>(
   (db) => db.careerAnswers,
   orderBy: [(a) => OrderingTerm(expression: a.question)],
 );
+
+final documentsProvider = _rows<$CareerDocumentsTable, CareerDocument>(
+  (db) => db.careerDocuments,
+  orderBy: [
+    (d) => OrderingTerm.desc(d.found),
+    (d) => OrderingTerm(expression: d.name),
+  ],
+);
+
+final questionsProvider = _rows<$CareerQuestionsTable, ProfileQuestion>(
+  (db) => db.careerQuestions,
+  orderBy: [(q) => OrderingTerm(expression: q.asked)],
+);
+
+final journalProvider = _rows<$CareerJournalTable, CheckIn>(
+  (db) => db.careerJournal,
+  orderBy: [(c) => OrderingTerm.desc(c.day)],
+);
+
+final storiesProvider = _rows<$CareerStoriesTable, Story>(
+  (db) => db.careerStories,
+  orderBy: [
+    (s) => OrderingTerm(expression: s.confirmed),
+    (s) => OrderingTerm.desc(s.added),
+  ],
+);
+
+/// The folders this device reads documents from.
+final documentFoldersProvider = FutureProvider<List<String>>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.documentFolders();
+});
+
+/// The check-in time on this device and whether it reminds.
+final checkInSettingsProvider = FutureProvider<({String time, bool remind})>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.checkInSettings();
+});
+
+/// The companion with the user's adviser (or none: it still finds documents
+/// and asks the built-in check-in questions).
+Future<Companion> companionOf(WidgetRef ref) async =>
+    Companion(ref.read(sessionProvider).book, advisor: await ref.read(advisorProvider.future));
 
 final profileProvider = FutureProvider<CandidateProfile>((ref) {
   ref.watch(revisionProvider);

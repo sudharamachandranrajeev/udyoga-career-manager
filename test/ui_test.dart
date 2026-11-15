@@ -136,6 +136,20 @@ void main() {
     await app.close();
   });
 
+  testWidgets('the Coach shows the questions, stories and documents; Settings the check-in time', (tester) async {
+    final app = AppHarness(tester)..desktop();
+    await app.open(seed: seedBook);
+    await app.run();
+    await app.go('Coach');
+    for (final text in ['When did you start?', 'E-observations pilot', 'cv.txt']) {
+      expect(find.textContaining(text), findsWidgets, reason: text);
+    }
+    await app.go('Settings');
+    expect(find.text('Daily check-in'), findsOneWidget);
+    expect(find.text('18:30'), findsOneWidget);
+    await app.close();
+  });
+
   testWidgets('the side rail scrolls by touchpad on a short window', (tester) async {
     final app = AppHarness(tester);
     tester.view.physicalSize = const Size(1000, 420);

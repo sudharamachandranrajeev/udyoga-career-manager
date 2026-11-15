@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 
 import '../db/database.dart';
 import 'ai.dart';
+import 'companion_book.dart';
 import 'feeds.dart';
 import 'insights.dart';
 import 'json.dart';
@@ -52,6 +53,13 @@ abstract final class LocalKeys {
 
   /// 'off' when Udyoga should not look for a new version at start.
   static const updateOnStart = 'udyoga.update.on_start';
+
+  /// Folders on this device to read documents from, JSON list of paths.
+  static const documentFolders = 'udyoga.documents.folders';
+
+  /// The daily check-in time on this device, HH:mm, and whether to remind.
+  static const checkInTime = 'udyoga.checkin.time';
+  static const checkInReminder = 'udyoga.checkin.reminder';
 }
 
 /// Udyoga's write path and the reads screens share.
@@ -75,7 +83,8 @@ class CareerBook {
   );
 
   /// The profile, with the candidate's ideas and wins from the Growth page
-  /// as [CandidateProfile.notes].
+  /// as [CandidateProfile.notes], their story bank and the facts they have
+  /// confirmed, so every AI request knows them.
   Future<CandidateProfile> profile() async =>
       CandidateProfile.fromJson(await pref<Map<String, Object?>>(PrefKeys.profile, const {})).copyWith(
         notes: [
@@ -83,6 +92,8 @@ class CareerBook {
             '${noteKinds[n.kind]}: ${n.title}${n.why.isEmpty ? '' : ' (${n.why})'}'
                 '${n.url.isEmpty ? '' : ' ${n.url}'}',
         ],
+        stories: [for (final s in await stories()) CompanionBook.storyLine(s)],
+        confirmed: [for (final q in await questions(status: 'answered')) '${q.topic}: ${q.answer}'],
       );
 
   /// The candidate's ideas and wins, newest first.
@@ -271,6 +282,24 @@ class CareerBook {
   Future<bool> updateOnStart() async => await db.localSetting(LocalKeys.updateOnStart) != 'off';
 
   Future<void> setUpdateOnStart(bool on) => db.setLocalSetting(LocalKeys.updateOnStart, on ? 'on' : 'off');
+
+  /// The folders this device reads documents from.
+  Future<List<String>> documentFolders() async =>
+      decodeList(await db.localSetting(LocalKeys.documentFolders) ?? '').whereType<String>().toList();
+
+  Future<void> setDocumentFolders(List<String> folders) =>
+      db.setLocalSetting(LocalKeys.documentFolders, jsonEncode(folders));
+
+  /// The check-in time on this device (default 18:30) and whether it reminds.
+  Future<({String time, bool remind})> checkInSettings() async => (
+    time: await db.localSetting(LocalKeys.checkInTime) ?? '18:30',
+    remind: await db.localSetting(LocalKeys.checkInReminder) != 'off',
+  );
+
+  Future<void> setCheckInSettings({String? time, bool? remind}) async {
+    if (time != null) await db.setLocalSetting(LocalKeys.checkInTime, time);
+    if (remind != null) await db.setLocalSetting(LocalKeys.checkInReminder, remind ? 'on' : 'off');
+  }
 
   Future<N8nLink> n8nLink() async =>
       N8nLink.fromJson(await pref<Map<String, Object?>>(PrefKeys.n8n, const {}));

@@ -7,6 +7,7 @@ import '../db/database.dart';
 import '../domain/pipeline.dart';
 import '../domain/profile.dart';
 import 'applications_page.dart';
+import 'coach_page.dart';
 import 'common.dart';
 import 'contacts_page.dart';
 import 'jobs_page.dart';
@@ -31,7 +32,11 @@ List<({IconData icon, String text})> nextSteps({
       icon: Icons.key_outlined,
       text: 'Add a free Gemini key (or a Claude key) in Settings to turn on the AI features.',
     ),
-  if (profile.isEmpty) (icon: Icons.upload_file, text: 'Import your CV on the Profile page.'),
+  if (profile.isEmpty)
+    (
+      icon: Icons.upload_file,
+      text: 'Import your CV on the Profile page, or add the folder with your documents on the Coach page.',
+    ),
   if (!profile.isEmpty && profile.searchCountries.isEmpty)
     (icon: Icons.public, text: 'Choose the countries to search in on the Profile page.'),
   if (!profile.isEmpty && hasAi && !assessed)
@@ -61,6 +66,14 @@ class TodayPage extends ConsumerWidget {
     final assessed = ref.watch(latestReportProvider('assessment')).value != null;
     final mapped = ref.watch(latestReportProvider('career_map')).value != null;
     final refresh = ref.watch(refreshProvider);
+    final checkIn = (ref.watch(journalProvider).value ?? const <CheckIn>[])
+        .where((c) => c.day == now)
+        .firstOrNull;
+    final toConfirm = (ref.watch(questionsProvider).value ?? const <ProfileQuestion>[])
+        .where((q) => q.status == 'open')
+        .length;
+    final checkInTime = ref.watch(checkInSettingsProvider).value?.time ?? '18:30';
+    final eveningNow = nowLocal().substring(11).compareTo(checkInTime) >= 0;
 
     final open = apps.where((a) => Stage.of(a.stage).open).toList();
     final dueApps = apps.where((a) => a.followUp != null && a.followUp!.compareTo(now) <= 0).toList();
@@ -161,6 +174,34 @@ class TodayPage extends ConsumerWidget {
                 const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
                 const SizedBox(width: 12),
                 Expanded(child: Text(refresh.status)),
+              ],
+            ),
+          ),
+        if ((eveningNow && (checkIn == null || checkIn.entry.isEmpty)) || toConfirm > 0)
+          SectionCard(
+            title: 'Your coach',
+            child: Column(
+              children: [
+                if (eveningNow && (checkIn == null || checkIn.entry.isEmpty))
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.wb_twilight_outlined),
+                    title: const Text('How was your day? Two minutes for today\'s check-in.'),
+                    onTap: () =>
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CoachPage())),
+                  ),
+                if (toConfirm > 0)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.fact_check_outlined),
+                    title: Text(
+                      toConfirm == 1
+                          ? '1 question to confirm your profile.'
+                          : '$toConfirm questions to confirm your profile.',
+                    ),
+                    onTap: () =>
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CoachPage())),
+                  ),
               ],
             ),
           ),

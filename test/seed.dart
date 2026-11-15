@@ -1,5 +1,7 @@
 import 'package:brahma_core/brahma_core.dart' show addDays, isoDate;
 import 'package:udyoga/domain/book.dart';
+import 'package:udyoga/domain/companion.dart';
+import 'package:udyoga/domain/companion_book.dart';
 import 'package:udyoga/domain/insights.dart';
 import 'package:udyoga/domain/pipeline.dart';
 
@@ -183,4 +185,33 @@ Future<void> seedBook(CareerBook book, {String today = '2026-10-24'}) async {
     }),
     at: '${today}T08:10',
   );
+
+  // The coach: a document read, a question, a story and a check-in.
+  final doc = (await book.recordFound([
+    (hash: 'c' * 64, name: 'cv.txt', content: 'CV'),
+  ], today: today)).single;
+  await book.saveReading(
+    (await book.documents()).firstWhere((d) => d.id == doc),
+    const DocumentReading(
+      name: 'cv.txt',
+      kind: 'cv',
+      summary: 'The master CV.',
+      facts: [DocumentFact(topic: 'Start date', statement: 'Started in 2020', quote: '2020 – present')],
+      stories: [
+        StoryDraft(
+          title: 'E-observations pilot',
+          situation: 'A 28-bed ward moved to electronic observations.',
+          action: 'I trained 40 staff on the new system.',
+          result: 'The ward went live on time.',
+          competencies: ['systems', 'supporting'],
+        ),
+      ],
+    ),
+    today: today,
+  );
+  await book.addQuestions([
+    const QuestionDraft(topic: 'Start date', question: 'When did you start?', choices: ['2020', '2021']),
+  ], today: today);
+  final c = await book.askToday(today, 'What went well today?', at: '${today}T18:30');
+  await book.answerCheckIn(c, 'Helped a new starter with the e-obs system.', at: '${today}T18:40');
 }
