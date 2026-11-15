@@ -10,9 +10,11 @@ import 'applications_page.dart';
 import 'coach_page.dart';
 import 'common.dart';
 import 'contacts_page.dart';
+import 'job_page.dart';
 import 'jobs_page.dart';
 import 'look.dart';
 import 'offer_checks.dart';
+import 'today_hero.dart';
 
 /// Next steps, from setting up to the day's chasing.
 List<({IconData icon, String text})> nextSteps({
@@ -119,6 +121,28 @@ class TodayPage extends ConsumerWidget {
       practice: practice.length,
       update: ref.watch(updateProvider).value?.version,
     );
+    // The next deadline: a saved job closing or an offer check due, soonest
+    // first.
+    final deadlines = <Deadline>[
+      for (final j in closing)
+        (
+          title: j.title,
+          detail: j.company,
+          date: j.closing!,
+          when: relativeDay(j.closing!, now),
+          open: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => JobPage(j.id))),
+        ),
+      for (final c in checks)
+        (
+          title: c.title,
+          detail: byId[c.applicationId]!.title,
+          date: c.due!,
+          when: relativeDay(c.due!, now),
+          open: () =>
+              Navigator.of(context).push(MaterialPageRoute(builder: (_) => ApplicationPage(c.applicationId))),
+        ),
+    ]..sort((a, b) => a.date.compareTo(b.date));
+    final next = deadlines.firstOrNull;
     final sent = apps.where((a) => a.applied != null).length;
     // Heard back: shortlisted or further, up to accepted.
     final heard = apps.where((a) {
@@ -139,24 +163,16 @@ class TodayPage extends ConsumerWidget {
       ],
       children: [
         _Greeting(profile),
+        TodayHero(
+          applied: sent,
+          interviews: interviews.length,
+          followUps: dueApps.length + dueLeads.length,
+          deadline: next == null ? null : _withNiceDate(next),
+        ),
         TiltGrid(
           minWidth: 160,
           children: [
-            KpiTile(
-              label: 'Follow-ups due',
-              value: '${dueApps.length + dueLeads.length}',
-              icon: Icons.notifications_active_outlined,
-              status: dueApps.isEmpty && dueLeads.isEmpty
-                  ? null
-                  : (color: Status.warning.color, icon: Status.warning.icon),
-              caption: dueApps.isEmpty && dueLeads.isEmpty ? 'All caught up' : 'Chase them today',
-            ),
             KpiTile(label: 'In progress', value: '${open.length}', icon: Icons.send_outlined),
-            KpiTile(
-              label: 'Interviews',
-              value: '${interviews.length}',
-              icon: Icons.record_voice_over_outlined,
-            ),
             KpiTile(label: 'New matches', value: '${fresh.length}', icon: Icons.work_outline),
             KpiTile(
               label: 'Response rate',
@@ -277,6 +293,10 @@ class TodayPage extends ConsumerWidget {
     );
   }
 }
+
+/// The deadline with its date written out ("24 Oct 2026").
+Deadline _withNiceDate(Deadline d) =>
+    (title: d.title, detail: d.detail, date: niceDate(d.date), when: d.when, open: d.open);
 
 class _Greeting extends StatelessWidget {
   const _Greeting(this.p);

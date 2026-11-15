@@ -14,6 +14,7 @@ import 'package:udyoga/ui/coach_page.dart';
 import 'package:udyoga/ui/growth_page.dart';
 import 'package:udyoga/ui/kit/kit.dart';
 import 'package:udyoga/ui/linkedin_page.dart';
+import 'package:udyoga/ui/today_hero.dart';
 import 'package:udyoga/ui/today_page.dart';
 
 import 'app_harness.dart';
@@ -116,6 +117,30 @@ void main() {
     expect(find.text('Follow up today'), findsOneWidget);
     expect(find.text('Upcoming interviews'), findsOneWidget);
     expect(find.text('Closing this week'), findsOneWidget);
+    // The hero strip: the counts have rolled to their values, and the next
+    // deadline (a saved job closing this week) has the beam round it.
+    for (final label in ['Applied', 'Interviews', 'Follow-ups due', 'Next deadline']) {
+      expect(find.descendant(of: find.byType(TodayHero), matching: find.text(label)), findsOneWidget);
+    }
+    final counts = tester.widgetList<RollingNumber>(find.byType(RollingNumber)).toList();
+    expect(counts, hasLength(3));
+    for (final n in counts) {
+      expect(find.descendant(of: find.byWidget(n), matching: find.text('${n.value}')), findsOneWidget);
+    }
+    expect(counts.last.value, greaterThan(0), reason: 'the seed has follow-ups due');
+    expect(find.ancestor(of: find.text('Next deadline'), matching: find.byType(BorderBeam)), findsOneWidget);
+    await app.close();
+  });
+
+  testWidgets('Today with no data has zero counts and no deadline beam', (tester) async {
+    final app = AppHarness(tester)..phone();
+    await app.open();
+    await app.run();
+    expect(find.descendant(of: find.byType(TodayHero), matching: find.text('Applied')), findsOneWidget);
+    expect(find.descendant(of: find.byType(TodayHero), matching: find.text('0')), findsNWidgets(3));
+    expect(find.text('Next deadline'), findsNothing);
+    expect(find.byType(BorderBeam), findsNothing);
+    expect(tester.takeException(), isNull);
     await app.close();
   });
 

@@ -19,6 +19,7 @@ import 'package:udyoga/domain/pipeline.dart';
 import 'package:udyoga/domain/profile.dart';
 import 'package:udyoga/ui/applications_page.dart';
 import 'package:udyoga/ui/site_page.dart';
+import 'package:udyoga/ui/today_hero.dart';
 
 import 'app_harness.dart';
 import 'support.dart';
@@ -480,7 +481,13 @@ void main() {
     );
     await h.run();
     expect(find.text('Offer checks due'), findsOneWidget);
-    expect(find.text('Send the FRMPEC4 declaration'), findsOneWidget);
+    final card = find.ancestor(of: find.text('Offer checks due'), matching: find.byType(SectionCard));
+    expect(find.descendant(of: card, matching: find.text('Send the FRMPEC4 declaration')), findsOneWidget);
+    // It is also the next deadline in the hero strip.
+    expect(
+      find.descendant(of: find.byType(TodayHero), matching: find.text('Send the FRMPEC4 declaration')),
+      findsOneWidget,
+    );
     expect(find.text('Book the uniform fitting'), findsNothing);
     await h.close();
   });
