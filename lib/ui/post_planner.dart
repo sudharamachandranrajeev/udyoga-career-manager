@@ -12,6 +12,7 @@ import '../domain/humanizer.dart';
 import '../domain/post_plan.dart';
 import 'common.dart';
 import 'kit/kit.dart';
+import 'look.dart';
 
 // The post plan for the LinkedIn studio: weekly slots, a draft in each, a
 // reminder when the time comes. "Copy & open LinkedIn" puts the text on
@@ -121,10 +122,25 @@ class _PostPlannerState extends ConsumerState<PostPlanner> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (posts.isEmpty)
-                  Text(
-                    slots.isEmpty
-                        ? 'Add a weekly slot, then plan the week.'
-                        : 'Nothing planned for this week yet.',
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.event_available_outlined,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            slots.isEmpty
+                                ? 'Add a weekly slot, then plan the week.'
+                                : 'Nothing planned for this week yet.',
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 for (final p in posts) _PostTile(p, now: now, onChange: _change),
                 const SizedBox(height: 8),
@@ -206,8 +222,19 @@ class _PostTile extends ConsumerWidget {
     final status = postStatus(p, now);
     final text = postText(p);
     final bluesky = p.channel == 'bluesky';
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+      decoration: BoxDecoration(
+        color: status == 'due' ? Status.warning.color.withValues(alpha: 0.06) : null,
+        borderRadius: BorderRadius.circular(Radii.sm),
+        border: Border.all(
+          color: status == 'due'
+              ? Status.warning.color.withValues(alpha: 0.4)
+              : theme.colorScheme.outlineVariant,
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -216,7 +243,10 @@ class _PostTile extends ConsumerWidget {
             runSpacing: 4,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text(niceDateTime(p.at), style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                niceDateTime(p.at),
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              ),
               ChannelChip(p.channel),
               StatusPill(
                 switch (status) {
@@ -233,12 +263,18 @@ class _PostTile extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
             text.isNotEmpty ? text : (p.topic.isNotEmpty ? 'Topic: ${p.topic}' : 'No draft yet.'),
             maxLines: 4,
             overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              height: 1.4,
+              color: text.isEmpty ? theme.colorScheme.onSurfaceVariant : null,
+              fontStyle: text.isEmpty ? FontStyle.italic : null,
+            ),
           ),
+          const SizedBox(height: 4),
           if (p.postUrl.isNotEmpty)
             TextButton.icon(
               icon: const Icon(Icons.open_in_new, size: 18),

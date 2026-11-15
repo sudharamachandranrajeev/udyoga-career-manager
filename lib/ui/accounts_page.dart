@@ -6,6 +6,8 @@ import '../app/providers.dart';
 import '../domain/bluesky.dart';
 import '../domain/mail.dart';
 import 'common.dart';
+import 'kit/kit.dart';
+import 'look.dart';
 
 // Connected accounts: the user's own e-mail accounts, signed in with an
 // app password. Udyoga reads only mail to or from people saved in it (and
@@ -44,9 +46,11 @@ class AccountsPage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (accounts.isEmpty)
-                  const Text(
-                    'No account yet. Connect Gmail, iCloud, Yahoo, Fastmail or any IMAP account to see '
-                    'replies from your contacts in Conversations and send from Udyoga.',
+                  const _Empty(
+                    icon: Icons.mail_outline,
+                    text:
+                        'No account yet. Connect Gmail, iCloud, Yahoo, Fastmail or any IMAP account to see '
+                        'replies from your contacts in Conversations and send from Udyoga.',
                   ),
                 for (final a in accounts) _AccountTile(a),
                 if (sync.status.isNotEmpty)
@@ -79,70 +83,150 @@ class _AccountTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final service = ref.read(mailServiceProvider);
     final last = DateTime.tryParse(a.lastSync ?? '')?.toLocal().toIso8601String();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.mail_outline),
-            title: Text(a.address),
-            subtitle: Text(
-              '${mailPresets[a.provider]?.name ?? 'IMAP'} · '
-              '${last == null ? 'not checked yet' : 'checked ${niceDateTime(last.substring(0, 16))}'}',
+    return _AccountBox(
+      children: [
+        _AccountHead(
+          channel: 'email',
+          title: a.address,
+          pills: [
+            StatusPill(mailPresets[a.provider]?.name ?? 'IMAP', icon: Icons.dns_outlined, quiet: true),
+            StatusPill(
+              last == null ? 'Not checked yet' : 'Checked ${niceDateTime(last.substring(0, 16))}',
+              icon: Icons.schedule,
+              quiet: true,
             ),
+          ],
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          title: const Text('Alert me when a saved contact writes'),
+          subtitle: const Text('On Android. Nothing else in your mailbox makes an alert.'),
+          value: a.notify,
+          onChanged: (v) async {
+            await service.saveAccount(a.copyWith(notify: v));
+            ref.read(revisionProvider.notifier).bump();
+          },
+        ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              icon: const Icon(Icons.verified_outlined),
+              label: const Text('Test connection'),
+              onPressed: () async {
+                try {
+                  await service.test(a);
+                  if (context.mounted) showMessage(context, '${a.address} signs in to read and send.');
+                } catch (e) {
+                  if (context.mounted) showError(context, e);
+                }
+              },
+            ),
+            TextButton.icon(
+              icon: const Icon(Icons.link_off),
+              label: const Text('Disconnect'),
+              onPressed: () async {
+                if (!await confirm(
+                  context,
+                  title: 'Disconnect ${a.address}?',
+                  message:
+                      'Udyoga stops reading and sending from this account and removes its password '
+                      'from this device. Mail already in your conversations stays.',
+                  action: 'Disconnect',
+                  destructive: true,
+                )) {
+                  return;
+                }
+                await service.removeAccount(a);
+                ref.read(revisionProvider.notifier).bump();
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// One connected account, in a quiet outlined box.
+class _AccountBox extends StatelessWidget {
+  const _AccountBox({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(top: 8),
+    padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(Radii.sm),
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+    ),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+  );
+}
+
+/// The channel's mark, the account on one line, and what is known about it.
+class _AccountHead extends StatelessWidget {
+  const _AccountHead({required this.channel, required this.title, this.pills = const []});
+  final String channel, title;
+  final List<Widget> pills;
+
+  @override
+  Widget build(BuildContext context) {
+    final look = ChannelLook.of(channel);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: look.color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(Radii.sm),
           ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            title: const Text('Alert me when a saved contact writes'),
-            subtitle: const Text('On Android. Nothing else in your mailbox makes an alert.'),
-            value: a.notify,
-            onChanged: (v) async {
-              await service.saveAccount(a.copyWith(notify: v));
-              ref.read(revisionProvider.notifier).bump();
-            },
-          ),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          child: Icon(look.icon, color: look.color, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              OutlinedButton.icon(
-                icon: const Icon(Icons.verified_outlined),
-                label: const Text('Test connection'),
-                onPressed: () async {
-                  try {
-                    await service.test(a);
-                    if (context.mounted) showMessage(context, '${a.address} signs in to read and send.');
-                  } catch (e) {
-                    if (context.mounted) showError(context, e);
-                  }
-                },
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
               ),
-              TextButton.icon(
-                icon: const Icon(Icons.link_off),
-                label: const Text('Disconnect'),
-                onPressed: () async {
-                  if (!await confirm(
-                    context,
-                    title: 'Disconnect ${a.address}?',
-                    message:
-                        'Udyoga stops reading and sending from this account and removes its password '
-                        'from this device. Mail already in your conversations stays.',
-                    action: 'Disconnect',
-                    destructive: true,
-                  )) {
-                    return;
-                  }
-                  await service.removeAccount(a);
-                  ref.read(revisionProvider.notifier).bump();
-                },
-              ),
+              const SizedBox(height: 6),
+              Wrap(spacing: 6, runSpacing: 6, children: pills),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Nothing connected yet: what connecting does.
+class _Empty extends StatelessWidget {
+  const _Empty({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: muted),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(text, style: TextStyle(color: muted, height: 1.4)),
+        ),
+      ],
     );
   }
 }
@@ -256,8 +340,11 @@ class BlueskyAccountCard extends ConsumerWidget {
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Not connected.'),
-                const SizedBox(height: 8),
+                const _Empty(
+                  icon: Icons.cloud_outlined,
+                  text: 'Not connected. Bluesky lets you search people and posts by topic, post, and see your DMs.',
+                ),
+                const SizedBox(height: 12),
                 FilledButton.tonalIcon(
                   icon: const Icon(Icons.add),
                   label: const Text('Connect Bluesky'),
@@ -265,19 +352,24 @@ class BlueskyAccountCard extends ConsumerWidget {
                 ),
               ],
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          : _AccountBox(
               children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.cloud_outlined),
-                  title: Text('@${a.handle}'),
-                  subtitle: Text(
+                _AccountHead(
+                  channel: 'bluesky',
+                  title: '@${a.handle}',
+                  pills: [
                     a.dms
-                        ? 'Search, posting and direct messages.'
-                        : 'Search and posting. This app password does not allow direct messages: make one '
-                              'with "Allow access to your direct messages" ticked and connect again to see them.',
-                  ),
+                        ? const StatusPill('Direct messages', status: Status.good)
+                        : const StatusPill('No direct messages', status: Status.warning),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  a.dms
+                      ? 'Search, posting and direct messages.'
+                      : 'Search and posting. This app password does not allow direct messages: make one '
+                            'with "Allow access to your direct messages" ticked and connect again to see them.',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
                 if (a.dms)
                   SwitchListTile(
