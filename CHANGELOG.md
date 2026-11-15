@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0 (unreleased)
+
+- A new look across the app: calmer cards with thin borders, numbers that roll to their value, a glow on the next deadline, quicker page changes, and less motion when your system asks for it. Ctrl+K (or the search button) jumps to any page or action.
+- Navigation in six places: Today, Jobs (with Applications), Conversations, Network (Contacts, Find people, LinkedIn), Prepare (Interview, Coach, Growth) and You (Profile, Career, Settings).
+- Conversations (new): every exchange with a person as a chat thread, on e-mail, LinkedIn, Bluesky, phone or in person. The top of each thread says who, their role, the channel and where you found them. For LinkedIn, Udyoga copies your message and opens LinkedIn; you send it and log it. Filters for replies waiting and follow-ups due, a Screener for people you have not saved, and a gentle warning when you send a lot on LinkedIn in a day.
+- E-mail: connect Gmail, iCloud, Yahoo, Fastmail or any IMAP server with an app password. Only mail to or from people you saved is kept. Send and reply from a thread; an alert on Android when a saved contact replies.
+- Contacts: where you found each person and why you may contact them, a suggested first line saying so, *Forget this person*, *Do not contact*, keep-in-touch reminders and merging of duplicates.
+- LinkedIn ZIP import now brings in your messages and invitations as threads, and shows who you already know at the employers you are applying to.
+- Find people (new): search links by role, employer and place, named contacts from job adverts, Bluesky search by topic, and a list of NHS and digital-health communities and events.
+- Post plan: weekly times to post, with a reminder; you post on LinkedIn yourself, or on Bluesky when you press Post.
+- Today: replies waiting and people to keep in touch with.
+
 ## 0.5.0 (2026-11-15)
 
 - Find and apply inside the app: the official NHS Jobs feed, an in-app browser for the job site (you sign in and submit yourself), an answer pack for the form, and a copy of each advert and application kept with it. Offer-to-start stages with a checklist; warnings for stale or suspicious listings.

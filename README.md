@@ -50,6 +50,11 @@ or a Claude or ChatGPT plan.
   steps, pay and how AI is changing each one.
 - 💼 **LinkedIn helper** – profile score, posts, comments and connection notes, all drafted for
   you to post yourself. Nothing is automated on your account.
+- 💬 **Every conversation in one place** – e-mail, LinkedIn, Bluesky, calls and meetings as chat
+  threads. Each one says who it is with, where it is happening and where you found them.
+- 🧑‍🤝‍🧑 **People in your field** – who you already know at the employers you are applying to,
+  search links for people in the same role, named contacts from job adverts, and NHS and
+  digital-health communities to join.
 - 🔒 **Private by design** – data is encrypted on the device. Sync is optional, and one account
   works in every Brahma app.
 
@@ -62,7 +67,11 @@ or a Claude or ChatGPT plan.
 | Jobs | Five free job-site feeds, plus an optional AI web search of employer and public-sector sites |
 | Fit | Quick score on every job; full verdict with matched requirements, gaps and how serious each is |
 | Applications | Preparing, applied, screening, interview, offer, closed; list or board; *No reply* after six weeks; drafted chasers, thank-you notes and feedback requests; reminders to your calendar or an `.ics` file |
-| Contacts | Recruiters and hiring managers from public pages or added by you, each with a follow-up date and a drafted first message |
+| Contacts | Recruiters and hiring managers from public pages or added by you, each with a follow-up date, a drafted first message, where you found them and why you may contact them; *Forget this person* and *Do not contact* |
+| Conversations | Chat threads per person on e-mail, LinkedIn, Bluesky, phone and in person; filters for replies waiting and follow-ups due; a Screener for strangers; LinkedIn messages are copied, opened and logged by you |
+| E-mail | Gmail, iCloud, Yahoo, Fastmail or any IMAP server with an app password; only mail with people you saved is kept; send and reply from a thread |
+| Find people | Connections at your target employers (from the LinkedIn ZIP), search links by role, employer and place, named contacts from adverts, Bluesky search, a list of NHS and digital-health communities |
+| Posts | A weekly post plan with reminders; you post on LinkedIn yourself, and on Bluesky when you press Post |
 | Interview | Mixed, competency (STAR), technical, toughest panel, and AI and change rounds; live measures of length, speaking time, filler words, "I" against "we", figures and STAR coverage; seven-part AI review |
 | Career | Assessment, career map of five to eight paths, redone monthly when the AI routine is on |
 | Growth | Certifications, courses and experience to get; *Ideas and wins* notes the AI reads in every request; LinkedIn data import (the ZIP LinkedIn sends you) |
@@ -198,7 +207,9 @@ flowchart LR
 - **The AI** (Gemini, Claude or ChatGPT) gets the text it needs for each task, such as your
   profile and one job advert. Your keys stay in the encrypted settings.
 - **LinkedIn** is only opened through its own links and the ZIP you import. Udyoga never signs in
-  to it or posts for you.
+  to it, reads its pages or posts for you. You send every message and connection request.
+- **E-mail and Bluesky** are reached with app passwords you make for Udyoga. The passwords stay in
+  the device's keychain and are never synced. Only messages with people you saved are kept.
 
 > [!IMPORTANT]
 > Your password and recovery key are the only ways to unlock synced data. If you lose both, nobody
