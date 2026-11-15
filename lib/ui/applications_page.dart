@@ -251,27 +251,35 @@ class ApplicationTile extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Row(
+                    // On a narrow card the follow-up drops below the dates
+                    // rather than shrinking to "Follow u…".
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 6,
                       children: [
-                        Icon(Icons.schedule, size: 15, color: muted),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            [
-                              if (a.applied != null) 'Applied ${niceDate(a.applied!)}',
-                              'updated ${relativeDay(a.updated, now)}',
-                            ].join(' · '),
-                            style: t.bodySmall?.copyWith(color: muted),
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.schedule, size: 15, color: muted),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                [
+                                  if (a.applied != null) 'Applied ${niceDate(a.applied!)}',
+                                  'updated ${relativeDay(a.updated, now)}',
+                                ].join(' · '),
+                                style: t.bodySmall?.copyWith(color: muted),
+                              ),
+                            ),
+                          ],
                         ),
                         if (a.followUp != null)
-                          // Shrinks (the label ellipsizes) on narrow cards.
-                          Flexible(
-                            child: StatusPill(
-                              'Follow up ${relativeDay(a.followUp!, now)}',
-                              status: followUpStatus(a.followUp!, now),
-                              icon: Icons.notifications_none,
-                            ),
+                          StatusPill(
+                            'Follow up ${relativeDay(a.followUp!, now)}',
+                            status: followUpStatus(a.followUp!, now),
+                            icon: Icons.notifications_none,
                           ),
                       ],
                     ),

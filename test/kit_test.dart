@@ -272,4 +272,60 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('In a sheet'), findsNothing);
   });
+
+  group('StatGrid', () {
+    test('picks a column count with no lone last tile', () {
+      // Six tiles: two across on a phone, three or six on wider screens.
+      expect(StatGrid.columnsFor(6, 288, minWidth: 128), 2);
+      expect(StatGrid.columnsFor(6, 600), 3);
+      expect(StatGrid.columnsFor(6, 1100), 6);
+      // Five tiles fit four across but divide only by five or one, so it
+      // keeps four and the last tile has the full row.
+      expect(StatGrid.columnsFor(5, 700), 4);
+      expect(StatGrid.columnsFor(0, 700), 1);
+    });
+
+    testWidgets('huge counts and long labels fit a 320-wide phone', (tester) async {
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        _app(
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: StatGrid(
+              minWidth: 128,
+              children: [
+                StatTile(label: 'Applications sent this year', icon: Icons.send, value: 12345678),
+                StatTile(
+                  label: 'Follow-ups due',
+                  icon: Icons.notifications,
+                  value: 99999,
+                  caption: 'Chase today',
+                  status: Status.warning,
+                ),
+                StatTile(
+                  label: 'Response rate',
+                  icon: Icons.mail,
+                  value: null,
+                  caption: 'No applications sent yet',
+                ),
+                StatTile(
+                  label: 'Pay',
+                  icon: Icons.payments,
+                  value: 1234567.89,
+                  fractionDigits: 2,
+                  suffix: '%',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(StatTile), findsNWidgets(4));
+      expect(find.bySemanticsLabel(RegExp('^Response rate. none yet')), findsOneWidget);
+    });
+  });
 }

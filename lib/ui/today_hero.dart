@@ -25,7 +25,9 @@ class TodayHero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          StatGrid(children: counts),
+          // Two across even on a 320-wide phone, so six tiles take three
+          // rows, not six.
+          StatGrid(minWidth: 128, children: counts),
           if (d != null) BorderBeam(child: _DeadlineCard(d)),
         ],
       ),

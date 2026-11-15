@@ -281,40 +281,38 @@ class JobTile extends StatelessWidget {
                     const SizedBox(height: 12),
                     // Pay, the closing date and when it was found: what to weigh
                     // before opening it.
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    // On a narrow card the closing date drops below the pay
+                    // rather than cutting either short.
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 6,
                       children: [
-                        Flexible(
-                          child: Text(
-                            pay.isEmpty ? 'Pay not given' : pay,
+                        Text(
+                          pay.isEmpty ? 'Pay not given' : pay,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: pay.isEmpty
+                              ? t.bodyMedium?.copyWith(color: muted)
+                              : t.titleMedium?.copyWith(fontFamily: headingFont, fontWeight: FontWeight.w800),
+                        ),
+                        if (closes == null || closed)
+                          Text(
+                            'Found ${relativeDay(j.found, now)}',
+                            style: t.bodySmall?.copyWith(color: muted),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: pay.isEmpty
-                                ? t.bodyMedium?.copyWith(color: muted)
-                                : t.titleMedium?.copyWith(
-                                    fontFamily: headingFont,
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                          )
+                        else
+                          Tooltip(
+                            message: 'Closes ${niceDate(closes)}',
+                            child: StatusPill(
+                              'Closes ${relativeDay(closes, now)}',
+                              status: closingSoon ? Status.serious : null,
+                              icon: Icons.event_outlined,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: closes == null || closed
-                              ? Text(
-                                  'Found ${relativeDay(j.found, now)}',
-                                  style: t.bodySmall?.copyWith(color: muted),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                )
-                              : Tooltip(
-                                  message: 'Closes ${niceDate(closes)}',
-                                  child: StatusPill(
-                                    'Closes ${relativeDay(closes, now)}',
-                                    status: closingSoon ? Status.serious : null,
-                                    icon: Icons.event_outlined,
-                                  ),
-                                ),
-                        ),
                       ],
                     ),
                   ],
@@ -330,8 +328,12 @@ class JobTile extends StatelessWidget {
 
 /// Pay in a few characters ("£32k–38k"), else the advert's own short wording.
 String shortSalary(Job j) {
-  String k(int v) =>
-      v >= 1000 ? '${(v / 1000).toStringAsFixed(v % 1000 == 0 || v >= 100000 ? 0 : 1)}k' : '$v';
+  // 1.3m, 45k, 38.5k: short enough for a card at any size of pay.
+  String k(int v) => switch (v) {
+    >= 1000000 => '${(v / 1000000).toStringAsFixed(v % 1000000 == 0 ? 0 : 1)}m',
+    >= 1000 => '${(v / 1000).toStringAsFixed(v % 1000 == 0 || v >= 100000 ? 0 : 1)}k',
+    _ => '$v',
+  };
   final sym = switch (j.currency.toUpperCase()) {
     'GBP' => '£',
     'EUR' => '€',

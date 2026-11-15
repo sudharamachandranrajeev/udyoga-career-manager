@@ -82,13 +82,16 @@ class StatCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(icon, size: 16, color: muted),
                     const SizedBox(width: 6),
+                    // Two lines, so "Follow-ups due" reads whole on a
+                    // 320-wide phone.
                     Expanded(
                       child: Text(
                         label,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: muted),
                       ),

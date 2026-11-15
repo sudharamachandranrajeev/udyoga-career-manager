@@ -189,7 +189,7 @@ class TodayPage extends ConsumerWidget {
               label: 'Follow-ups due',
               icon: Icons.notifications_active_outlined,
               value: followUps,
-              caption: followUps == 0 ? 'All caught up' : 'Chase them today',
+              caption: followUps == 0 ? 'All caught up' : 'Chase today',
               status: followUps == 0 ? null : Status.warning,
             ),
             StatTile(
@@ -230,17 +230,17 @@ class TodayPage extends ConsumerWidget {
             if (replies.isNotEmpty)
               SectionCard(
                 title: 'Replies waiting',
-                child: Column(children: [for (final l in replies) LeadTile(l)]),
+                child: _FirstFew([
+                  for (final l in replies) LeadTile(l),
+                ], onMore: () => goToPage(ref, 'contacts')),
               ),
             if (dueApps.isNotEmpty || dueLeads.isNotEmpty)
               SectionCard(
                 title: 'Follow up today',
-                child: Column(
-                  children: [
-                    for (final a in dueApps) ApplicationTile(a),
-                    for (final l in dueLeads) LeadTile(l),
-                  ],
-                ),
+                child: _FirstFew([
+                  for (final a in dueApps) ApplicationTile(a),
+                  for (final l in dueLeads) LeadTile(l),
+                ], onMore: () => goToPage(ref, dueApps.isNotEmpty ? 'applications' : 'contacts')),
               ),
             if (checks.isNotEmpty)
               SectionCard(
@@ -265,7 +265,9 @@ class TodayPage extends ConsumerWidget {
             if (closing.isNotEmpty)
               SectionCard(
                 title: 'Closing this week',
-                child: Column(children: [for (final j in closing) JobTile(j, list: 'closing')]),
+                child: _FirstFew([
+                  for (final j in closing) JobTile(j, list: 'closing'),
+                ], onMore: () => goToPage(ref, 'jobs')),
               ),
           ],
           count: replies.length + followUps + checks.length + closing.length,
@@ -363,12 +365,14 @@ class _Greeting extends StatelessWidget {
               children: [
                 OrgLogo(p.name, size: 46),
                 const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Welcome back', style: t.bodyMedium?.copyWith(color: muted)),
-                    Text(p.name, style: t.titleMedium),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Welcome back', style: t.bodyMedium?.copyWith(color: muted)),
+                      Text(p.name, style: t.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -436,4 +440,30 @@ class _NeedsYou extends StatelessWidget {
       ],
     );
   }
+}
+
+/// The first few of a long list, with a link to the page holding the rest,
+/// so thirty follow-ups don't bury everything below them.
+class _FirstFew extends StatelessWidget {
+  const _FirstFew(this.tiles, {required this.onMore});
+  final List<Widget> tiles;
+  final VoidCallback onMore;
+  static const shown = 5;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      ...tiles.take(shown),
+      if (tiles.length > shown)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: onMore,
+            icon: const Icon(Icons.arrow_forward, size: 18),
+            label: Text('See all ${tiles.length}'),
+          ),
+        ),
+    ],
+  );
 }
