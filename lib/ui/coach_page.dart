@@ -281,7 +281,7 @@ class _Readiness extends StatelessWidget {
     final ready = readiness(counts);
     return SectionCard(
       title: 'Interview readiness',
-      hint: 'Two confirmed stories make a competency ready. Your check-ins and documents add drafts.',
+      hint: 'coach.readiness',
       child: Column(
         children: [
           for (final e in ready.entries)
@@ -450,9 +450,7 @@ class _Documents extends ConsumerWidget {
     final docs = ref.watch(documentsProvider).value ?? const <CareerDocument>[];
     return SectionCard(
       title: 'Your documents',
-      hint:
-          'CVs, references, interview notes and applications in these folders are read into your profile. '
-          'Files stay on this device; what is read from them syncs with your account.',
+      hint: 'coach.folders',
       trailing: folders.isEmpty
           ? null
           : FilledButton.tonalIcon(

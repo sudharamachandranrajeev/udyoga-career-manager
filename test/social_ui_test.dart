@@ -1,5 +1,5 @@
-// The post planner and Bluesky search widgets the coordinator places in
-// the LinkedIn studio and Find people, and the Bluesky card on Connected
+// The post planner and Bluesky search widgets, in the LinkedIn studio and
+// Find people, and the Bluesky card on Connected
 // accounts. A fake Bluesky server answers; every handle is made up.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -92,6 +92,21 @@ void main() {
       final c = (await app.book.db.select(app.book.db.careerContacts).get()).single;
       expect((c.name, c.basis, c.sourceKind), ('Jordan Example', 'legitimate_interest', 'other'));
     });
+    await app.close();
+  });
+
+  testWidgets('the planner, Bluesky search and accounts sit where people look for them', (tester) async {
+    final app = AppHarness(tester)..desktop();
+    await app.open();
+    await app.run();
+    await app.go('LinkedIn');
+    expect(find.byType(PostPlanner), findsOneWidget);
+    await app.go('Find people');
+    expect(find.byType(BlueskySearch), findsOneWidget);
+    await app.go('Settings');
+    await app.tap(find.text('Manage'));
+    expect(find.byType(AccountsPage), findsOneWidget);
+    expect(tester.takeException(), isNull);
     await app.close();
   });
 }

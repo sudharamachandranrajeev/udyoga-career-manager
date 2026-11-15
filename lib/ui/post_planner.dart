@@ -68,9 +68,7 @@ class _PostPlannerState extends ConsumerState<PostPlanner> {
     final slots = ref.watch(_postSlotsProvider).value ?? const <PostSlot>[];
     return SectionCard(
       title: 'Post plan',
-      hint:
-          'Pick weekly times to post, write each post ahead, and get a reminder when it is time. You post on '
-          'LinkedIn yourself; Udyoga never posts there.',
+      hint: 'linkedin.postPlan',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

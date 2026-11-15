@@ -32,9 +32,7 @@ class AccountsPage extends ConsumerWidget {
       children: [
         SectionCard(
           title: 'E-mail',
-          hint:
-              'Udyoga keeps only mail to or from people you saved, and replies in their threads. '
-              'Everything else in your mailbox is skipped and never stored.',
+          hint: 'accounts.mail',
           trailing: FilledButton.tonalIcon(
             icon: const Icon(Icons.add),
             label: const Text('Connect'),
@@ -251,9 +249,7 @@ class BlueskyAccountCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => SectionCard(
     title: 'Bluesky',
-    hint:
-        'Search people and posts by topic, post when you press Post, and see your direct messages with '
-        'saved contacts in Conversations.',
+    hint: 'accounts.bluesky',
     child: AsyncView(
       ref.watch(blueskyAccountProvider),
       builder: (a) => a == null

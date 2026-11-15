@@ -9,6 +9,7 @@ import '../domain/gemini.dart';
 import '../domain/n8n.dart';
 import '../domain/subscription.dart';
 import '../domain/update.dart';
+import '../ui/accounts_page.dart';
 import '../ui/common.dart';
 import 'check_in_reminder.dart';
 import 'providers.dart';
@@ -118,6 +119,19 @@ class SettingsPage extends ConsumerWidget {
                 ),
               ],
             ],
+          ),
+        ),
+        SectionCard(
+          title: 'Connected accounts',
+          hint: 'accounts.mail',
+          trailing: TextButton(
+            onPressed: () =>
+                Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountsPage())),
+            child: const Text('Manage'),
+          ),
+          child: const Text(
+            'E-mail and Bluesky accounts that Conversations sends from and reads replies from. Passwords stay '
+            'on this device.',
           ),
         ),
         SectionCard(

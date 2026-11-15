@@ -7,6 +7,7 @@ import '../db/database.dart';
 import '../domain/communities.dart';
 import '../domain/lead_finder.dart';
 import '../domain/pipeline.dart';
+import 'bluesky_search.dart';
 import 'common.dart';
 import 'kit/kit.dart';
 import 'look.dart';
@@ -31,7 +32,7 @@ class NetworkTools extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [KnownAtTargets(), FindPeople(), AdvertLeads(), CommunityDirectory()],
+    children: [KnownAtTargets(), FindPeople(), BlueskySearch(), AdvertLeads(), CommunityDirectory()],
   );
 }
 
@@ -45,7 +46,7 @@ class KnownAtTargets extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => SectionCard(
     title: 'Who you already know at your target employers',
-    hint: 'Your LinkedIn connections at employers you have applied to or saved jobs at.',
+    hint: 'network.known',
     child: AsyncList(
       ref.watch(knownAtTargetsProvider),
       builder: (groups) => groups.isEmpty
@@ -197,7 +198,7 @@ class _FindPeopleState extends ConsumerState<FindPeople> {
         : leadSearches(role: role.text, employer: employer.text, place: place.text);
     return SectionCard(
       title: 'Find people in roles like yours',
-      hint: 'Each search opens in your browser. Save the people you find here, with where you found them.',
+      hint: 'network.search',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -368,7 +369,7 @@ class AdvertLeads extends ConsumerWidget {
     ];
     return SectionCard(
       title: 'Named in your saved adverts',
-      hint: 'People adverts name for informal enquiries. They expect questions about the job.',
+      hint: 'network.adverts',
       child: offers.isEmpty
           ? const Text('Nobody new. Save jobs whose adverts name a contact, and they show here.')
           : _Tiles([
@@ -463,7 +464,7 @@ class CommunityDirectory extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => SectionCard(
     title: 'Communities and events',
-    hint: 'Where people in health administration and digital health meet. Turning up is the warmest way in.',
+    hint: 'network.communities',
     child: _Tiles([
       for (final c in communities)
         Padding(

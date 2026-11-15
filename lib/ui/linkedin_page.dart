@@ -13,6 +13,7 @@ import '../domain/json.dart';
 import '../domain/linkedin.dart';
 import 'carousel.dart';
 import 'common.dart';
+import 'post_planner.dart';
 import 'kit/kit.dart';
 import 'look.dart' hide Pace;
 
@@ -71,6 +72,7 @@ class LinkedInPage extends ConsumerWidget {
             style: voice.isEmpty ? TextStyle(color: muted) : null,
           ),
         ),
+        const PostPlanner(),
         SectionCard(
           title: 'Tools',
           child: TiltGrid(

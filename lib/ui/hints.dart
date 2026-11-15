@@ -78,4 +78,27 @@ const udyogaHints = <String, String>{
       'documents, asks you to confirm anything that disagrees, and shows how ready you are for each competency.',
   'page.profile':
       'Import your CV and the AI fills this in. Everything Udyoga does starts from it, so keep it accurate.',
+  'network.bluesky':
+      'Search Bluesky by topic with your own account. Save someone to keep them, with where you found '
+      'them; nothing else is stored.',
+  'accounts.mail':
+      'Udyoga keeps only mail to or from people you saved, and replies in their threads. '
+      'Everything else in your mailbox is skipped and never stored.',
+  'accounts.bluesky':
+      'Search people and posts by topic, post when you press Post, and see your direct messages with '
+      'saved contacts in Conversations.',
+  'coach.readiness':
+      'Two confirmed stories make a competency ready. Your check-ins and documents add drafts.',
+  'coach.folders':
+      'CVs, references, interview notes and applications in these folders are read into your profile. '
+      'Files stay on this device; what is read from them syncs with your account.',
+  'linkedin.postPlan':
+      'Pick weekly times to post, write each post ahead, and get a reminder when it is time. You post on '
+      'LinkedIn yourself; Udyoga never posts there.',
+  'network.known': 'Your LinkedIn connections at employers you have applied to or saved jobs at.',
+  'network.search':
+      'Each search opens in your browser. Save the people you find here, with where you found them.',
+  'network.adverts': 'People adverts name for informal enquiries. They expect questions about the job.',
+  'network.communities':
+      'Where people in health administration and digital health meet. Turning up is the warmest way in.',
 };

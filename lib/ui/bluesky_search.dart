@@ -75,9 +75,7 @@ class _BlueskySearchState extends ConsumerState<BlueskySearch> {
   @override
   Widget build(BuildContext context) => SectionCard(
     title: 'People on Bluesky',
-    hint:
-        'Search Bluesky by topic with your own account. Save someone to keep them, with where you found '
-        'them; nothing else is stored.',
+    hint: 'network.bluesky',
     child: AsyncView(
       ref.watch(blueskyAccountProvider),
       builder: (a) => a == null
