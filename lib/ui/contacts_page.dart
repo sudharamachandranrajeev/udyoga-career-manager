@@ -14,6 +14,7 @@ import '../domain/conversations.dart';
 import 'common.dart';
 import 'conversations_page.dart';
 import 'linkedin_page.dart';
+import 'network_page.dart';
 import 'look.dart';
 
 const _kindIcons = {
@@ -52,6 +53,12 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
           tooltip: 'Conversations',
           onPressed: () =>
               Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ConversationsPage())),
+        ),
+        IconButton(
+          icon: const Icon(Icons.hub_outlined),
+          tooltip: 'Network and lead finder',
+          onPressed: () =>
+              Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const LeadFinderPage())),
         ),
         if (field.isNotEmpty)
           IconButton(
