@@ -328,4 +328,36 @@ void main() {
       expect(find.bySemanticsLabel(RegExp('^Response rate. none yet')), findsOneWidget);
     });
   });
+
+  testWidgets('a crowded switch shows icons named by tooltips; a roomy one shows labels', (tester) async {
+    Widget nav(double width) => Center(
+      child: SizedBox(
+        width: width,
+        child: PillNav<int>(
+          items: const [
+            PillNavItem(0, 'Conversations', icon: Icons.forum_outlined),
+            PillNavItem(1, 'Contacts', icon: Icons.contacts_outlined),
+            PillNavItem(2, 'Find people', icon: Icons.person_search_outlined),
+            PillNavItem(3, 'LinkedIn', icon: Icons.campaign_outlined),
+          ],
+          selected: 0,
+          onChanged: (_) {},
+        ),
+      ),
+    );
+    // The test font is wide (every letter a square), so the roomy case
+    // needs a wide surface.
+    tester.view
+      ..physicalSize = const Size(1600, 900)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app(nav(300)));
+    expect(find.text('Conversations'), findsNothing);
+    expect(find.byTooltip('Conversations'), findsOneWidget);
+    expect(find.byTooltip('LinkedIn'), findsOneWidget);
+    await tester.pumpWidget(_app(nav(1500)));
+    expect(find.text('Conversations'), findsOneWidget);
+    expect(find.byTooltip('Conversations'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

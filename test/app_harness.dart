@@ -90,7 +90,12 @@ class AppHarness {
     final group = target == null ? null : groupOf(target.id);
     await _entry(group?.label ?? page);
     if (group == null) return;
-    await tap(find.descendant(of: find.byKey(ValueKey('pills.${group.id}')), matching: find.text(page)));
+    // On a narrow screen a crowded switch shows icons, named by tooltips.
+    final pills = find.byKey(ValueKey('pills.${group.id}'));
+    final label = find.descendant(of: pills, matching: find.text(page));
+    await tap(
+      label.evaluate().isNotEmpty ? label : find.descendant(of: pills, matching: find.byTooltip(page)),
+    );
   }
 
   /// Goes to a navigation entry through the rail or the dock.
