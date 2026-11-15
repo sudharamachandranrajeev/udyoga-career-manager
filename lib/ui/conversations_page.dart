@@ -49,12 +49,28 @@ class _ConversationsPageState extends ConsumerState<ConversationsPage> {
   void initState() {
     super.initState();
     selected = widget.openThread;
+    // A thread another page asked for before this page was built.
+    final asked = ref.read(openThreadProvider);
+    if (asked != null) {
+      selected = asked;
+      Future.microtask(() => ref.read(openThreadProvider.notifier).clear());
+    }
   }
 
   void _open(String? id) => setState(() => selected = id);
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
+  Widget build(BuildContext context) {
+    // A thread another page asks for while this page is already built.
+    ref.listen<String?>(openThreadProvider, (_, id) {
+      if (id == null) return;
+      _open(id);
+      ref.read(openThreadProvider.notifier).clear();
+    });
+    return _layout(context);
+  }
+
+  Widget _layout(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
       final wide = box.maxWidth >= _twoPaneWidth;
       final list = ThreadList(

@@ -91,4 +91,16 @@ void main() {
     expect(find.text('Sam Sample'), findsOneWidget);
     await app.close();
   });
+
+  testWidgets('a reply waiting on Today opens its own thread', (tester) async {
+    final app = AppHarness(tester)..desktop();
+    await app.open(seed: seedConversations);
+    await app.run();
+    expect(find.text('Replies waiting'), findsOneWidget);
+    await app.tap(find.text('Jordan Example').first);
+    expect(find.byType(ConversationsPage), findsOneWidget);
+    expect(find.textContaining('To Jordan Example · Practice Manager'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await app.close();
+  });
 }
