@@ -19,7 +19,7 @@ class LeadFinderPage extends StatelessWidget {
   const LeadFinderPage({super.key});
 
   @override
-  Widget build(BuildContext context) => const PageScaffold(title: 'Network', children: [NetworkTools()]);
+  Widget build(BuildContext context) => const PageScaffold(title: 'Find people', children: [NetworkTools()]);
 }
 
 /// The Network sections, for a page or a tab.

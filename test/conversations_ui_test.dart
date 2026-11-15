@@ -1,4 +1,4 @@
-// The Conversations page, reached from Contacts: the header that always says
+// The Conversations page, its own navigation entry: the header that always says
 // who and where, logging a hand-sent message, and the Screener. Every person
 // is made up.
 import 'package:flutter_test/flutter_test.dart';
@@ -8,8 +8,7 @@ import 'app_harness.dart';
 import 'seed.dart';
 
 Future<void> openConversations(AppHarness app) async {
-  await app.go('Contacts');
-  await app.tap(find.byTooltip('Conversations'));
+  await app.go('Conversations');
   expect(find.byType(ConversationsPage), findsOneWidget);
 }
 

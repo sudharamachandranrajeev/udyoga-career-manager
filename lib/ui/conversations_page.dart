@@ -93,18 +93,23 @@ class _ConversationsPageState extends ConsumerState<ConversationsPage> {
               },
             ),
           ],
-          body: wide
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(width: 380, child: list),
-                    const VerticalDivider(width: 1),
-                    Expanded(child: thread),
-                  ],
-                )
-              : selected == null
-              ? list
-              : thread,
+          // A floating dock covers the bottom of the shell on a phone, its
+          // height arriving as bottom padding; the composer sits above it.
+          body: Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
+            child: wide
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(width: 380, child: list),
+                      const VerticalDivider(width: 1),
+                      Expanded(child: thread),
+                    ],
+                  )
+                : selected == null
+                ? list
+                : thread,
+          ),
         ),
       );
     },
@@ -491,7 +496,14 @@ class ThreadView extends ConsumerWidget {
             const Divider(height: 1),
             Expanded(child: MessageList(conversationId)),
             const Divider(height: 1),
-            Composer(row, key: ValueKey('composer-$conversationId'), onOpen: onOpen),
+            // On a short screen the composer scrolls rather than squeezing
+            // the messages out.
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: box.maxHeight * 0.55),
+              child: SingleChildScrollView(
+                child: Composer(row, key: ValueKey('composer-$conversationId'), onOpen: onOpen),
+              ),
+            ),
           ],
         );
         if (!panel) return column;

@@ -52,8 +52,7 @@ void main() {
     final app = AppHarness(tester)..desktop();
     await app.open(seed: _seed);
     await app.run();
-    await app.go('Contacts');
-    await app.tap(find.byTooltip('Network and lead finder'));
+    await app.go('Find people');
     expect(find.byType(LeadFinderPage), findsOneWidget);
 
     // A connection at the trust a job is saved at, despite the suffix.
@@ -106,8 +105,7 @@ void main() {
     final app = AppHarness(tester)..phone();
     await app.open(seed: _seed);
     await app.run();
-    await app.go('Contacts');
-    await app.tap(find.byTooltip('Network and lead finder'));
+    await app.go('Find people');
     await tester.scrollUntilVisible(
       find.text(communities.last.name),
       300,

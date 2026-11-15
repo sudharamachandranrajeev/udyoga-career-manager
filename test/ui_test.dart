@@ -213,13 +213,15 @@ void main() {
     await app.close();
   });
 
-  test('eleven pages sit under five entries, each keeping its old id', () {
-    expect(allDestinations.map((d) => d.id), ['today', 'jobs', 'network', 'prepare', 'you']);
+  test('thirteen pages sit under six entries, each keeping its old id', () {
+    expect(allDestinations.map((d) => d.id), ['today', 'jobs', 'conversations', 'network', 'prepare', 'you']);
     expect(allPages.map((p) => p.id), [
       'today',
       'jobs',
       'applications',
+      'conversations',
       'contacts',
+      'find-people',
       'linkedin',
       'interview',
       'coach',
@@ -231,6 +233,8 @@ void main() {
     expect(groupOf('applications')?.id, 'jobs');
     expect(groupOf('settings')?.id, 'you');
     expect(groupOf('today'), isNull);
+    expect(groupOf('conversations'), isNull);
+    expect(groupOf('find-people')?.id, 'network');
   });
 
   for (final phone in [false, true]) {

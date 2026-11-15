@@ -5,10 +5,12 @@ import '../ui/applications_page.dart';
 import '../ui/career_page.dart';
 import '../ui/coach_page.dart';
 import '../ui/contacts_page.dart';
+import '../ui/conversations_page.dart';
 import '../ui/growth_page.dart';
 import '../ui/interview_page.dart';
 import '../ui/jobs_page.dart';
 import '../ui/linkedin_page.dart';
+import '../ui/network_page.dart';
 import '../ui/profile_page.dart';
 import '../ui/today_page.dart';
 import 'navigation.dart';
@@ -40,6 +42,25 @@ final applicationsPage = Destination(
   icon: Icons.send_outlined,
   selectedIcon: Icons.send,
   page: (_) => const ApplicationsPage(),
+);
+
+/// Every conversation with every person, on any channel, as chat threads.
+final conversationsPage = Destination(
+  id: 'conversations',
+  label: 'Conversations',
+  icon: Icons.forum_outlined,
+  selectedIcon: Icons.forum,
+  page: (_) => const ConversationsPage(),
+);
+
+/// Finding people in the field: who you know, search links, advert
+/// contacts and communities.
+final findPeoplePage = Destination(
+  id: 'find-people',
+  label: 'Find people',
+  icon: Icons.person_search_outlined,
+  selectedIcon: Icons.person_search,
+  page: (_) => const LeadFinderPage(),
 );
 
 final contactsPage = Destination(
@@ -121,7 +142,7 @@ final pageGroups = <PageGroup>[
     label: 'Network',
     icon: Icons.hub_outlined,
     selectedIcon: Icons.hub,
-    pages: [contactsPage, linkedinPage],
+    pages: [contactsPage, findPeoplePage, linkedinPage],
   ),
   PageGroup(
     id: 'prepare',
@@ -142,7 +163,12 @@ final pageGroups = <PageGroup>[
 final careerModule = AppModule(
   id: 'career',
   name: 'Career',
-  destinations: [todayPage, for (final g in pageGroups) g.destination],
+  destinations: [
+    todayPage,
+    pageGroups.first.destination,
+    conversationsPage,
+    for (final g in pageGroups.skip(1)) g.destination,
+  ],
 );
 
 final modules = <AppModule>[careerModule];
@@ -151,7 +177,12 @@ final modules = <AppModule>[careerModule];
 List<Destination> get allDestinations => [for (final m in modules) ...m.destinations];
 
 /// Every page, in navigation order, grouped or not.
-List<Destination> get allPages => [todayPage, for (final g in pageGroups) ...g.pages];
+List<Destination> get allPages => [
+  todayPage,
+  ...pageGroups.first.pages,
+  conversationsPage,
+  for (final g in pageGroups.skip(1)) ...g.pages,
+];
 
 /// The group page [id] lives in, or null for a page of its own (Today).
 PageGroup? groupOf(String id) => pageGroups.where((g) => g.pages.any((p) => p.id == id)).firstOrNull;
