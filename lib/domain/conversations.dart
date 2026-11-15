@@ -615,7 +615,9 @@ extension ConversationBook on CareerBook {
     try {
       final externalId = await sender.send(t, c, m.body, subject: t.subject);
       await save(db.messages, m.copyWith(status: 'sent', externalId: Value(externalId)), m.id);
-      if (t.account.isEmpty) await save(db.conversations, t.copyWith(account: sender.account), t.id);
+      // Read again: the sender may have noted the channel's thread id.
+      final now = await conversation(t.id);
+      if (now.account.isEmpty) await save(db.conversations, now.copyWith(account: sender.account), now.id);
     } catch (_) {
       await save(db.messages, m.copyWith(status: 'failed'), m.id);
       rethrow;

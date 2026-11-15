@@ -261,6 +261,36 @@ class Messages extends Table with SyncedRow {
   TextColumn get draftOf => text().nullable()();
 }
 
+/// A post in the weekly plan: when to post it, the draft, and whether it
+/// went out. The user posts by hand (or presses Post for Bluesky); nothing
+/// is posted on its own.
+@DataClassName('PlannedPost')
+class CareerPosts extends Table with SyncedRow {
+  @override
+  String get tableName => 'career_posts';
+
+  /// linkedin | bluesky
+  TextColumn get channel => text().withDefault(const Constant('linkedin'))();
+
+  /// The slot, local time (YYYY-MM-DDTHH:mm).
+  TextColumn get at => text()();
+
+  /// What it is about, before there is a draft.
+  TextColumn get topic => text().withDefault(const Constant(''))();
+  TextColumn get body => text().withDefault(const Constant(''))();
+
+  /// The draft after the humanizer, when the user ran it.
+  TextColumn get humanized => text().withDefault(const Constant(''))();
+
+  /// planned | posted | skipped ("due" is a planned post whose time has
+  /// come).
+  TextColumn get status => text().withDefault(const Constant('planned'))();
+
+  /// The post's address, pasted by the user or given by Bluesky.
+  TextColumn get postUrl => text().withDefault(const Constant(''))();
+  TextColumn get postedAt => text().nullable()();
+}
+
 /// CVs: the base one made from the profile and those tailored to a job.
 @DataClassName('Resume')
 class CareerResumes extends Table with SyncedRow {

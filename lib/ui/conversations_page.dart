@@ -101,10 +101,11 @@ class _ConversationsPageState extends ConsumerState<ConversationsPage> {
         child: PageScaffold(
           title: 'Conversations',
           actions: [
-            if (ref.watch(mailAccountsProvider).value?.isNotEmpty ?? false)
+            if ((ref.watch(mailAccountsProvider).value?.isNotEmpty ?? false) ||
+                (ref.watch(blueskyAccountProvider).value?.dms ?? false))
               IconButton(
                 icon: const Icon(Icons.sync),
-                tooltip: 'Check mail',
+                tooltip: 'Check messages',
                 onPressed: ref.watch(mailSyncProvider).running ? null : () => checkMailNow(context, ref),
               ),
             IconButton(
@@ -845,15 +846,15 @@ class _ComposerState extends ConsumerState<Composer> {
     );
   }
 
-  /// Sends through the connected account: a subject first if the thread
-  /// has none, and the PECR reminder before the first mail to a personal
+  /// Sends through the connected account: a subject first if an e-mail
+  /// thread has none, and the PECR reminder before the first mail to a personal
   /// address. A failed send stays in the thread with Retry.
   Future<void> _send(ChannelSender sender, bool first) async {
     final body = text.text.trim();
     if (body.isEmpty) return showMessage(context, 'Write the message first.');
     final l = contact!;
     var subject = thread.subject;
-    if (subject.isEmpty) {
+    if (subject.isEmpty && thread.channel == 'email') {
       subject =
           (await pasteDialog(context, title: 'Subject', label: 'What the e-mail is about'))?.trim() ?? '';
       if (subject.isEmpty || !mounted) return;

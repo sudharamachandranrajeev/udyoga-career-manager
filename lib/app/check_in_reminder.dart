@@ -21,11 +21,16 @@ abstract class CheckInScheduler {
   Future<void> replaceAll(List<DateTime> times);
 }
 
-class LocalCheckInScheduler implements CheckInScheduler {
+/// Reminders scheduled on the device (Android). Each kind of reminder has
+/// its own block of ids and replaces only those, so the check-ins and the
+/// post plan never cancel each other.
+class LocalReminders {
+  LocalReminders._();
+  static final instance = LocalReminders._();
+
   final _plugin = FlutterLocalNotificationsPlugin();
   var _ready = false;
 
-  @override
   bool get supported => Platform.isAndroid;
 
   Future<void> _init() async {
@@ -36,37 +41,60 @@ class LocalCheckInScheduler implements CheckInScheduler {
     _ready = true;
   }
 
-  @override
   Future<bool> requestPermission() async {
     await _init();
     final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     return await android?.requestNotificationsPermission() ?? false;
   }
 
-  @override
-  Future<void> replaceAll(List<DateTime> times) async {
+  /// Replaces the pending reminders with ids from [base] to [base] + [size]
+  /// with one for each of [items] (the first [size]).
+  Future<void> replaceBlock({
+    required int base,
+    required int size,
+    required List<({DateTime at, String body})> items,
+    required AndroidNotificationDetails details,
+  }) async {
     await _init();
-    await _plugin.cancelAllPendingNotifications();
-    for (var i = 0; i < times.length; i++) {
+    for (final r in await _plugin.pendingNotificationRequests()) {
+      if (r.id >= base && r.id < base + size) await _plugin.cancel(id: r.id);
+    }
+    for (var i = 0; i < items.length && i < size; i++) {
       await _plugin.zonedSchedule(
-        id: i,
+        id: base + i,
         title: 'Udyoga',
-        body: 'How was your day? Two minutes for your check-in.',
+        body: items[i].body,
         // The instant is what matters, so UTC is as good as the local zone;
         // each day is computed in local time, so clock changes are handled.
-        scheduledDate: tz.TZDateTime.from(times[i], tz.UTC),
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'check_in',
-            'Daily check-in',
-            channelDescription: 'A reminder at the time you chose to answer the day\'s question.',
-          ),
-        ),
-        // Inexact: no exact-alarm permission needed for a daily nudge.
+        scheduledDate: tz.TZDateTime.from(items[i].at, tz.UTC),
+        notificationDetails: NotificationDetails(android: details),
+        // Inexact: no exact-alarm permission needed for a nudge.
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       );
     }
   }
+}
+
+class LocalCheckInScheduler implements CheckInScheduler {
+  final _reminders = LocalReminders.instance;
+
+  @override
+  bool get supported => _reminders.supported;
+
+  @override
+  Future<bool> requestPermission() => _reminders.requestPermission();
+
+  @override
+  Future<void> replaceAll(List<DateTime> times) => _reminders.replaceBlock(
+    base: 0,
+    size: 100,
+    items: [for (final t in times) (at: t, body: 'How was your day? Two minutes for your check-in.')],
+    details: const AndroidNotificationDetails(
+      'check_in',
+      'Daily check-in',
+      channelDescription: 'A reminder at the time you chose to answer the day\'s question.',
+    ),
+  );
 }
 
 final checkInSchedulerProvider = Provider<CheckInScheduler>((ref) => LocalCheckInScheduler());
