@@ -91,6 +91,11 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
         }
       }
       if (from < 4) {
+        // Only the columns not there yet, so a half-finished upgrade can run
+        // again.
+        final have = await customSelect('PRAGMA table_info(career_contacts)')
+            .map((r) => r.read<String>('name'))
+            .get();
         for (final c in [
           careerContacts.sourceUrl,
           careerContacts.sourceKind,
@@ -100,7 +105,7 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
           careerContacts.doNotContact,
           careerContacts.keepInTouchWeeks,
         ]) {
-          await m.addColumn(careerContacts, c);
+          if (!have.contains(c.name)) await m.addColumn(careerContacts, c);
         }
         await m.createTable(contactHandles);
         await m.createTable(conversations);
