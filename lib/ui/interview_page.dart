@@ -8,6 +8,7 @@ import '../domain/answer_metrics.dart';
 import '../domain/insights.dart';
 import '../domain/json.dart';
 import 'common.dart';
+import 'kit/kit.dart';
 import 'look.dart';
 
 const _ratings = {
@@ -197,7 +198,7 @@ class _RoundTile extends StatelessWidget {
                           style: t.bodyMedium?.copyWith(color: muted),
                         ),
                         const SizedBox(height: 8),
-                        Pill('$answered of $total answered', icon: Icons.check_circle_outline),
+                        StatusPill('$answered of $total answered', icon: Icons.check_circle_outline),
                       ],
                     ),
                   ),

@@ -19,6 +19,7 @@ import 'contacts_page.dart';
 import 'employer_cards.dart';
 import 'interview_page.dart';
 import 'jobs_page.dart';
+import 'kit/kit.dart';
 import 'look.dart';
 import 'resume_page.dart';
 import 'site_page.dart';
@@ -424,19 +425,19 @@ class _Header extends StatelessWidget {
             runSpacing: 6,
             children: [
               if (j.salaryText.isNotEmpty || shortSalary(j).isNotEmpty)
-                Pill(j.salaryText.ifEmpty(shortSalary(j)), icon: Icons.payments_outlined),
-              if (j.remote) const Pill('Remote', icon: Icons.public),
-              if (j.country.isNotEmpty) Pill(Country.nameOf(j.country), icon: Icons.place_outlined),
-              if (j.posted != null) Pill('Posted ${niceDate(j.posted!)}'),
+                StatusPill(j.salaryText.ifEmpty(shortSalary(j)), icon: Icons.payments_outlined),
+              if (j.remote) const StatusPill('Remote', icon: Icons.public),
+              if (j.country.isNotEmpty) StatusPill(Country.nameOf(j.country), icon: Icons.place_outlined),
+              if (j.posted != null) StatusPill('Posted ${niceDate(j.posted!)}'),
               if (checkListing(j, today: now).official)
-                const Pill('Official site', status: Status.good, icon: Icons.verified_outlined),
+                const StatusPill('Official site', status: Status.good, icon: Icons.verified_outlined),
               if (j.closing != null)
-                Pill(
+                StatusPill(
                   'Closes ${niceDate(j.closing!)} (${relativeDay(j.closing!, now)})',
                   status: j.closing!.compareTo(addDays(now, 7)) <= 0 ? Status.serious : null,
                   icon: Icons.event_outlined,
                 ),
-              Pill('Found ${niceDate(j.found)} via ${sourceName(j.source)}'),
+              StatusPill('Found ${niceDate(j.found)} via ${sourceName(j.source)}'),
             ],
           ),
         ],

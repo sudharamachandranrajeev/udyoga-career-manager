@@ -11,6 +11,7 @@ import '../db/database.dart';
 import '../domain/calendar.dart';
 import '../domain/pipeline.dart';
 import 'common.dart';
+import 'kit/kit.dart';
 import 'look.dart';
 import 'offer_checks.dart';
 import 'job_page.dart';
@@ -222,7 +223,7 @@ class ApplicationTile extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Pill(stage.label, status: stageStatus(stage)),
+                      StatusPill(stage.label, status: stageStatus(stage)),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -242,7 +243,7 @@ class ApplicationTile extends StatelessWidget {
                       if (a.followUp != null)
                         // Shrinks (the label ellipsizes) on narrow cards.
                         Flexible(
-                          child: Pill(
+                          child: StatusPill(
                             'Follow up ${relativeDay(a.followUp!, now)}',
                             status: followUpStatus(a.followUp!, now),
                             icon: Icons.notifications_none,
@@ -331,7 +332,7 @@ class _BoardColumn extends ConsumerWidget {
               child: Row(
                 children: [
                   Expanded(child: Text(stage.label, style: t.titleSmall)),
-                  Pill('${apps.length}', status: stageStatus(stage)),
+                  StatusPill('${apps.length}', status: stageStatus(stage)),
                 ],
               ),
             ),
@@ -406,7 +407,7 @@ class _BoardCard extends ConsumerWidget {
                 children: [
                   Text('Updated ${relativeDay(a.updated, now)}', style: t.bodySmall?.copyWith(color: muted)),
                   if (a.followUp != null)
-                    Pill(
+                    StatusPill(
                       'Follow up ${relativeDay(a.followUp!, now)}',
                       status: followUpStatus(a.followUp!, now),
                       icon: Icons.notifications_none,
