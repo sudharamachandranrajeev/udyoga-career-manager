@@ -259,7 +259,7 @@ class ConversationTile extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            l?.name ?? t.peer.ifEmpty('Unknown sender'),
+                            l?.name ?? senderName(t).ifEmpty('Unknown sender'),
                             style: theme.textTheme.titleSmall,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1069,7 +1069,7 @@ class ScreenerActions extends ConsumerWidget {
 }
 
 Future<void> addFromScreenerDialog(BuildContext context, WidgetRef ref, Conversation t) async {
-  final name = TextEditingController();
+  final name = TextEditingController(text: senderName(t) == t.peer ? '' : senderName(t));
   final title = TextEditingController();
   final company = TextEditingController();
   var kind = 'recruiter';
@@ -1126,7 +1126,10 @@ class ContactPanel extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         shrinkWrap: true,
         children: [
-          Text('Unknown sender', style: theme.textTheme.titleMedium),
+          Text(
+            senderName(t) == t.peer ? 'Unknown sender' : senderName(t),
+            style: theme.textTheme.titleMedium,
+          ),
           if (t.peer.isNotEmpty) SelectableText(t.peer),
           const SizedBox(height: 8),
           Text(

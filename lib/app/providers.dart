@@ -17,6 +17,7 @@ import '../domain/companion_service.dart';
 import '../domain/conversations.dart';
 import '../domain/gemini.dart';
 import '../domain/insights.dart';
+import '../domain/linkedin_messages.dart';
 import '../domain/pay.dart';
 import '../domain/profile.dart';
 import '../domain/refresh.dart';
@@ -209,6 +210,17 @@ final paceProvider = FutureProvider<Pace>((ref) {
 final mergeSuggestionsProvider = FutureProvider<List<MergeSuggestion>>((ref) {
   ref.watch(revisionProvider);
   return ref.watch(sessionProvider).book.mergeSuggestions();
+});
+
+/// First-degree connections at the employers the user is aiming for.
+final knownAtTargetsProvider = FutureProvider<List<KnownAt>>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.knownAtTargets();
+});
+
+final targetEmployersProvider = FutureProvider<List<String>>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.targetEmployers();
 });
 
 /// The channels Udyoga can send on by itself, once the user connects an

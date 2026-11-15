@@ -11,6 +11,7 @@ import 'feeds.dart';
 import 'insights.dart';
 import 'json.dart';
 import 'linkedin_export.dart';
+import 'linkedin_messages.dart';
 import 'matching.dart';
 import 'n8n.dart';
 import 'pay.dart';
@@ -139,7 +140,8 @@ class CareerBook {
   /// Brings a LinkedIn export into every part of the app it helps: the
   /// profile (filled in, never overwritten), held certifications and
   /// recommendations on the Growth page, contacts at the employers the user
-  /// is pursuing (and recruiters), recent applications and saved jobs.
+  /// is pursuing (and recruiters), recent applications and saved jobs, and
+  /// the messages and connection requests as imported conversations.
   Future<LinkedInImport> importLinkedIn(LinkedInExport x, {required String today}) async {
     final before = await profile();
     final after = x.mergeInto(before);
@@ -222,6 +224,7 @@ class CareerBook {
       chase: false,
       sourceKind: 'archive',
     );
+    final said = await importLinkedInMessages(x, today: today);
 
     return (
       jobs: after.experience.length - before.experience.length,
@@ -231,6 +234,8 @@ class CareerBook {
       applications: sent,
       savedJobs: saved.length,
       contacts: contacts,
+      messages: said.messages,
+      invitations: said.invitations,
     );
   }
 

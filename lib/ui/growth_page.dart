@@ -537,6 +537,8 @@ Future<void> importLinkedIn(BuildContext context, WidgetRef ref) async {
     if (done.applications > 0) n(done.applications, 'application'),
     if (done.savedJobs > 0) n(done.savedJobs, 'saved job'),
     if (done.contacts > 0) n(done.contacts, 'contact'),
+    if (done.messages > 0) n(done.messages, 'message'),
+    if (done.invitations > 0) n(done.invitations, 'connection request'),
   ];
   showMessage(
     context,

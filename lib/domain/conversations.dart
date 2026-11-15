@@ -191,6 +191,11 @@ String _nameKey(String name, String company) =>
 
 // ---- what the screens show ----
 
+/// Who an unknown sender is: an imported LinkedIn thread keeps their name
+/// as its subject (its peer is their profile link); otherwise the address.
+String senderName(Conversation t) =>
+    t.channel == 'linkedin' && t.mode == 'import' && t.subject.isNotEmpty ? t.subject : t.peer;
+
 /// The line the user may add to a first message to say how they found the
 /// person (UK GDPR Article 14), or '' when the person knows already (met in
 /// person, or they got in touch).
@@ -236,9 +241,9 @@ String threadHeader(Conversation c, Lead? l) {
   return [
     l != null
         ? 'To ${l.name}'
-        : c.peer.isEmpty
+        : senderName(c).isEmpty
         ? 'From an unknown sender'
-        : 'From ${c.peer}',
+        : 'From ${senderName(c)}',
     if (role.isNotEmpty) role,
     'via ${channelLabel(c.channel, account: c.account)}',
     if (found.isNotEmpty) 'found on $found',
@@ -529,16 +534,21 @@ extension ConversationBook on CareerBook {
       id,
     );
     final day = at.substring(0, 10);
+    // An older message (from an import) adds to the history but does not
+    // move the thread on.
+    final newest = at.compareTo(t.lastAt) >= 0;
     await save(
       db.conversations,
       t.copyWith(
-        lastAt: at.compareTo(t.lastAt) > 0 ? at : t.lastAt,
+        lastAt: newest ? at : t.lastAt,
         status: switch (direction) {
+          _ when !newest => t.status,
           'out' => 'awaiting_reply',
           'in' => 'replied',
           _ => t.status,
         },
         followUp: switch (direction) {
+          _ when !newest => Value(t.followUp),
           'out' => Value(addDays(day, 7)),
           'in' => const Value(null),
           _ => Value(t.followUp),
