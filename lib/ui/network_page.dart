@@ -8,6 +8,8 @@ import '../domain/communities.dart';
 import '../domain/lead_finder.dart';
 import '../domain/pipeline.dart';
 import 'common.dart';
+import 'kit/kit.dart';
+import 'look.dart';
 
 // Network: the people the user already knows at the employers they want,
 // searches for people like them, people named in saved adverts, and the
@@ -44,7 +46,7 @@ class KnownAtTargets extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => SectionCard(
     title: 'Who you already know at your target employers',
     hint: 'Your LinkedIn connections at employers you have applied to or saved jobs at.',
-    child: AsyncView(
+    child: AsyncList(
       ref.watch(knownAtTargetsProvider),
       builder: (groups) => groups.isEmpty
           ? const Text(
@@ -54,7 +56,26 @@ class KnownAtTargets extends ConsumerWidget {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final g in groups) ...[Subhead(g.employer), for (final l in g.people) _PersonTile(l)],
+                for (final g in groups) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 4),
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            g.employer,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        StatusPill(g.people.length == 1 ? '1 person' : '${g.people.length} people'),
+                      ],
+                    ),
+                  ),
+                  for (final l in g.people) _PersonTile(l),
+                ],
               ],
             ),
     ),
@@ -66,18 +87,61 @@ class _PersonTile extends StatelessWidget {
   final Lead l;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    dense: true,
-    leading: const Icon(Icons.person_outline),
-    title: Text(l.name),
-    subtitle: l.title.isEmpty ? null : Text(l.title),
-    trailing: l.linkedin.isEmpty
-        ? null
-        : IconButton(
-            icon: const Icon(Icons.open_in_new),
-            tooltip: 'Open ${l.name} on LinkedIn',
-            onPressed: () => openLink(context, l.linkedin),
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          OrgLogo(l.name, size: 32),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l.name, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                if (l.title.isNotEmpty)
+                  Text(
+                    l.title,
+                    style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          if (l.linkedin.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Tooltip(
+              message: 'Open ${l.name} on LinkedIn',
+              child: ChannelChip('linkedin', onPressed: () => openLink(context, l.linkedin)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Tiles as spotlight cards in columns on a wide screen; on a phone, a flat
+/// list, since they already sit inside a card.
+class _Tiles extends StatelessWidget {
+  const _Tiles(this.children);
+  final List<Widget> children;
+  static const minWidth = 400.0;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) => box.maxWidth >= 2 * minWidth
+        ? StatGrid(
+            minWidth: minWidth,
+            children: [for (final c in children) SpotlightCard(padding: EdgeInsets.zero, child: c)],
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final (i, c) in children.indexed) ...[if (i > 0) const Divider(height: 1), c],
+            ],
           ),
   );
 }
@@ -142,15 +206,7 @@ class _FindPeopleState extends ConsumerState<FindPeople> {
           Field(employer, 'Employer'),
           if (employers.isNotEmpty) _Picks(employers, onPick: (e) => employer.text = e),
           Field(place, 'Place'),
-          for (final s in searches)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.travel_explore),
-              title: Text(s.label),
-              subtitle: Text(s.why),
-              trailing: const Icon(Icons.open_in_new),
-              onTap: () => openUri(context, s.uri),
-            ),
+          if (searches.isNotEmpty) _Tiles([for (final s in searches) _SearchTile(s)]),
           if (searches.isNotEmpty)
             Align(
               alignment: Alignment.centerLeft,
@@ -217,6 +273,51 @@ class _FindPeopleState extends ConsumerState<FindPeople> {
   }
 }
 
+/// One search: what it looks in, why, and that it opens in the browser.
+class _SearchTile extends StatelessWidget {
+  const _SearchTile(this.s);
+  final LeadSearch s;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: () => openUri(context, s.uri),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.travel_explore, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(s.label, style: t.titleSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 2),
+                    Text(
+                      s.why,
+                      style: t.bodySmall?.copyWith(color: muted),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.open_in_new, size: 18, color: muted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _Picks extends StatelessWidget {
   const _Picks(this.items, {required this.onPick});
   final List<String> items;
@@ -228,7 +329,17 @@ class _Picks extends StatelessWidget {
     child: Wrap(
       spacing: 6,
       runSpacing: 6,
-      children: [for (final i in items.take(8)) ActionChip(label: Text(i), onPressed: () => onPick(i))],
+      children: [
+        for (final i in items.take(8))
+          ActionChip(
+            // A long employer name stays on one line inside the chip.
+            label: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 260),
+              child: Text(i, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+            onPressed: () => onPick(i),
+          ),
+      ],
     ),
   );
 }
@@ -260,48 +371,86 @@ class AdvertLeads extends ConsumerWidget {
       hint: 'People adverts name for informal enquiries. They expect questions about the job.',
       child: offers.isEmpty
           ? const Text('Nobody new. Save jobs whose adverts name a contact, and they show here.')
-          : Column(
-              children: [
-                for (final o in offers)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.campaign_outlined),
-                    title: Text(o.contact.name.ifEmpty(o.contact.email)),
-                    subtitle: Text(
-                      [
-                        if (o.contact.title.isNotEmpty) o.contact.title,
-                        '${o.job.title}${o.job.company.isEmpty ? '' : ' at ${o.job.company}'}',
-                        if (o.contact.email.isNotEmpty && o.contact.name.isNotEmpty) o.contact.email,
-                        if (o.contact.phone.isNotEmpty) o.contact.phone,
-                      ].join(' · '),
-                    ),
-                    trailing: TextButton(
-                      onPressed: () async {
-                        final c = o.contact;
-                        final added = await ref.mutate(
-                          (s) => s.book.saveFoundLead(
-                            name: c.name.ifEmpty('Enquiries, ${o.job.title}'),
-                            title: c.title,
-                            company: o.job.company,
-                            email: c.email,
-                            phone: c.phone,
-                            kind: 'hiring_manager',
-                            sourceKind: 'advert',
-                            source: 'the advert for ${o.job.title}',
-                            sourceUrl: o.job.url,
-                            jobId: o.job.id,
-                            today: today(),
+          : _Tiles([
+              for (final o in offers)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          OrgLogo(o.contact.name.ifEmpty(o.job.company), size: 32),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              o.contact.name.ifEmpty(o.contact.email),
+                              style: Theme.of(context).textTheme.titleSmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        );
-                        if (context.mounted) {
-                          showMessage(context, added ? 'Saved to Contacts.' : 'Already in your contacts.');
-                        }
-                      },
-                      child: const Text('Save as lead'),
-                    ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        [
+                          if (o.contact.title.isNotEmpty) o.contact.title,
+                          '${o.job.title}${o.job.company.isEmpty ? '' : ' at ${o.job.company}'}',
+                        ].join(' · '),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (o.contact.email.isNotEmpty && o.contact.name.isNotEmpty)
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 260),
+                              child: ChannelChip('email', account: o.contact.email),
+                            ),
+                          if (o.contact.phone.isNotEmpty) ChannelChip('phone', account: o.contact.phone),
+                          const StatusPill('Job advert', icon: Icons.place_outlined, quiet: true),
+                        ],
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () async {
+                            final c = o.contact;
+                            final added = await ref.mutate(
+                              (s) => s.book.saveFoundLead(
+                                name: c.name.ifEmpty('Enquiries, ${o.job.title}'),
+                                title: c.title,
+                                company: o.job.company,
+                                email: c.email,
+                                phone: c.phone,
+                                kind: 'hiring_manager',
+                                sourceKind: 'advert',
+                                source: 'the advert for ${o.job.title}',
+                                sourceUrl: o.job.url,
+                                jobId: o.job.id,
+                                today: today(),
+                              ),
+                            );
+                            if (context.mounted) {
+                              showMessage(
+                                context,
+                                added ? 'Saved to Contacts.' : 'Already in your contacts.',
+                              );
+                            }
+                          },
+                          child: const Text('Save as lead'),
+                        ),
+                      ),
+                    ],
                   ),
-              ],
-            ),
+                ),
+            ]),
     );
   }
 }
@@ -315,47 +464,54 @@ class CommunityDirectory extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => SectionCard(
     title: 'Communities and events',
     hint: 'Where people in health administration and digital health meet. Turning up is the warmest way in.',
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final c in communities)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(child: Text(c.name, style: Theme.of(context).textTheme.titleSmall)),
-                    Text(
-                      communityKinds[c.kind] ?? c.kind,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-                Text(c.why),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    TextButton.icon(
-                      onPressed: () => openLink(context, c.url),
-                      icon: const Icon(Icons.open_in_new),
-                      label: const Text('Open'),
-                    ),
-                    TextButton.icon(
-                      onPressed: () => logPeopleMet(context, ref, c),
-                      icon: const Icon(Icons.person_add_alt),
-                      label: const Text('Log people I met'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+    child: _Tiles([
+      for (final c in communities)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                c.name,
+                style: Theme.of(context).textTheme.titleSmall,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 6),
+              StatusPill(communityKinds[c.kind] ?? c.kind, icon: _communityIcons[c.kind]),
+              const SizedBox(height: 6),
+              Text(
+                c.why,
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+              Wrap(
+                spacing: 8,
+                children: [
+                  TextButton.icon(
+                    onPressed: () => openLink(context, c.url),
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('Open'),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => logPeopleMet(context, ref, c),
+                    icon: const Icon(Icons.person_add_alt),
+                    label: const Text('Log people I met'),
+                  ),
+                ],
+              ),
+            ],
           ),
-      ],
-    ),
+        ),
+    ]),
   );
 }
+
+const _communityIcons = {
+  'community': Icons.groups_outlined,
+  'event': Icons.event_outlined,
+  'body': Icons.account_balance_outlined,
+};
 
 /// Saves someone the user met at [c]: met in person, so they know where
 /// the user found them.

@@ -7,12 +7,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/book.dart';
+import '../domain/conversations.dart';
 import '../domain/humanizer.dart';
 import '../domain/json.dart';
 import '../domain/linkedin.dart';
 import 'carousel.dart';
 import 'common.dart';
-import 'look.dart';
+import 'kit/kit.dart';
+import 'look.dart' hide Pace;
 
 const _icons = {
   LinkedInTool.profile: Icons.badge_outlined,
@@ -44,11 +46,14 @@ class LinkedInPage extends ConsumerWidget {
     final reports = ref.watch(reportsProvider).value ?? const <Report>[];
     final recent = reports.where((r) => r.kind.startsWith('linkedin.')).take(30).toList();
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    final pace = ref.watch(paceProvider).value;
     return PageScaffold(
       title: 'LinkedIn',
       banner: 'page.linkedin',
       children: [
         if (!hasAi) const NeedsKey(what: 'The LinkedIn drafts'),
+        // The pace guard speaks only when sending is busy or past the safe pace.
+        if (pace != null && pace.level != PaceLevel.calm) _PaceCard(pace),
         SectionCard(
           title: 'Your voice',
           hint: 'linkedin.voice',
@@ -69,7 +74,8 @@ class LinkedInPage extends ConsumerWidget {
         SectionCard(
           title: 'Tools',
           child: TiltGrid(
-            minWidth: 220,
+            // Two across on a phone, so eleven tools are not one long column.
+            minWidth: 150,
             children: [
               for (final t in LinkedInTool.values)
                 _ToolTile(
@@ -83,29 +89,21 @@ class LinkedInPage extends ConsumerWidget {
         SectionCard(
           title: 'Recent',
           child: recent.isEmpty
-              ? Text('What the tools write is kept here.', style: TextStyle(color: muted))
-              : Column(
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final r in recent)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(_icons[LinkedInTool.ofKind(r.kind)] ?? Icons.article_outlined),
-                        title: Text(
-                          str(decodeObject(r.content)['headline'])
-                              .ifEmpty(LinkedInTool.ofKind(r.kind)?.title ?? 'Draft'),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          '${LinkedInTool.ofKind(r.kind)?.title ?? ''} · ${niceDateTime(r.created)}'
-                          '${str(decodeObject(r.content)['posted']).isEmpty ? '' : ' · posted'}',
-                        ),
-                        onTap: () =>
-                            Navigator.of(context)
-                                .push(MaterialPageRoute(builder: (_) => LinkedInResultPage(r.id))),
+                    Text('What the tools write is kept here.', style: TextStyle(color: muted)),
+                    if (hasAi) ...[
+                      const SizedBox(height: 8),
+                      FilledButton.tonalIcon(
+                        onPressed: () => openLinkedInTool(context, ref, LinkedInTool.post),
+                        icon: Icon(_icons[LinkedInTool.post]),
+                        label: const Text('Write a post'),
                       ),
+                    ],
                   ],
-                ),
+                )
+              : Column(children: [for (final r in recent) _RecentTile(r)]),
         ),
         StatusLabel(
           Status.info,
@@ -139,6 +137,95 @@ class LinkedInPage extends ConsumerWidget {
   }
 }
 
+/// A saved draft: what it is, which tool wrote it, when, and whether it
+/// went out.
+class _RecentTile extends StatelessWidget {
+  const _RecentTile(this.r);
+  final Report r;
+
+  @override
+  Widget build(BuildContext context) {
+    final tool = LinkedInTool.ofKind(r.kind);
+    final data = decodeObject(r.content);
+    final posted = str(data['posted']);
+    return InkWell(
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => LinkedInResultPage(r.id))),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(_icons[tool] ?? Icons.article_outlined, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    str(data['headline']).ifEmpty(tool?.title ?? 'Draft'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      if (tool != null) StatusPill(tool.title),
+                      StatusPill(niceDateTime(r.created), icon: Icons.schedule, quiet: true),
+                      if (posted.isNotEmpty)
+                        StatusPill('Posted ${niceDate(posted)}', status: Status.good, icon: Icons.check),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// What has gone out by hand on LinkedIn lately, against the pace LinkedIn
+/// tolerates.
+class _PaceCard extends StatelessWidget {
+  const _PaceCard(this.pace);
+  final Pace pace;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, status) = pace.level == PaceLevel.slowDown
+        ? ('Slow down', Status.serious)
+        : ('Busy', Status.warning);
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: SpotlightCard(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.speed, color: status.color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  StatusPill(label, status: status),
+                  const SizedBox(height: 6),
+                  Text(pace.summary, style: TextStyle(color: muted)),
+                  if (pace.advice.isNotEmpty) ...[const SizedBox(height: 4), Text(pace.advice)],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ToolTile extends StatelessWidget {
   const _ToolTile(this.tool, {required this.enabled, required this.onTap});
   final LinkedInTool tool;
@@ -149,28 +236,31 @@ class _ToolTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        child: Opacity(
-          opacity: enabled ? 1 : 0.5,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(_icons[tool], color: scheme.primary),
-                const SizedBox(height: 8),
-                Text(tool.title, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 4),
-                Text(
-                  tool.blurb,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: t.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-              ],
+    return SpotlightCard(
+      padding: EdgeInsets.zero,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          child: Opacity(
+            opacity: enabled ? 1 : 0.5,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(_icons[tool], color: scheme.primary),
+                  const SizedBox(height: 8),
+                  Text(tool.title, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(
+                    tool.blurb,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: t.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -290,22 +380,27 @@ class LinkedInResultPage extends ConsumerWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(str(data['headline']), style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              str(data['headline']),
+              style: Theme.of(context).textTheme.titleLarge,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                Pill(niceDateTime(r.created), icon: Icons.schedule),
+                StatusPill(niceDateTime(r.created), icon: Icons.schedule),
                 if (score >= 0)
-                  Pill(
+                  StatusPill(
                     'Score $score/100',
                     status: score >= 75 ? Status.good : (score >= 50 ? Status.warning : Status.serious),
                   ),
                 if (after > score && score >= 0)
-                  Pill('After the rewrites: about $after', status: Status.good),
+                  StatusPill('After the rewrites: about $after', status: Status.good),
                 if (posted.isNotEmpty)
-                  Pill('Posted ${niceDate(posted)}', status: Status.good, icon: Icons.check),
+                  StatusPill('Posted ${niceDate(posted)}', status: Status.good, icon: Icons.check),
               ],
             ),
           ],
@@ -393,14 +488,14 @@ class _BlockView extends ConsumerWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 if (copy) ...[
-                  Pill(
+                  StatusPill(
                     limit > 0 ? '${text.length} / $limit' : '${text.length} characters',
                     status: limit > 0 && text.length > limit ? Status.serious : null,
                   ),
                   InkWell(
                     borderRadius: BorderRadius.circular(999),
                     onTap: () => showHumanCheck(context, text),
-                    child: Pill(
+                    child: StatusPill(
                       'Human check ${check!.overall}',
                       status: check.pass ? Status.good : Status.warning,
                       icon: Icons.fact_check_outlined,
@@ -444,12 +539,21 @@ class HumanCheckPage extends StatelessWidget {
     return PageScaffold(
       title: 'Human check',
       children: [
-        Row(
+        // On a phone the copy button drops under the score.
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          alignment: WrapAlignment.spaceBetween,
           children: [
-            Text('${c.overall}', style: Theme.of(context).textTheme.displaySmall),
-            const SizedBox(width: 12),
-            Pill(c.verdict, status: c.pass ? Status.good : Status.warning),
-            const Spacer(),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('${c.overall}', style: Theme.of(context).textTheme.displaySmall),
+                const SizedBox(width: 12),
+                StatusPill(c.verdict, status: c.pass ? Status.good : Status.warning),
+              ],
+            ),
             FilledButton.icon(
               onPressed: () => copyText(context, c.text, what: 'Cleaned text copied.'),
               icon: const Icon(Icons.copy),
