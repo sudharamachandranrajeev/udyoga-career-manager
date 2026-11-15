@@ -3,6 +3,7 @@
 // is made up.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:udyoga/ui/conversations_page.dart';
+import 'package:udyoga/ui/kit/kit.dart';
 
 import 'app_harness.dart';
 import 'seed.dart';
@@ -63,6 +64,27 @@ void main() {
     expect(logged!.single.direction, 'out');
     expect(logged.single.source, 'manual');
     expect(find.text('Tuesday at ten works for me.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await app.close();
+  });
+
+  testWidgets('a reply that comes in fades in; what the user sends appears at once', (tester) async {
+    final app = AppHarness(tester)..desktop();
+    await app.open(seed: seedConversations);
+    await app.run();
+    await openConversations(app);
+    await app.tap(find.text('Jordan Example').first);
+    expect(find.byType(BlurFadeIn), findsNothing, reason: 'the messages already there just show');
+    await app.tapText('Log a reply');
+    await app.enter('Their reply', 'Tuesday is perfect.');
+    await app.tapText('Log it');
+    expect(find.text('Tuesday is perfect.'), findsWidgets);
+    expect(find.byType(BlurFadeIn), findsOneWidget);
+
+    await app.enter('Message', 'See you then.');
+    await app.tap(find.text('Log as sent'));
+    expect(find.text('See you then.'), findsOneWidget);
+    expect(find.byType(BlurFadeIn), findsOneWidget, reason: 'the sent message does not animate');
     expect(tester.takeException(), isNull);
     await app.close();
   });

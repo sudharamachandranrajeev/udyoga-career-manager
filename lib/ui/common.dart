@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart' show Bidi;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../domain/ai.dart';
@@ -12,6 +13,11 @@ import 'kit/kit.dart';
 /// "2026-10-24T11:00" as "24 Oct 2026, 11:00".
 String niceDateTime(String at) =>
     at.length > 10 ? '${niceDate(at.substring(0, 10))}, ${at.substring(11, 16)}' : niceDate(at);
+
+/// Right to left when most of [text] is in a right-to-left script (Arabic,
+/// Hebrew), so a message in one reads from the right.
+TextDirection textDirectionOf(String text) =>
+    Bidi.detectRtlDirectionality(text) ? TextDirection.rtl : TextDirection.ltr;
 
 /// Now as local yyyy-MM-ddTHH:mm.
 String nowLocal() => DateTime.now().toIso8601String().substring(0, 16);

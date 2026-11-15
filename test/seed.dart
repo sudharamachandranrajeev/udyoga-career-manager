@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:brahma_core/brahma_core.dart' show addDays, isoDate, newId;
 import 'package:drift/drift.dart' show Value;
 import 'package:udyoga/db/database.dart';
@@ -8,8 +10,11 @@ import 'package:udyoga/domain/companion_book.dart';
 import 'package:udyoga/domain/conversations.dart';
 import 'package:udyoga/domain/feeds.dart';
 import 'package:udyoga/domain/insights.dart';
+import 'package:udyoga/domain/mail.dart';
+import 'package:udyoga/domain/mail_sync.dart';
 import 'package:udyoga/domain/pay.dart';
 import 'package:udyoga/domain/pipeline.dart';
+import 'package:udyoga/domain/post_plan.dart';
 
 import 'support.dart';
 
@@ -579,4 +584,159 @@ Future<void> seedWorstCase(CareerBook book) async {
       at: at(100 + i),
     );
   }
+}
+
+/// Conversations at their worst: 200 threads, 50 unknown senders waiting in
+/// the Screener, very long names, addresses and subjects, a 5,000-character
+/// message, and emoji and right-to-left text in names and bodies. The
+/// longest thread is the newest, so it heads the list. Every person and
+/// address is made up.
+Future<void> seedWorstConversations(CareerBook book) async {
+  final now = DateTime.now();
+  String at(int minutesAgo) => now.subtract(Duration(minutes: minutesAgo)).toIso8601String().substring(0, 16);
+  const board = 'Betsi Cadwaladr University Health Board – Ysbyty Ysgol Glan Clwyd, Bodelwyddan';
+  Future<String> person(String name, {String email = '', String company = board}) async {
+    final id = newId();
+    await book.save(
+      book.db.careerContacts,
+      CareerContactsCompanion.insert(
+        id: id,
+        name: name,
+        title: const Value(
+          'Associate Director of Nursing Informatics, Clinical Safety and Digital Transformation',
+        ),
+        company: Value(company),
+        email: Value(email),
+        source: const Value(
+          'NHS Jobs advert for an Advanced Clinical Practitioner in the Emergency Department',
+        ),
+        sourceKind: const Value('advert'),
+        foundOn: Value(isoDate(now)),
+      ),
+      id,
+    );
+    return id;
+  }
+
+  // 196 ordinary threads among twenty people, on every channel, older than
+  // the rest.
+  final people = [
+    for (var i = 0; i < 20; i++)
+      await person('Correspondent ${i + 1}', email: 'correspondent${i + 1}@nhs.net'),
+  ];
+  const channels = ['email', 'linkedin', 'bluesky', 'phone'];
+  for (var i = 0; i < 196; i++) {
+    final t = await book.startConversation(
+      contactId: people[i % people.length],
+      channel: channels[i % channels.length],
+      account: i % 4 == 0 ? 'you@example.org' : '',
+      subject: i % 4 == 0 ? 'About the role, part ${i + 1}' : '',
+      at: at(9000 - i * 10),
+    );
+    await book.logSent(t, 'A question about the role (${i + 1}).', at: at(9000 - i * 10));
+    if (i % 3 == 0) await book.logReply(t, 'Thanks, I will come back to you.', at: at(8995 - i * 10));
+  }
+
+  // Right to left and emoji, in names and in bodies.
+  final arabic = await person('مريم عبد الرحمن الهاشمي', company: 'مستشفى الملك فيصل التخصصي');
+  final rtl = await book.startConversation(contactId: arabic, channel: 'linkedin', at: at(300));
+  await book.logSent(rtl, 'Hello Maryam, I saw the informatics role.', at: at(300));
+  await book.logReply(rtl, 'شكراً لتواصلك. يسعدنا التحدث معك يوم الخميس عن الدور.', at: at(290));
+  final star = await person('🌟 Priya 🌟 Recruiter 🚀', company: 'Example Health Trust');
+  final emoji = await book.startConversation(contactId: star, channel: 'bluesky', at: at(200));
+  await book.logReply(emoji, '🎉🎉 Great news!! 👍🏽 Can you do Thursday? 🙌 ☕️', at: at(200));
+  final short = await person('Q', company: 'X');
+  await book.startConversation(contactId: short, channel: 'phone', at: at(150));
+
+  // The longest of everything, newest of all.
+  final max = await person(
+    'Dr Maximiliana Alexandra Featherstonehaugh-Wolstenholme-Cholmondeley',
+    email: 'maximiliana.alexandra.featherstonehaugh-wolstenholme-cholmondeley@betsicadwaladr-university.wales.nhs.uk',
+  );
+  final long = await book.startConversation(
+    contactId: max,
+    channel: 'email',
+    account: 'oluwaseun.siobhan.featherstonehaugh-kowalczyk@example-long-domain.co.uk',
+    subject:
+        'Re: Re: Fwd: Band 8a Advanced Clinical Practitioner – Emergency Department and Same Day Emergency Care '
+        '(Fixed Term / Secondment Opportunity, 12 Months, Flexible Working Considered) – informal enquiry',
+    at: at(120),
+  );
+  const sentence =
+      'I have led the electronic observations roll-out across twenty-eight wards, including night staff '
+      'training and the clinical safety case. ';
+  final essay = (sentence * 40).substring(0, 5000);
+  await book.logSent(long, essay, at: at(110));
+  await book.addNote(long, 'Called the ward: she is on leave until Monday. 📞', at: at(100));
+  await book.logReply(
+    long,
+    'Thank you for such a thorough note! 🙏 Could you send the safety case too?\n\n'
+    'ممتاز، شكراً جزيلاً.\n\nKind regards,\nMaximiliana',
+    at: at(90),
+  );
+
+  // Fifty unknown senders waiting in the Screener, with long addresses.
+  for (var i = 0; i < 50; i++) {
+    final t = await book.startConversation(
+      channel: 'email',
+      peer: 'unknown.sender.${i + 1}.with.a.very.long.address@recruitment-agency-example.co.uk',
+      mode: 'api',
+      at: at(60 + i),
+    );
+    await book.addMessage(
+      t,
+      direction: 'in',
+      body: 'Are you open to new roles? 🚀 We have ${i + 1} exciting opportunities across the North West.',
+      at: at(60 + i),
+      source: 'api',
+    );
+  }
+}
+
+/// [seedPeople] with the social side filled in: a connected Gmail account,
+/// a longer LinkedIn thread with a note, and a week of planned posts on
+/// LinkedIn and Bluesky, one already posted. Every person and address is
+/// made up.
+Future<void> seedSocial(CareerBook book) async {
+  await seedPeople(book);
+  final now = DateTime.now();
+  await book.db.setLocalSetting(
+    mailAccountsKey,
+    jsonEncode([
+      ChannelAccount.preset(
+        'gmail',
+        'alex.example@gmail.com',
+        name: 'Alex Example',
+      ).copyWith(lastSync: now.toUtc().toIso8601String()).toJson(),
+    ]),
+  );
+  final jordan = (await book.db.select(book.db.conversations).get()).firstWhere(
+    (c) => c.channel == 'linkedin',
+  );
+  await book.addNote(jordan.id, 'Prefers mornings. Ask about the EPR go-live date.', at: '2026-11-12T16:30');
+  await book.logSent(
+    jordan.id,
+    'Great, thank you! Would Tuesday at ten suit you? I can bring the e-observations roll-out plan.',
+    at: '2026-11-12T17:05',
+  );
+
+  await book.addPostSlot((day: 2, time: '08:30', channel: 'linkedin'));
+  await book.addPostSlot((day: 4, time: '08:30', channel: 'linkedin'));
+  await book.addPostSlot((day: 5, time: '12:00', channel: 'bluesky'));
+  final monday = weekStart(now);
+  String at(int day, String time) =>
+      '${isoDate(DateTime(monday.year, monday.month, monday.day + day))}T$time';
+  final posted = await book.addPost(
+    at: at(1, '08:30'),
+    body: 'Three things our records team learned in the first month of the new EPR.',
+  );
+  await book.markPosted(posted, url: 'https://www.linkedin.com/posts/example-1', at: now);
+  await book.addPost(
+    at: at(3, '08:30'),
+    topic: 'Night staff training',
+    body:
+        'What I learned training night staff on e-observations: start with the why, keep sessions short, '
+        'and let the ward champions lead.',
+  );
+  await book.addPost(channel: 'bluesky', at: at(4, '12:00'), topic: 'Digital nursing meet-up in Leeds');
 }

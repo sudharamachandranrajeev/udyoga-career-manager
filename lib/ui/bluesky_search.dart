@@ -6,6 +6,7 @@ import '../app/providers.dart';
 import '../domain/bluesky.dart';
 import 'accounts_page.dart' show connectBluesky;
 import 'common.dart';
+import 'look.dart';
 
 // Bluesky search for Find people: people and posts by topic, through the
 // user's own signed-in account. One search per press, the first page only.
@@ -151,27 +152,97 @@ class _BlueskySearchState extends ConsumerState<BlueskySearch> {
           child: const Text('Save'),
         );
 
-  Widget _personTile(BskyPerson p) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    leading: const Icon(Icons.person_outline),
-    title: Text(p.name),
-    subtitle: Text(
-      ['@${p.handle}', if (p.description.trim().isNotEmpty) p.description.trim()].join('\n'),
-      maxLines: 3,
-      overflow: TextOverflow.ellipsis,
-    ),
-    isThreeLine: p.description.trim().isNotEmpty,
+  Widget _personTile(BskyPerson p) => _ResultTile(
+    name: p.name,
+    handle: p.handle,
+    text: p.description.trim(),
     onTap: () => openLink(context, p.profileUrl),
     trailing: _saveButton(p),
   );
 
-  Widget _postTile(BskyPost p) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    leading: const Icon(Icons.article_outlined),
-    title: Text('${p.author.name} · @${p.author.handle}'),
-    subtitle: Text(p.text, maxLines: 3, overflow: TextOverflow.ellipsis),
-    isThreeLine: true,
+  Widget _postTile(BskyPost p) => _ResultTile(
+    name: p.author.name,
+    handle: p.author.handle,
+    text: p.text,
+    post: true,
     onTap: () => openLink(context, p.url),
     trailing: _saveButton(p.author, sourceUrl: p.url),
   );
+}
+
+/// A person or a post found: who on one line each, then a few lines of what
+/// they wrote. Tapping opens it on Bluesky.
+class _ResultTile extends StatelessWidget {
+  const _ResultTile({
+    required this.name,
+    required this.handle,
+    required this.text,
+    required this.onTap,
+    required this.trailing,
+    this.post = false,
+  });
+  final String name, handle, text;
+  final bool post;
+  final VoidCallback onTap;
+  final Widget trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(Radii.sm),
+          child: Ink(
+            padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(Radii.sm),
+              border: Border.all(color: theme.colorScheme.outlineVariant),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                OrgLogo(name.ifEmpty(handle), size: 36),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        '@$handle',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                      ),
+                      if (text.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          text,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          textDirection: textDirectionOf(text),
+                          style: TextStyle(height: 1.35, color: post ? null : muted),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                trailing,
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

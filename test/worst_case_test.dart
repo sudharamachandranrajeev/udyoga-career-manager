@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:udyoga/ui/contacts_page.dart';
+import 'package:udyoga/ui/conversations_page.dart';
 import 'package:udyoga/ui/jobs_page.dart';
 import 'package:udyoga/ui/kit/kit.dart';
 import 'package:udyoga/ui/today_hero.dart';
@@ -57,6 +58,44 @@ void main() {
       await app.go('LinkedIn');
       expect(find.textContaining('What three years'), findsNWidgets(3));
       expect(find.text('Busy'), findsOneWidget, reason: 'the pace guard shows on the LinkedIn page too');
+      expect(tester.takeException(), isNull);
+      await app.close();
+    });
+  }
+
+  // Conversations over seedWorstConversations: 200 threads, 50 in the
+  // Screener, a 5,000-character message, long everything, emoji and
+  // right-to-left text.
+  for (final width in [320.0, 360.0, 1400.0]) {
+    testWidgets('worst-case conversations lay out at $width wide', (tester) async {
+      tester.view.physicalSize = Size(width, 3000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final app = AppHarness(tester);
+      await app.open(seed: seedWorstConversations);
+      await app.run();
+      await app.go('Conversations');
+      expect(find.byType(ConversationTile), findsWidgets);
+      expect(find.text('Screener (50)'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      // The longest thread heads the list; its header says everything in
+      // full, and the long message, the emoji and the Arabic all lay out.
+      await app.tap(find.textContaining('Dr Maximiliana').first);
+      expect(find.textContaining('To Dr Maximiliana Alexandra'), findsOneWidget);
+      expect(find.byType(MessageBubble), findsNWidgets(3));
+      expect(find.textContaining('Called the ward'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      if (width < 840) await app.tap(find.byTooltip('All conversations'));
+
+      await app.tapText('مريم عبد الرحمن الهاشمي');
+      expect(find.textContaining('يسعدنا التحدث'), findsWidgets);
+      expect(tester.takeException(), isNull);
+      if (width < 840) await app.tap(find.byTooltip('All conversations'));
+
+      await app.tap(find.text('Screener (50)'));
+      await app.tap(find.textContaining('unknown.sender.1.with').first);
+      expect(find.text('Add as lead'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await app.close();
     });
