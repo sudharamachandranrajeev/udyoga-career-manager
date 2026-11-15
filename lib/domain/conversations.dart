@@ -81,6 +81,14 @@ abstract interface class ChannelSender {
   Future<String> send(Conversation thread, Lead contact, String body, {String subject = ''});
 }
 
+/// The sender for [thread], if one of the user's connected accounts can
+/// send on its channel (its own account first).
+ChannelSender? senderFor(Conversation thread, List<ChannelSender> senders) {
+  final mine = senders.where((s) => s.channel == thread.channel).toList();
+  return mine.where((s) => s.account.toLowerCase() == thread.account.toLowerCase()).firstOrNull ??
+      (thread.account.isEmpty ? mine.firstOrNull : null);
+}
+
 /// Thrown when something would message a person marked "do not contact".
 class DoNotContactException implements Exception, UserFacingError {
   DoNotContactException(this.name);
@@ -501,7 +509,9 @@ extension ConversationBook on CareerBook {
     String? draftOf,
   }) => db.transaction(() async {
     final t = await conversation(conversationId);
-    if (direction == 'out' && t.contactId != null) {
+    // Mail synced from the account records what was sent elsewhere; only
+    // what the user logs or sends from here is stopped.
+    if (direction == 'out' && source == 'manual' && t.contactId != null) {
       final c = await contact(t.contactId!);
       if (c != null && c.doNotContact) throw DoNotContactException(c.name);
     }
@@ -560,6 +570,57 @@ extension ConversationBook on CareerBook {
     if (t.contactId != null) await refreshContact(t.contactId!, today: day);
     return id;
   });
+
+  /// Sends [body] through a connected account and records it; a [subject]
+  /// becomes the thread's when it has none. A failed send stays in the
+  /// thread, marked failed, for [retrySend]; the error is rethrown.
+  Future<String> sendVia(
+    ChannelSender sender,
+    String conversationId,
+    String body, {
+    required String at,
+    String subject = '',
+  }) async {
+    var t = await conversation(conversationId);
+    final c = t.contactId == null ? null : await contact(t.contactId!);
+    if (c == null) throw StateError('Add this person to your contacts before writing to them.');
+    if (c.doNotContact) throw DoNotContactException(c.name);
+    if (t.subject.isEmpty && subject.trim().isNotEmpty) {
+      t = t.copyWith(subject: subject.trim());
+      await save(db.conversations, t, t.id);
+    }
+    final id = (await addMessage(
+      conversationId,
+      direction: 'out',
+      body: body,
+      at: at,
+      source: 'api',
+      status: 'sending',
+    ))!;
+    await _deliver(sender, id);
+    return id;
+  }
+
+  /// Sends a failed message again.
+  Future<void> retrySend(ChannelSender sender, String messageId) => _deliver(sender, messageId);
+
+  Future<void> _deliver(ChannelSender sender, String messageId) async {
+    final m = await (db.select(db.messages)..where((m) => m.id.equals(messageId))).getSingle();
+    final t = await conversation(m.conversationId);
+    final c = t.contactId == null ? null : await contact(t.contactId!);
+    if (c == null || c.doNotContact) {
+      await save(db.messages, m.copyWith(status: 'failed'), m.id);
+      throw DoNotContactException(c?.name ?? '');
+    }
+    try {
+      final externalId = await sender.send(t, c, m.body, subject: t.subject);
+      await save(db.messages, m.copyWith(status: 'sent', externalId: Value(externalId)), m.id);
+      if (t.account.isEmpty) await save(db.conversations, t.copyWith(account: sender.account), t.id);
+    } catch (_) {
+      await save(db.messages, m.copyWith(status: 'failed'), m.id);
+      rethrow;
+    }
+  }
 
   /// Logs a message the user sent by hand (on LinkedIn, by phone...). A
   /// LinkedIn connection note is an [invite], which the pace guard counts
