@@ -172,53 +172,43 @@ class TodayPage extends ConsumerWidget {
         _Greeting(profile),
         TodayHero(
           counts: [
-            (
+            StatTile(
               label: 'Applied',
-              value: sent,
-              suffix: '',
               icon: Icons.send_outlined,
+              value: sent,
               caption: sent == 0 ? 'Nothing sent yet' : 'Applications sent',
-              status: null,
             ),
-            (
+            StatTile(
               label: 'Interviews',
-              value: interviews.length,
-              suffix: '',
               icon: Icons.record_voice_over_outlined,
+              value: interviews.length,
               caption: interviews.isEmpty ? 'None booked' : 'Coming up',
-              status: null,
             ),
-            (
+            StatTile(
               label: 'Follow-ups due',
-              value: followUps,
-              suffix: '',
               icon: Icons.notifications_active_outlined,
+              value: followUps,
               caption: followUps == 0 ? 'All caught up' : 'Chase them today',
               status: followUps == 0 ? null : Status.warning,
             ),
-            (
+            StatTile(
               label: 'In progress',
-              value: open.length,
-              suffix: '',
               icon: Icons.timelapse,
+              value: open.length,
               caption: open.isEmpty ? 'No open applications' : 'Open applications',
-              status: null,
             ),
-            (
+            StatTile(
               label: 'New matches',
-              value: fresh.length,
-              suffix: '',
               icon: Icons.work_outline,
+              value: fresh.length,
               caption: fresh.isEmpty ? 'None new yet' : 'To look through',
-              status: null,
             ),
-            (
+            StatTile(
               label: 'Response rate',
+              icon: Icons.mark_email_unread_outlined,
               value: sent == 0 ? null : (heard * 100 / sent).round(),
               suffix: '%',
-              icon: Icons.mark_email_unread_outlined,
               caption: sent == 0 ? 'No applications sent yet' : '$heard of $sent heard back',
-              status: null,
             ),
           ],
           deadline: next == null ? null : _withNiceDate(next),

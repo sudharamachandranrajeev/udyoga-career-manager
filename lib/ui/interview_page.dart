@@ -2,6 +2,7 @@ import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, che
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/navigation.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/answer_metrics.dart';
@@ -108,16 +109,29 @@ class InterviewPage extends ConsumerWidget {
           : null,
       children: [
         if (!hasAi) const NeedsKey(what: 'Interview practice'),
-        AsyncView(
+        AsyncList(
           ref.watch(practiceProvider),
           builder: (rounds) {
             if (rounds.isEmpty) {
-              return const EmptyState(
+              return EmptyState(
                 icon: Icons.record_voice_over_outlined,
                 title: 'No practice yet',
                 message:
                     'Pick a role and a kind of interview. The AI researches how that employer or sector interviews '
                     'now, asks the questions, and scores each answer strictly on seven dimensions.',
+                actions: [
+                  if (hasAi)
+                    FilledButton.icon(
+                      onPressed: () => startPractice(context, ref),
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('Practise an interview'),
+                    )
+                  else
+                    TextButton(
+                      onPressed: () => goToPage(ref, 'settings'),
+                      child: const Text('Add an AI key in Settings'),
+                    ),
+                ],
               );
             }
             final scored = rounds.where((r) => r.score != null).toList();
@@ -127,27 +141,28 @@ class InterviewPage extends ConsumerWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TiltGrid(
-                  minWidth: 150,
+                StatGrid(
                   children: [
-                    KpiTile(label: 'Rounds', value: '${rounds.length}', icon: Icons.history),
-                    KpiTile(
+                    StatTile(label: 'Rounds', value: rounds.length, icon: Icons.history),
+                    StatTile(
                       label: 'Answers scored',
-                      value: '${answers.where((a) => a.score != null).length}',
+                      value: answers.where((a) => a.score != null).length,
                       icon: Icons.fact_check_outlined,
                     ),
-                    KpiTile(
+                    StatTile(
                       label: 'Recent average',
-                      value: avg == null ? '–' : '${avg.toStringAsFixed(1)}/10',
+                      value: avg,
+                      fractionDigits: 1,
+                      suffix: '/10',
                       icon: Icons.trending_up,
-                      caption: 'Last ${recent.length} rounds',
-                      status: avg == null
-                          ? null
-                          : (color: scoreStatus(avg).color, icon: scoreStatus(avg).icon),
+                      caption: recent.isEmpty ? 'No scored rounds yet' : 'Last ${recent.length} rounds',
+                      status: avg == null ? null : scoreStatus(avg),
                     ),
-                    KpiTile(
+                    StatTile(
                       label: 'Best round',
-                      value: best == null ? '–' : '${best.toStringAsFixed(1)}/10',
+                      value: best,
+                      fractionDigits: 1,
+                      suffix: '/10',
                       icon: Icons.emoji_events_outlined,
                     ),
                   ],
@@ -176,42 +191,45 @@ class _RoundTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Tilt(
-        child: Card(
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () =>
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => PracticePage(round.id))),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  OrgLogo(round.role, size: 40),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(round.role, style: t.titleMedium),
-                        Text(
-                          '${(practiceModes[round.mode] ?? round.mode).split(':').first} · '
-                          '${niceDateTime(round.started)}',
-                          style: t.bodyMedium?.copyWith(color: muted),
-                        ),
-                        const SizedBox(height: 8),
-                        StatusPill('$answered of $total answered', icon: Icons.check_circle_outline),
-                      ],
-                    ),
-                  ),
-                  if (score != null)
-                    Text(
-                      score.toStringAsFixed(1),
-                      style: t.headlineSmall?.copyWith(
-                        fontFamily: headingFont,
-                        fontWeight: FontWeight.w800,
-                        color: scoreStatus(score).color,
+        child: SpotlightCard(
+          padding: EdgeInsets.zero,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: () =>
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => PracticePage(round.id))),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    OrgLogo(round.role, size: 40),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(round.role, style: t.titleMedium),
+                          Text(
+                            '${(practiceModes[round.mode] ?? round.mode).split(':').first} · '
+                            '${niceDateTime(round.started)}',
+                            style: t.bodyMedium?.copyWith(color: muted),
+                          ),
+                          const SizedBox(height: 8),
+                          StatusPill('$answered of $total answered', icon: Icons.check_circle_outline),
+                        ],
                       ),
                     ),
-                ],
+                    if (score != null)
+                      Text(
+                        score.toStringAsFixed(1),
+                        style: t.headlineSmall?.copyWith(
+                          fontFamily: headingFont,
+                          fontWeight: FontWeight.w800,
+                          color: scoreStatus(score).color,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
