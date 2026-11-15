@@ -204,6 +204,24 @@ final threadMessagesProvider = FutureProvider.family<List<ThreadMessage>, String
   return ref.watch(sessionProvider).book.messagesIn(id);
 });
 
+/// People to get back to today or earlier: thread follow-ups and "keep in
+/// touch" dates (see [ConversationBook.dueFollowUps]).
+final dueFollowUpsProvider = FutureProvider<List<FollowUpDue>>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.dueFollowUps(today());
+});
+
+/// A thread another page asked the Conversations page to open, such as a
+/// reply waiting on Today. The Conversations page opens it and clears it.
+class OpenThread extends Notifier<String?> {
+  @override
+  String? build() => null;
+  void open(String id) => state = id;
+  void clear() => state = null;
+}
+
+final openThreadProvider = NotifierProvider<OpenThread, String?>(OpenThread.new);
+
 /// What the user has sent by hand on LinkedIn lately (see [Pace]).
 final paceProvider = FutureProvider<Pace>((ref) {
   ref.watch(revisionProvider);

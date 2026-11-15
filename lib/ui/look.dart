@@ -546,47 +546,6 @@ class OrgLogo extends StatelessWidget {
   }
 }
 
-/// A small tinted label: "Remote", "Shortlisted", "Closes in 3 days".
-///
-/// The kit's StatusPill replaces it; it stays only for Contacts and LinkedIn
-/// until those pages move to the kit.
-class Pill extends StatelessWidget {
-  const Pill(this.label, {super.key, this.status, this.icon});
-  final String label;
-  final Status? status;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final tone = status == null || status == Status.info ? null : status!.color;
-    final fg = tone ?? (dark ? Colors.white70 : const Color(0xFF3B4660));
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color:
-            tone?.withValues(alpha: dark ? 0.18 : 0.1) ?? (dark ? Colors.white10 : const Color(0xFFF1F4FA)),
-        borderRadius: BorderRadius.circular(999),
-        border: tone == null ? Border.all(color: dark ? Colors.white12 : const Color(0xFFE2E8F3)) : null,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[Icon(icon, size: 13, color: fg), const SizedBox(width: 4)],
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg, height: 1.2),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// A big greeting with one phrase picked out in the brand colour.
 class Headline extends StatelessWidget {
   const Headline(this.parts, {super.key});

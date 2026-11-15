@@ -52,7 +52,8 @@ class _SpotlightCardState extends State<SpotlightCard> {
       child: ShadCard(
         padding: EdgeInsets.zero,
         radius: BorderRadius.circular(widget.radius),
-        border: ShadBorder.all(color: scheme.outlineVariant),
+        // An explicit width: shadcn draws no border when it is left null.
+        border: ShadBorder.all(color: scheme.outlineVariant, width: 1),
         shadows: const [],
         backgroundColor: scheme.surfaceContainerLow,
         clipBehavior: Clip.antiAlias,

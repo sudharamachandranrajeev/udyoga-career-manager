@@ -12,7 +12,8 @@ import '../domain/pipeline.dart';
 import 'applications_page.dart';
 import '../domain/conversations.dart';
 import 'common.dart';
-import 'conversations_page.dart';
+import 'conversations_page.dart' hide StatusPill;
+import 'kit/kit.dart';
 import 'linkedin_page.dart';
 import 'look.dart';
 
@@ -81,7 +82,7 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
           ],
         ),
         const SizedBox(height: 12),
-        AsyncView(
+        AsyncList(
           ref.watch(leadsProvider),
           builder: (all) {
             final now = today();
@@ -94,12 +95,28 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
               _ => all.where((l) => l.status == filter).toList(),
             };
             if (list.isEmpty) {
+              // One next step: see everyone when a filter hides them, else
+              // add the first person.
+              final others = all.isNotEmpty && filter != 'all';
               return EmptyState(
                 icon: Icons.contacts_outlined,
                 title: filter == 'due' ? 'Nobody to follow up today' : 'No contacts here',
                 message: hasAi
                     ? 'Find recruiters, hiring managers and agencies with the AI, from a job, or add people you know.'
                     : 'Add recruiters, hiring managers and people who could refer you.',
+                actions: [
+                  if (others)
+                    FilledButton.tonal(
+                      onPressed: () => setState(() => filter = 'all'),
+                      child: Text('See all ${all.length}'),
+                    )
+                  else
+                    FilledButton.tonalIcon(
+                      onPressed: () => editLead(context, ref, null),
+                      icon: const Icon(Icons.person_add_alt),
+                      label: const Text('Add contact'),
+                    ),
+                ],
               );
             }
             return Column(children: [for (final l in list) LeadTile(l)]);
@@ -156,52 +173,65 @@ class LeadTile extends ConsumerWidget {
     final now = today();
     final t = Theme.of(context).textTheme;
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    final found = l.sourceKind == 'other' ? '' : foundOnText(l);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Tilt(
-        child: Card(
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => _actions(context, ref, l),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  OrgLogo(l.name.ifEmpty(l.company), size: 40),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(l.name, style: t.titleMedium),
-                        Text(
-                          [l.title, l.company].where((s) => s.isNotEmpty).join(' · '),
-                          style: t.bodyMedium?.copyWith(color: muted),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            Pill(leadKinds[l.kind] ?? l.kind, icon: _kindIcons[l.kind]),
-                            if (l.doNotContact)
-                              const Pill('Do not contact', status: Status.serious, icon: Icons.block),
-                            if (l.sourceKind != 'other') Pill(sourceKinds[l.sourceKind] ?? l.sourceKind),
-                            if (l.followUp != null && l.status != 'cold')
-                              Pill(
-                                '${leadStatuses[l.status] ?? l.status} · follow up ${relativeDay(l.followUp!, now)}',
-                                status: followUpStatus(l.followUp!, now),
-                              )
-                            else
-                              Pill(leadStatuses[l.status] ?? l.status),
-                          ],
-                        ),
-                      ],
+        child: SpotlightCard(
+          padding: EdgeInsets.zero,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: () => _actions(context, ref, l),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    OrgLogo(l.name.ifEmpty(l.company), size: 40),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(l.name, style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text(
+                            [l.title, l.company].where((s) => s.isNotEmpty).join(' · '),
+                            style: t.bodyMedium?.copyWith(color: muted),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              StatusPill(leadKinds[l.kind] ?? l.kind, icon: _kindIcons[l.kind]),
+                              if (l.doNotContact)
+                                const StatusPill('Do not contact', status: Status.serious, icon: Icons.block),
+                              if (l.followUp != null && l.status != 'cold')
+                                StatusPill(
+                                  '${leadStatuses[l.status] ?? l.status} · follow up ${relativeDay(l.followUp!, now)}',
+                                  status: followUpStatus(l.followUp!, now),
+                                )
+                              else
+                                StatusPill(leadStatuses[l.status] ?? l.status),
+                              // Where they were found and the basis for contacting
+                              // them: on record, not to act on.
+                              if (found.isNotEmpty)
+                                StatusPill(found, icon: Icons.place_outlined, quiet: true),
+                              StatusPill(
+                                lawfulBases[l.basis] ?? l.basis,
+                                icon: Icons.verified_user_outlined,
+                                quiet: true,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
