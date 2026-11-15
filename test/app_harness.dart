@@ -6,6 +6,7 @@ import 'package:udyoga/app/app.dart';
 import 'package:udyoga/app/providers.dart';
 import 'package:udyoga/app/session.dart';
 import 'package:udyoga/domain/book.dart';
+import 'package:udyoga/ui/site_browser.dart';
 
 import 'support.dart';
 
@@ -14,6 +15,9 @@ class AppHarness {
   AppHarness(this.tester);
   final WidgetTester tester;
   late AppSession session;
+
+  /// Stands in for the in-app web view, which needs a real platform.
+  final browser = FakeSiteBrowser();
 
   CareerBook get book => session.book;
 
@@ -31,7 +35,10 @@ class AppHarness {
   Future<void> run() async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: udyogaOverrides(session, client: quietClient()),
+        overrides: [
+          ...udyogaOverrides(session, client: quietClient()),
+          siteBrowserProvider.overrideWithValue(() => browser),
+        ],
         retry: (_, _) => null,
         child: const UdyogaApp(),
       ),
@@ -93,4 +100,22 @@ class AppHarness {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
   }
+}
+
+/// A site "open" in its own window, showing [current].
+class FakeSiteBrowser implements SiteBrowser {
+  final opened = <String>[];
+  ({String url, String title, String text})? current;
+
+  @override
+  Future<Widget?> open(String url, {required String title}) async {
+    opened.add(url);
+    return null;
+  }
+
+  @override
+  Future<({String url, String title, String text})?> page() async => opened.isEmpty ? null : current;
+
+  @override
+  Future<void> close() async {}
 }

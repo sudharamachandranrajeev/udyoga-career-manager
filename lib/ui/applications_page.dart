@@ -12,15 +12,19 @@ import '../domain/calendar.dart';
 import '../domain/pipeline.dart';
 import 'common.dart';
 import 'look.dart';
+import 'offer_checks.dart';
 import 'job_page.dart';
 import 'resume_page.dart';
+import 'site_page.dart';
 
 const _eventIcons = {
   'applied': Icons.send_outlined,
   'followup': Icons.mark_email_read_outlined,
   'reply': Icons.mark_email_unread_outlined,
   'interview': Icons.record_voice_over_outlined,
+  'waitlist': Icons.format_list_numbered,
   'offer': Icons.celebration_outlined,
+  'checks': Icons.checklist,
   'accepted': Icons.handshake_outlined,
   'rejected': Icons.block,
   'withdrawn': Icons.undo,
@@ -171,8 +175,8 @@ class _ApplicationsPageState extends ConsumerState<ApplicationsPage> {
 
 /// Stage colours, as in the list: open stages neutral, outcomes tinted.
 Status? stageStatus(Stage s) => switch (s) {
-  Stage.interview || Stage.offer || Stage.accepted => Status.good,
-  Stage.screening => Status.info,
+  Stage.interview || Stage.offer || Stage.checks || Stage.accepted => Status.good,
+  Stage.screening || Stage.waitingList => Status.info,
   Stage.rejected => Status.serious,
   Stage.noReply || Stage.withdrawn => Status.warning,
   _ => null,
@@ -235,7 +239,7 @@ class ApplicationTile extends StatelessWidget {
                           style: t.bodySmall?.copyWith(color: muted),
                         ),
                       ),
-                      if (a.followUp != null && stage.open)
+                      if (a.followUp != null)
                         // Shrinks (the label ellipsizes) on narrow cards.
                         Flexible(
                           child: Pill(
@@ -445,7 +449,7 @@ Future<List<Reminder>> reminders(WidgetRef ref) async {
   final byId = {for (final a in apps) a.id: a};
   return [
     for (final a in apps)
-      if (a.followUp != null && Stage.of(a.stage).open)
+      if (a.followUp != null)
         (
           id: 'followup-${a.id}',
           title: 'Follow up: ${a.title}${a.company.isEmpty ? '' : ' at ${a.company}'}',
@@ -524,8 +528,8 @@ class ApplicationPage extends ConsumerWidget {
         if (a.url.isNotEmpty)
           IconButton(
             icon: const Icon(Icons.open_in_new),
-            tooltip: 'Open the advert',
-            onPressed: () => openLink(context, a.url),
+            tooltip: 'Open the site with your answers',
+            onPressed: () => openSite(context, url: a.url, title: a.title, applicationId: a.id),
           ),
         IconButton(
           icon: const Icon(Icons.delete_outline),
@@ -581,7 +585,9 @@ class ApplicationPage extends ConsumerWidget {
             ],
           ),
         ),
-        if (stage.open)
+        // Closed applications keep a reminder too: ask for feedback after a
+        // rejection, withdraw the others after accepting.
+        if (stage.open || a.followUp != null)
           SectionCard(
             title: 'Follow-up',
             hint: 'apps.followup',
@@ -636,6 +642,7 @@ class ApplicationPage extends ConsumerWidget {
               ],
             ),
           ),
+        ChecksSection(a),
         if (stage == Stage.rejected && hasAi)
           SectionCard(
             title: 'Feedback',
@@ -677,6 +684,7 @@ class ApplicationPage extends ConsumerWidget {
                       Navigator.of(context).push(MaterialPageRoute(builder: (_) => ResumePage(cv.id))),
                 ),
         ),
+        KeptCopiesSection(id),
         SectionCard(
           title: 'Timeline',
           child: events.isEmpty
@@ -827,6 +835,9 @@ class ApplicationPage extends ConsumerWidget {
       Stage.interview =>
         'a thank-you to the interview panel that restates fit in one line and asks about timescales',
       Stage.offer => 'a reply to the job offer that thanks them and asks the open questions',
+      Stage.waitingList =>
+        'a short note confirming continued interest in posts from the waiting list and current availability',
+      Stage.checks => 'a polite update to the recruitment team on the pre-employment checks and documents still outstanding',
       _ => 'a polite follow-up asking for an update on the application and the timetable',
     };
     final p = await ref.read(profileProvider.future);

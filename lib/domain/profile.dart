@@ -194,6 +194,8 @@ class CandidateProfile {
     this.cvText = '',
     this.versions = const [],
     this.notes = const [],
+    this.stories = const [],
+    this.confirmed = const [],
   });
 
   final String name, headline, email, phone, location;
@@ -217,6 +219,14 @@ class CandidateProfile {
   /// The candidate's own ideas and wins from the Growth page, for the AI.
   /// Loaded with the profile, never saved in it.
   final List<String> notes;
+
+  /// The candidate's work stories (story bank), one line each, for the AI.
+  /// Loaded with the profile, never saved in it.
+  final List<String> stories;
+
+  /// Facts the candidate confirmed by answering a profile question. Loaded
+  /// with the profile, never saved in it.
+  final List<String> confirmed;
 
   bool get isEmpty => name.isEmpty && currentRole.isEmpty && experience.isEmpty && cvText.isEmpty;
 
@@ -285,6 +295,8 @@ class CandidateProfile {
     final j = toJson();
     if (experience.isNotEmpty && cvText.length > 12000) j.remove('cvText');
     if (notes.isNotEmpty) j['ownNotes'] = notes;
+    if (stories.isNotEmpty) j['workStories'] = stories;
+    if (confirmed.isNotEmpty) j['confirmedByCandidate'] = confirmed;
     return j;
   }
 
@@ -311,6 +323,8 @@ class CandidateProfile {
     String? cvText,
     List<CvVersion>? versions,
     List<String>? notes,
+    List<String>? stories,
+    List<String>? confirmed,
   }) => CandidateProfile(
     name: name ?? this.name,
     headline: headline ?? this.headline,
@@ -334,6 +348,8 @@ class CandidateProfile {
     cvText: cvText ?? this.cvText,
     versions: versions ?? this.versions,
     notes: notes ?? this.notes,
+    stories: stories ?? this.stories,
+    confirmed: confirmed ?? this.confirmed,
   );
 
   /// The shape the AI fills in when reading a CV.

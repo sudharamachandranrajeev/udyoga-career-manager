@@ -86,12 +86,44 @@ class JobEvents extends Table with SyncedRow {
   TextColumn get summary => text().withDefault(const Constant(''))();
 }
 
+/// One pre-employment check or step between an offer and the first day.
+@DataClassName('JobCheck')
+class JobChecks extends Table with SyncedRow {
+  TextColumn get applicationId => text()();
+
+  /// identity | references | criminal_record | health | qualifications |
+  /// forms | contract | notice | start | other
+  TextColumn get kind => text()();
+  TextColumn get title => text()();
+
+  /// todo | sent | done | not_needed
+  TextColumn get status => text().withDefault(const Constant('todo'))();
+  TextColumn get due => text().nullable()();
+  TextColumn get done => text().nullable()();
+  TextColumn get notes => text().withDefault(const Constant(''))();
+}
+
+/// A copy kept by the candidate: the advert as it read, or the application
+/// as sent. Job sites delete both after a while.
+@DataClassName('Archived')
+class JobArchive extends Table with SyncedRow {
+  TextColumn get applicationId => text().nullable()();
+  TextColumn get jobId => text().nullable()();
+
+  /// advert | application
+  TextColumn get kind => text()();
+  TextColumn get at => text()();
+  TextColumn get title => text().withDefault(const Constant(''))();
+  TextColumn get url => text().withDefault(const Constant(''))();
+  TextColumn get content => text()();
+}
+
 /// Recruiters, hiring managers, referrers and other leads.
 @DataClassName('Lead')
 class CareerContacts extends Table with SyncedRow {
   TextColumn get name => text()();
 
-  /// recruiter | hiring_manager | referral | peer | mentor | other
+  /// recruiter | hiring_manager | referral | peer | mentor | referee | other
   TextColumn get kind => text().withDefault(const Constant('recruiter'))();
   TextColumn get title => text().withDefault(const Constant(''))();
   TextColumn get company => text().withDefault(const Constant(''))();
@@ -191,6 +223,97 @@ class CareerAnswers extends Table with SyncedRow {
   /// AnswerReview as JSON, '' until evaluated.
   TextColumn get review => text().withDefault(const Constant(''))();
   RealColumn get score => real().nullable()();
+}
+
+/// A document of the candidate's that Udyoga has read: a CV, a reference,
+/// interview notes, an advert. The file stays where it is on the device;
+/// what was read from it syncs, so every device builds the same profile.
+/// The id comes from the content hash, so the same file found on two
+/// devices is one row.
+@DataClassName('CareerDocument')
+class CareerDocuments extends Table with SyncedRow {
+  /// SHA-256 of the file's bytes, hex.
+  TextColumn get hash => text()();
+  TextColumn get name => text()();
+
+  /// cv | reference | interview | advert | application | certificate |
+  /// notes | other (see domain/companion.dart).
+  TextColumn get kind => text().withDefault(const Constant('other'))();
+  TextColumn get summary => text().withDefault(const Constant(''))();
+
+  /// DocumentReading.facts as JSON.
+  TextColumn get facts => text().withDefault(const Constant('[]'))();
+
+  /// The text read from the file (Word, text, Markdown); '' for PDFs,
+  /// which the AI reads whole.
+  TextColumn get content => text().withDefault(const Constant(''))();
+  TextColumn get found => text()();
+
+  /// When the AI read it; null until then.
+  TextColumn get analysed => text().nullable()();
+
+  /// False when the candidate asked Udyoga to ignore it.
+  BoolColumn get use => boolean().withDefault(const Constant(true))();
+}
+
+/// A question to the candidate about their own profile: two documents
+/// disagree, a claim needs a figure, a point is unconfirmed.
+@DataClassName('ProfileQuestion')
+class CareerQuestions extends Table with SyncedRow {
+  /// What it is about, e.g. "Start date at Acme".
+  TextColumn get topic => text()();
+  TextColumn get question => text()();
+
+  /// Why it is asked: the conflicting statements and where they are.
+  TextColumn get why => text().withDefault(const Constant(''))();
+
+  /// Likely answers to pick from, JSON list of strings.
+  TextColumn get choices => text().withDefault(const Constant('[]'))();
+
+  /// open | answered | dismissed
+  TextColumn get status => text().withDefault(const Constant('open'))();
+  TextColumn get answer => text().withDefault(const Constant(''))();
+  TextColumn get asked => text()();
+  TextColumn get answered => text().nullable()();
+
+  /// True once the answer has been written into the profile.
+  BoolColumn get applied => boolean().withDefault(const Constant(false))();
+}
+
+/// One day's check-in: the question asked, the candidate's answer and what
+/// Udyoga took from it.
+@DataClassName('CheckIn')
+class CareerJournal extends Table with SyncedRow {
+  /// yyyy-MM-dd.
+  TextColumn get day => text()();
+  TextColumn get prompt => text()();
+  TextColumn get entry => text().withDefault(const Constant(''))();
+
+  /// CheckInDigest as JSON, '' until read.
+  TextColumn get digest => text().withDefault(const Constant(''))();
+  TextColumn get at => text()();
+}
+
+/// A story from the candidate's own work, in STAR form, that proves one or
+/// more competencies; the raw material for applications and interviews.
+@DataClassName('Story')
+class CareerStories extends Table with SyncedRow {
+  TextColumn get title => text()();
+  TextColumn get situation => text().withDefault(const Constant(''))();
+  TextColumn get task => text().withDefault(const Constant(''))();
+  TextColumn get action => text().withDefault(const Constant(''))();
+  TextColumn get result => text().withDefault(const Constant(''))();
+
+  /// Competency ids (domain/companion.dart), JSON list.
+  TextColumn get competencies => text().withDefault(const Constant('[]'))();
+
+  /// checkin | document | practice | manual
+  TextColumn get source => text().withDefault(const Constant('manual'))();
+  TextColumn get sourceId => text().nullable()();
+
+  /// False until the candidate has checked it is true as written.
+  BoolColumn get confirmed => boolean().withDefault(const Constant(false))();
+  TextColumn get added => text()();
 }
 
 @DataClassName('Pref')

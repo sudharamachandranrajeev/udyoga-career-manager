@@ -7,10 +7,12 @@ import '../db/database.dart';
 import '../domain/pipeline.dart';
 import '../domain/profile.dart';
 import 'applications_page.dart';
+import 'coach_page.dart';
 import 'common.dart';
 import 'contacts_page.dart';
 import 'jobs_page.dart';
 import 'look.dart';
+import 'offer_checks.dart';
 
 /// Next steps, from setting up to the day's chasing.
 List<({IconData icon, String text})> nextSteps({
@@ -30,7 +32,11 @@ List<({IconData icon, String text})> nextSteps({
       icon: Icons.key_outlined,
       text: 'Add a free Gemini key (or a Claude key) in Settings to turn on the AI features.',
     ),
-  if (profile.isEmpty) (icon: Icons.upload_file, text: 'Import your CV on the Profile page.'),
+  if (profile.isEmpty)
+    (
+      icon: Icons.upload_file,
+      text: 'Import your CV on the Profile page, or add the folder with your documents on the Coach page.',
+    ),
   if (!profile.isEmpty && profile.searchCountries.isEmpty)
     (icon: Icons.public, text: 'Choose the countries to search in on the Profile page.'),
   if (!profile.isEmpty && hasAi && !assessed)
@@ -60,13 +66,27 @@ class TodayPage extends ConsumerWidget {
     final assessed = ref.watch(latestReportProvider('assessment')).value != null;
     final mapped = ref.watch(latestReportProvider('career_map')).value != null;
     final refresh = ref.watch(refreshProvider);
+    final checkIn = (ref.watch(journalProvider).value ?? const <CheckIn>[])
+        .where((c) => c.day == now)
+        .firstOrNull;
+    final toConfirm = (ref.watch(questionsProvider).value ?? const <ProfileQuestion>[])
+        .where((q) => q.status == 'open')
+        .length;
+    final checkInTime = ref.watch(checkInSettingsProvider).value?.time ?? '18:30';
+    final eveningNow = nowLocal().substring(11).compareTo(checkInTime) >= 0;
 
     final open = apps.where((a) => Stage.of(a.stage).open).toList();
-    final dueApps = open.where((a) => a.followUp != null && a.followUp!.compareTo(now) <= 0).toList();
+    final dueApps = apps.where((a) => a.followUp != null && a.followUp!.compareTo(now) <= 0).toList();
     final dueLeads = leads
         .where((l) => l.followUp != null && l.followUp!.compareTo(now) <= 0 && l.status != 'cold')
         .toList();
     final byId = {for (final a in apps) a.id: a};
+    // Offer paperwork has hard deadlines (HSC: 5 working days), so it shows
+    // two days ahead.
+    final checks = checksDue(
+      ref.watch(checksProvider).value ?? const <JobCheck>[],
+      addDays(now, 2),
+    ).where((c) => byId.containsKey(c.applicationId)).toList();
     final interviews =
         events
             .where(
@@ -79,8 +99,14 @@ class TodayPage extends ConsumerWidget {
           ..sort((a, b) => a.at.compareTo(b.at));
     final fresh = jobs.where((j) => j.status == 'new').toList()
       ..sort((a, b) => (b.fit ?? -1).compareTo(a.fit ?? -1));
+    // Saved jobs, and jobs with an application still being written.
+    final unsent = {
+      for (final a in apps)
+        if (a.jobId != null && Stage.of(a.stage) == Stage.preparing) a.jobId!,
+    };
     final closing = jobs
-        .where((j) => j.status == 'saved' && j.closing != null && j.closing!.compareTo(now) >= 0)
+        .where((j) => j.status == 'saved' || unsent.contains(j.id))
+        .where((j) => j.closing != null && j.closing!.compareTo(now) >= 0)
         .where((j) => j.closing!.compareTo(addDays(now, 7)) <= 0)
         .toList();
     final steps = nextSteps(
@@ -94,11 +120,11 @@ class TodayPage extends ConsumerWidget {
       update: ref.watch(updateProvider).value?.version,
     );
     final sent = apps.where((a) => a.applied != null).length;
-    final heard = apps
-        .where(
-          (a) => a.applied != null && const ['screening', 'interview', 'offer', 'accepted'].contains(a.stage),
-        )
-        .length;
+    // Heard back: shortlisted or further, up to accepted.
+    final heard = apps.where((a) {
+      final i = Stage.of(a.stage).index;
+      return a.applied != null && i > Stage.applied.index && i <= Stage.accepted.index;
+    }).length;
 
     return PageScaffold(
       title: 'Today',
@@ -151,6 +177,34 @@ class TodayPage extends ConsumerWidget {
               ],
             ),
           ),
+        if ((eveningNow && (checkIn == null || checkIn.entry.isEmpty)) || toConfirm > 0)
+          SectionCard(
+            title: 'Your coach',
+            child: Column(
+              children: [
+                if (eveningNow && (checkIn == null || checkIn.entry.isEmpty))
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.wb_twilight_outlined),
+                    title: const Text('How was your day? Two minutes for today\'s check-in.'),
+                    onTap: () =>
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CoachPage())),
+                  ),
+                if (toConfirm > 0)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.fact_check_outlined),
+                    title: Text(
+                      toConfirm == 1
+                          ? '1 question to confirm your profile.'
+                          : '$toConfirm questions to confirm your profile.',
+                    ),
+                    onTap: () =>
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CoachPage())),
+                  ),
+              ],
+            ),
+          ),
         if (steps.isNotEmpty)
           SectionCard(
             title: 'Next steps',
@@ -186,6 +240,26 @@ class TodayPage extends ConsumerWidget {
             title: 'Follow up today',
             child: Column(
               children: [for (final a in dueApps) ApplicationTile(a), for (final l in dueLeads) LeadTile(l)],
+            ),
+          ),
+        if (checks.isNotEmpty)
+          SectionCard(
+            title: 'Offer checks due',
+            child: Column(
+              children: [
+                for (final c in checks)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(checkStatus(c, now).icon, color: checkStatus(c, now).color),
+                    title: Text(c.title),
+                    subtitle: Text(
+                      '${byId[c.applicationId]!.title} · due ${niceDate(c.due!)} (${relativeDay(c.due!, now)})',
+                    ),
+                    onTap: () =>
+                        Navigator.of(context)
+                            .push(MaterialPageRoute(builder: (_) => ApplicationPage(c.applicationId))),
+                  ),
+              ],
             ),
           ),
         if (closing.isNotEmpty)

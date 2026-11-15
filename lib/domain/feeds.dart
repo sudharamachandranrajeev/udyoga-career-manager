@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:xml/xml.dart';
 
 import 'countries.dart';
 import 'json.dart';
@@ -192,6 +193,101 @@ class ReedFeed extends JobFeed {
   }
 }
 
+/// NHS Jobs (England and Wales): the official public search feed
+/// (NHSBSA "Self-Serve Job Adverts API"), no key. Its terms allow extracts
+/// for personal, non-commercial use; each job opens on NHS Jobs.
+class NhsJobsFeed extends JobFeed {
+  NhsJobsFeed(this.client);
+  final http.Client client;
+
+  /// Pages of ten read per search term.
+  static const pages = 3;
+
+  @override
+  String get id => 'nhs';
+  @override
+  String get name => 'NHS Jobs';
+
+  @override
+  bool covers(FeedQuery q) => q.country == 'GB';
+
+  @override
+  Future<List<Posting>> search(FeedQuery q) async {
+    final out = <Posting>[];
+    for (final term in q.terms.take(4)) {
+      for (var page = 1; page <= pages; page++) {
+        final uri = Uri.https('www.jobs.nhs.uk', '/api/v1/search_xml', {
+          'keyword': term,
+          if (q.place.isNotEmpty) ...{'location': q.place, 'distance': '15', 'countryCode': 'GB-ENG'},
+          'page': '$page',
+        });
+        final r = await client
+            .get(uri, headers: {'accept': 'application/xml'})
+            .timeout(const Duration(seconds: 30));
+        if (r.statusCode != 200) throw FeedException('error ${r.statusCode}');
+        final found = parse(utf8.decode(r.bodyBytes));
+        out.addAll(found.where((p) => _mentions(p.title, [term])));
+        if (found.length < 10) break;
+      }
+    }
+    return out;
+  }
+
+  /// The postings in one search_xml response.
+  static List<Posting> parse(String body) {
+    final XmlDocument doc;
+    try {
+      doc = XmlDocument.parse(body);
+    } on XmlException {
+      throw FeedException('NHS Jobs sent something unreadable');
+    }
+    String text(XmlElement e, String name) => e.getElement(name)?.innerText.trim() ?? '';
+    return [
+      for (final v in doc.findAllElements('vacancyDetails'))
+        if (text(v, 'title').isNotEmpty)
+          () {
+            final (min, max) = _pounds(text(v, 'salary'));
+            final places = v
+                .findAllElements('location')
+                .map((l) => l.innerText.trim())
+                .where((l) => l.isNotEmpty);
+            return Posting(
+              source: 'nhs',
+              sourceId: text(v, 'id'),
+              title: text(v, 'title'),
+              company: text(v, 'employer'),
+              location: places.join('; '),
+              country: 'GB',
+              salaryMin: min,
+              salaryMax: max,
+              currency: 'GBP',
+              salaryText: text(v, 'salary'),
+              url: text(v, 'url'),
+              description: [
+                text(v, 'description'),
+                if (text(v, 'type').isNotEmpty) 'Contract: ${text(v, 'type')}.',
+                if (text(v, 'reference').isNotEmpty) 'Reference: ${text(v, 'reference')}.',
+              ].join('\n'),
+              posted: _date(text(v, 'postDate')),
+              closing: _date(text(v, 'closeDate')),
+            );
+          }(),
+    ];
+  }
+
+  /// "£25760.00 to £27476.00" or "£25272.00"; anything else (Negotiable,
+  /// an hourly rate) gives no figures.
+  static (int?, int?) _pounds(String s) {
+    final m = RegExp(r'£([\d,]+)(?:\.\d+)?(?:\s+to\s+£([\d,]+)(?:\.\d+)?)?$').firstMatch(s.trim());
+    if (m == null) return (null, null);
+    int? n(String? x) => x == null ? null : int.tryParse(x.replaceAll(',', ''));
+    final low = n(m[1]);
+    // Hourly rates (£12.21 to £12.60) stay as text only.
+    if (low == null || low < 1000) return (null, null);
+    return (low, n(m[2]) ?? low);
+  }
+}
+
 /// Remotive: remote jobs worldwide, no key. Its terms ask for a link back
 /// (each job opens on Remotive) and at most a few calls a day.
 class RemotiveFeed extends JobFeed {
@@ -346,7 +442,41 @@ class FeedKeys {
 List<JobFeed> allFeeds(http.Client client, FeedKeys keys) => [
   AdzunaFeed(client, appId: keys.adzunaId, appKey: keys.adzunaKey),
   ReedFeed(client, key: keys.reed),
+  NhsJobsFeed(client),
   RemotiveFeed(client),
   JobicyFeed(client),
   ArbeitnowFeed(client),
 ];
+
+const _months = {
+  'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6, //
+  'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+};
+
+/// The closing date an advert's text states ("Closing date: 17 November
+/// 2026", "Closes 17/11/2026"), as yyyy-MM-dd, or null.
+String? closingIn(String text) {
+  final m = RegExp(
+    r'clos(?:ing date|es|ing)\s*:?\s*(?:on\s+)?(?:[A-Za-z]+day\s+)?'
+    r'(?:(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})|(\d{1,2})/(\d{1,2})/(\d{4}))',
+    caseSensitive: false,
+  ).firstMatch(text);
+  if (m == null) return null;
+  final (day, month, year) = m[1] != null
+      ? (int.parse(m[1]!), _months[m[2]!.substring(0, 3).toLowerCase()], int.parse(m[3]!))
+      : (int.parse(m[4]!), int.parse(m[5]!), int.parse(m[6]!));
+  if (month == null || month > 12 || day < 1 || day > 31) return null;
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '$year-${two(month)}-${two(day)}';
+}
+
+/// The yearly salary range an advert's text states ("£28,392 to £31,157 a
+/// year", "£28,392 - £31,157"), or nulls.
+(int?, int?) salaryIn(String text) {
+  final m = RegExp(r'£\s?([\d,]{5,})(?:\.\d+)?(?:\s*(?:to|-|–)\s*£\s?([\d,]{5,}))?').firstMatch(text);
+  if (m == null) return (null, null);
+  int? n(String? x) => x == null ? null : int.tryParse(x.replaceAll(',', ''));
+  final low = n(m[1]);
+  if (low == null || low < 1000) return (null, null);
+  return (low, n(m[2]) ?? low);
+}

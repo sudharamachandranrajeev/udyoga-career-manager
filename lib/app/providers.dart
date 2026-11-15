@@ -13,7 +13,10 @@ import '../domain/ai.dart';
 import '../domain/claude.dart';
 import '../domain/claude_code.dart';
 import '../domain/codex.dart';
+import '../domain/companion_service.dart';
 import '../domain/gemini.dart';
+import '../domain/insights.dart';
+import '../domain/pay.dart';
 import '../domain/profile.dart';
 import '../domain/refresh.dart';
 import '../domain/n8n.dart';
@@ -115,6 +118,13 @@ final eventsProvider = _rows<$JobEventsTable, JobEvent>(
   orderBy: [(e) => OrderingTerm.desc(e.at)],
 );
 
+final checksProvider = _rows<$JobChecksTable, JobCheck>((db) => db.jobChecks);
+
+final archiveProvider = _rows<$JobArchiveTable, Archived>(
+  (db) => db.jobArchive,
+  orderBy: [(a) => OrderingTerm.desc(a.at)],
+);
+
 final leadsProvider = _rows<$CareerContactsTable, Lead>(
   (db) => db.careerContacts,
   orderBy: [(c) => OrderingTerm(expression: c.name)],
@@ -148,6 +158,49 @@ final answersProvider = _rows<$CareerAnswersTable, PracticeAnswer>(
   orderBy: [(a) => OrderingTerm(expression: a.question)],
 );
 
+final documentsProvider = _rows<$CareerDocumentsTable, CareerDocument>(
+  (db) => db.careerDocuments,
+  orderBy: [
+    (d) => OrderingTerm.desc(d.found),
+    (d) => OrderingTerm(expression: d.name),
+  ],
+);
+
+final questionsProvider = _rows<$CareerQuestionsTable, ProfileQuestion>(
+  (db) => db.careerQuestions,
+  orderBy: [(q) => OrderingTerm(expression: q.asked)],
+);
+
+final journalProvider = _rows<$CareerJournalTable, CheckIn>(
+  (db) => db.careerJournal,
+  orderBy: [(c) => OrderingTerm.desc(c.day)],
+);
+
+final storiesProvider = _rows<$CareerStoriesTable, Story>(
+  (db) => db.careerStories,
+  orderBy: [
+    (s) => OrderingTerm(expression: s.confirmed),
+    (s) => OrderingTerm.desc(s.added),
+  ],
+);
+
+/// The folders this device reads documents from.
+final documentFoldersProvider = FutureProvider<List<String>>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.documentFolders();
+});
+
+/// The check-in time on this device and whether it reminds.
+final checkInSettingsProvider = FutureProvider<({String time, bool remind})>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.checkInSettings();
+});
+
+/// The companion with the user's adviser (or none: it still finds documents
+/// and asks the built-in check-in questions).
+Future<Companion> companionOf(WidgetRef ref) async =>
+    Companion(ref.read(sessionProvider).book, advisor: await ref.read(advisorProvider.future));
+
 final profileProvider = FutureProvider<CandidateProfile>((ref) {
   ref.watch(revisionProvider);
   return ref.watch(sessionProvider).book.profile();
@@ -157,6 +210,18 @@ final profileProvider = FutureProvider<CandidateProfile>((ref) {
 final latestReportProvider = FutureProvider.family<Report?, String>((ref, kind) {
   ref.watch(revisionProvider);
   return ref.watch(sessionProvider).book.latestReport(kind);
+});
+
+/// The latest research on an employer, by name.
+final employerBriefProvider = FutureProvider.family<EmployerBrief?, String>((ref, employer) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.employerBrief(employer);
+});
+
+/// The candidate's current pay and rent.
+final payBaselineProvider = FutureProvider<PayBaseline>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.payBaseline();
 });
 
 /// The user's n8n lead workflow (not set until they connect one).

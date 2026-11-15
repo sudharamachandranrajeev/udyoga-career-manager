@@ -5,12 +5,14 @@ import 'package:drift/drift.dart';
 
 import '../db/database.dart';
 import 'ai.dart';
+import 'companion_book.dart';
 import 'feeds.dart';
 import 'insights.dart';
 import 'json.dart';
 import 'linkedin_export.dart';
 import 'matching.dart';
 import 'n8n.dart';
+import 'pay.dart';
 import 'pipeline.dart';
 import 'profile.dart';
 import 'resume.dart';
@@ -36,6 +38,9 @@ abstract final class PrefKeys {
 
   /// How the user writes on LinkedIn: their notes and a few past posts.
   static const linkedInVoice = 'udyoga.linkedin.voice';
+
+  /// The candidate's current pay and rent, for the pay change on each job.
+  static const pay = 'udyoga.pay';
 }
 
 /// Device-only settings (local_settings).
@@ -52,6 +57,16 @@ abstract final class LocalKeys {
 
   /// 'off' when Udyoga should not look for a new version at start.
   static const updateOnStart = 'udyoga.update.on_start';
+
+  /// Folders on this device to read documents from, JSON list of paths.
+  static const documentFolders = 'udyoga.documents.folders';
+
+  /// The daily check-in time on this device, HH:mm, and whether to remind.
+  static const checkInTime = 'udyoga.checkin.time';
+  static const checkInReminder = 'udyoga.checkin.reminder';
+
+  /// Set once the phone has been asked to allow the reminder.
+  static const checkInAsked = 'udyoga.checkin.asked';
 }
 
 /// Udyoga's write path and the reads screens share.
@@ -75,7 +90,8 @@ class CareerBook {
   );
 
   /// The profile, with the candidate's ideas and wins from the Growth page
-  /// as [CandidateProfile.notes].
+  /// as [CandidateProfile.notes], their story bank and the facts they have
+  /// confirmed, so every AI request knows them.
   Future<CandidateProfile> profile() async =>
       CandidateProfile.fromJson(await pref<Map<String, Object?>>(PrefKeys.profile, const {})).copyWith(
         notes: [
@@ -83,6 +99,8 @@ class CareerBook {
             '${noteKinds[n.kind]}: ${n.title}${n.why.isEmpty ? '' : ' (${n.why})'}'
                 '${n.url.isEmpty ? '' : ' ${n.url}'}',
         ],
+        stories: [for (final s in await stories()) CompanionBook.storyLine(s)],
+        confirmed: [for (final q in await questions(status: 'answered')) '${q.topic}: ${q.answer}'],
       );
 
   /// The candidate's ideas and wins, newest first.
@@ -272,6 +290,24 @@ class CareerBook {
 
   Future<void> setUpdateOnStart(bool on) => db.setLocalSetting(LocalKeys.updateOnStart, on ? 'on' : 'off');
 
+  /// The folders this device reads documents from.
+  Future<List<String>> documentFolders() async =>
+      decodeList(await db.localSetting(LocalKeys.documentFolders) ?? '').whereType<String>().toList();
+
+  Future<void> setDocumentFolders(List<String> folders) =>
+      db.setLocalSetting(LocalKeys.documentFolders, jsonEncode(folders));
+
+  /// The check-in time on this device (default 18:30) and whether it reminds.
+  Future<({String time, bool remind})> checkInSettings() async => (
+    time: await db.localSetting(LocalKeys.checkInTime) ?? '18:30',
+    remind: await db.localSetting(LocalKeys.checkInReminder) != 'off',
+  );
+
+  Future<void> setCheckInSettings({String? time, bool? remind}) async {
+    if (time != null) await db.setLocalSetting(LocalKeys.checkInTime, time);
+    if (remind != null) await db.setLocalSetting(LocalKeys.checkInReminder, remind ? 'on' : 'off');
+  }
+
   Future<N8nLink> n8nLink() async =>
       N8nLink.fromJson(await pref<Map<String, Object?>>(PrefKeys.n8n, const {}));
 
@@ -410,36 +446,259 @@ class CareerBook {
       id,
     );
     await save(db.jobListings, j.copyWith(status: 'applied'), j.id);
-    if (sent) await moveTo(id, Stage.applied, date: today);
+    await archive(
+      applicationId: id,
+      jobId: j.id,
+      kind: 'advert',
+      at: '${today}T${_clock()}',
+      title: j.company.isEmpty ? j.title : '${j.title} at ${j.company}',
+      url: j.url,
+      content: advertText(j),
+    );
+    if (sent) {
+      await moveTo(id, Stage.applied, date: today);
+    } else if (j.closing != null) {
+      await setFollowUp(id, _sendBy(j.closing!, today), note: _sendNote(j.closing!));
+    }
     return id;
   });
 
-  /// Moves an application to [stage] on [date], records it and sets the
-  /// next follow-up.
-  Future<void> moveTo(String id, Stage stage, {required String date, String summary = ''}) =>
+  /// Moves an application to [stage] on [date], records it (at [at] when the
+  /// time is known, as for a booked interview) and sets the next follow-up.
+  Future<void> moveTo(String id, Stage stage, {required String date, String summary = '', String? at}) =>
       db.transaction(() async {
         final a = await application(id);
+        final from = Stage.of(a.stage);
+        final job = a.jobId == null
+            ? null
+            : await (db.select(db.jobListings)..where((j) => j.id.equals(a.jobId!))).getSingleOrNull();
+        final (followUp, note) = switch (stage) {
+          Stage.preparing when job?.closing != null => (
+            _sendBy(job!.closing!, date),
+            _sendNote(job.closing!),
+          ),
+          // HSC waiting-list offers lapse at 12 noon two working days on.
+          Stage.offer when from == Stage.waitingList => (
+            addWorkingDays(date, 2),
+            'Offer from the waiting list: reply by 12 noon on ${niceDate(addWorkingDays(date, 2))}, '
+                'or it counts as a refusal.',
+          ),
+          Stage.rejected when from == Stage.interview || from == Stage.waitingList => (
+            addDays(date, 3),
+            'Ask the panel for feedback on your interview, and say you would welcome future posts.',
+          ),
+          _ => (followUpFor(stage, date), stage.chaseAfter == null ? '' : _chaseNote(stage)),
+        };
         await save(
           db.jobApplications,
           a.copyWith(
             stage: stage.id,
             updated: date,
             applied: Value(a.applied ?? (stage.index >= Stage.applied.index && stage.open ? date : null)),
-            followUp: Value(followUpFor(stage, date)),
-            followUpNote: stage.chaseAfter == null ? '' : _chaseNote(stage),
+            followUp: Value(followUp),
+            followUpNote: note,
           ),
           id,
         );
         final kind = eventKinds.entries.where((e) => e.value.$2 == stage).firstOrNull?.key ?? 'note';
-        await _event(id, kind, summary.isNotEmpty ? summary : stage.label, '${date}T${_clock()}');
+        await _event(id, kind, summary.isNotEmpty ? summary : stage.label, at ?? '${date}T${_clock()}');
+        if (stage == Stage.checks && from != Stage.checks) await startChecks(id, date);
+        if (stage == Stage.accepted) await _flagOthers(a, date);
       });
+
+  /// When to remind about an unsent application: two days before [closing]
+  /// (NHS adverts can close early), never before [today].
+  static String _sendBy(String closing, String today) {
+    final d = addDays(closing, -2);
+    return d.compareTo(today) < 0 ? today : d;
+  }
+
+  static String _sendNote(String closing) =>
+      'Send this before the advert closes on ${niceDate(closing)}; busy adverts can close early.';
+
+  /// After accepting [won], every other open application gets a reminder to
+  /// withdraw it (nothing is withdrawn for the candidate).
+  Future<void> _flagOthers(JobApplication won, String date) async {
+    final others =
+        await (db.select(db.jobApplications)..where(
+              (a) =>
+                  a.deleted.not() &
+                  a.id.equals(won.id).not() &
+                  a.stage.isIn(Stage.openStages.map((s) => s.id)),
+            ))
+            .get();
+    final where = won.company.isEmpty ? won.title : '${won.title} at ${won.company}';
+    for (final o in others) {
+      await save(
+        db.jobApplications,
+        o.copyWith(
+          followUp: Value(date),
+          followUpNote:
+              'You accepted $where. Withdraw this application, or tell them you are no longer available.',
+        ),
+        o.id,
+      );
+    }
+  }
+
+  /// The steps between a conditional offer and the first day, as NHS
+  /// England and HSC (Northern Ireland) run them. Forms are due within five
+  /// working days (HSC's deadline; NHS trusts ask for them promptly).
+  static const offerSteps = [
+    ('identity', 'Identity and right to work: book the appointment and bring the original documents'),
+    ('references', 'References: confirm your referees and the period they must cover'),
+    (
+      'criminal_record',
+      'Criminal record check if the post needs one (DBS in England, AccessNI in Northern Ireland)',
+    ),
+    ('health', 'Occupational health questionnaire and evidence of immunisations'),
+    ('qualifications', 'Evidence of the qualifications the advert asks for'),
+    ('forms', 'Personal declaration and payroll forms (HSC: FRMPEC4, FRMPEC6 and FRMPEC7)'),
+    ('contract', 'Unconditional offer and contract received'),
+    ('notice', 'Notice given to your current employer'),
+    ('start', 'Start date agreed with your new line manager'),
+  ];
+
+  static const _formsDue = {'identity', 'references', 'criminal_record', 'health', 'qualifications', 'forms'};
+
+  /// Adds the offer-to-start checklist ([offerSteps]) unless the
+  /// application has one; forms are due 5 working days after [date].
+  Future<void> startChecks(String applicationId, String date) async {
+    final existing = await checks(applicationId);
+    if (existing.isNotEmpty) return;
+    for (final (kind, title) in offerSteps) {
+      await addCheck(
+        applicationId,
+        kind: kind,
+        title: title,
+        due: _formsDue.contains(kind) ? addWorkingDays(date, 5) : null,
+      );
+    }
+  }
+
+  /// The checks on an application, in the order of [offerSteps], then any
+  /// the candidate added.
+  Future<List<JobCheck>> checks(String applicationId) async => sortChecks(
+    await (db.select(
+      db.jobChecks,
+    )..where((c) => c.applicationId.equals(applicationId) & c.deleted.not())).get(),
+  );
+
+  static List<JobCheck> sortChecks(List<JobCheck> list) {
+    int rank(JobCheck c) {
+      final i = offerSteps.indexWhere((s) => s.$1 == c.kind);
+      return i < 0 ? offerSteps.length : i;
+    }
+
+    return list..sort((a, b) => rank(a) != rank(b) ? rank(a).compareTo(rank(b)) : a.title.compareTo(b.title));
+  }
+
+  Future<String> addCheck(
+    String applicationId, {
+    required String kind,
+    required String title,
+    String? due,
+  }) async {
+    final id = newId();
+    await save(
+      db.jobChecks,
+      JobChecksCompanion.insert(
+        id: id,
+        applicationId: applicationId,
+        kind: kind,
+        title: title,
+        due: Value(due),
+      ),
+      id,
+    );
+    return id;
+  }
+
+  /// Sets a check's status; done ones record [today].
+  Future<void> setCheck(JobCheck c, String status, {required String today, String? due, String? notes}) =>
+      save(
+        db.jobChecks,
+        c.copyWith(
+          status: status,
+          done: Value(status == 'done' ? (c.done ?? today) : null),
+          due: due == null ? const Value.absent() : Value(due.isEmpty ? null : due),
+          notes: notes ?? c.notes,
+        ),
+        c.id,
+      );
+
+  /// Keeps a copy of [content]: the advert as it read or the application as
+  /// sent.
+  Future<String> archive({
+    String? applicationId,
+    String? jobId,
+    required String kind,
+    required String at,
+    required String content,
+    String title = '',
+    String url = '',
+  }) async {
+    final id = newId();
+    await save(
+      db.jobArchive,
+      JobArchiveCompanion.insert(
+        id: id,
+        applicationId: Value(applicationId),
+        jobId: Value(jobId),
+        kind: kind,
+        at: at,
+        title: Value(title),
+        url: Value(url),
+        content: content,
+      ),
+      id,
+    );
+    return id;
+  }
+
+  Future<List<Archived>> archived(String applicationId) =>
+      (db.select(db.jobArchive)
+            ..where((a) => a.applicationId.equals(applicationId) & a.deleted.not())
+            ..orderBy([(a) => OrderingTerm(expression: a.at)]))
+          .get();
+
+  /// Records the application as sent on [today], keeping a copy of what was
+  /// sent ([sent], the answer pack as the candidate used it).
+  Future<void> markSent(String id, {required String today, required String sent}) => db.transaction(() async {
+    final a = await application(id);
+    if (Stage.of(a.stage).index < Stage.applied.index) await moveTo(id, Stage.applied, date: today);
+    await archive(
+      applicationId: id,
+      jobId: a.jobId,
+      kind: 'application',
+      at: '${today}T${_clock()}',
+      title: a.company.isEmpty ? a.title : '${a.title} at ${a.company}',
+      url: a.url,
+      content: sent,
+    );
+  });
+
+  /// The advert as text, for the archive.
+  static String advertText(Job j) => [
+    j.title,
+    if (j.company.isNotEmpty) j.company,
+    if (j.location.isNotEmpty) j.location,
+    if (j.salaryText.isNotEmpty) j.salaryText,
+    if (j.closing != null) 'Closes ${j.closing}',
+    if (j.url.isNotEmpty) j.url,
+    '',
+    j.description,
+  ].join('\n');
 
   static String _chaseNote(Stage s) => switch (s) {
     Stage.applied => 'Ask whether the application is being considered and when shortlisting ends.',
     Stage.screening => 'Ask about next steps and the interview timetable.',
     Stage.interview =>
       'Thank the panel and ask when they expect to decide; ask for feedback if unsuccessful.',
+    Stage.waitingList =>
+      'Keep your contact details and preferences current; check email, junk mail and voicemail for offers.',
     Stage.offer => 'Reply to the offer: questions, negotiation or acceptance.',
+    Stage.checks => 'Chase any pre-employment check still outstanding and ask for a start date.',
     _ => '',
   };
 
@@ -468,12 +727,22 @@ class CareerBook {
         final a = await application(id);
         final date = at.substring(0, 10);
         if (stage != null && (stage.index > Stage.of(a.stage).index || !stage.open)) {
-          await moveTo(id, stage, date: date, summary: summary.isNotEmpty ? summary : eventKinds[kind]!.$1);
+          await moveTo(
+            id,
+            stage,
+            date: date,
+            at: at,
+            summary: summary.isNotEmpty ? summary : eventKinds[kind]!.$1,
+          );
           return;
         }
         await _event(id, kind, summary.isNotEmpty ? summary : eventKinds[kind]?.$1 ?? kind, at);
         if (kind == 'followup' && Stage.of(a.stage).open) {
           await save(db.jobApplications, a.copyWith(followUp: Value(addDays(date, 7))), id);
+        } else if (stage != null && date.compareTo(a.updated) > 0) {
+          // Word from the employer at the same stage: still in touch, so it
+          // is not a silent application.
+          await save(db.jobApplications, a.copyWith(updated: date), id);
         }
       });
 
@@ -604,6 +873,33 @@ class CareerBook {
             ..orderBy([(r) => OrderingTerm.desc(r.created)])
             ..limit(1))
           .getSingleOrNull();
+
+  /// The latest research on [employer], if any (matched by name, any case).
+  Future<EmployerBrief?> employerBrief(String employer) async {
+    final key = employer.toLowerCase().trim();
+    if (key.isEmpty) return null;
+    final rows =
+        await (db.select(db.careerReports)
+              ..where((r) => r.kind.equals('employer') & r.deleted.not())
+              ..orderBy([(r) => OrderingTerm.desc(r.created)]))
+            .get();
+    for (final r in rows) {
+      final j = decodeObject(r.content);
+      if (str(j['employer']).toLowerCase().trim() == key) {
+        return EmployerBrief({...j, 'researched': r.created, 'sources': decodeList(r.sources)});
+      }
+    }
+    return null;
+  }
+
+  /// Saves research on [employer] under the name the candidate's job uses.
+  Future<void> saveEmployerBrief(String employer, AiResult r, {required String at}) =>
+      saveReport('employer', {...r.data, 'employer': employer}, r.sources, at: at);
+
+  Future<PayBaseline> payBaseline() async =>
+      PayBaseline.fromJson(await pref<Map<String, Object?>>(PrefKeys.pay, const {}));
+
+  Future<void> setPayBaseline(PayBaseline b) => setPref(PrefKeys.pay, b.toJson());
 
   /// Adds learning suggestions not already on the list. Returns how many.
   Future<int> suggestLearning(List<LearningSuggestion> items, {String path = '', required String today}) =>

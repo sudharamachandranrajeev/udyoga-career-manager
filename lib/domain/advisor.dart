@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import '../db/database.dart';
 import 'answer_metrics.dart';
+import 'companion.dart';
 import 'ai.dart';
 import 'countries.dart';
 import 'insights.dart';
@@ -171,6 +172,30 @@ Evaluate this job for the candidate as a demanding hiring manager would. If the 
     schema: FitAssessment.schema,
     web: true,
     searches: 6,
+    onProgress: onProgress,
+  );
+
+  /// Research on what it is like to work for [employer]: systems, culture
+  /// evidence with sources, and risks.
+  Future<AiResult> researchEmployer(
+    CandidateProfile p,
+    String employer, {
+    String place = '',
+    Progress? onProgress,
+  }) => ai.ask(
+    system: _system(p),
+    content: [
+      _candidate(p),
+      _text('<employer>$employer${place.isEmpty ? '' : ' ($place)'}</employer>'),
+      _text(
+        '''
+Research what it is like to work for this employer in the candidate's kind of role. Find the systems staff use day to day (for health employers: the electronic patient record, patient administration and rostering systems, and any planned replacement with its date), evidence on culture from official sources (the latest staff survey results such as "would recommend as a place to work", inspection ratings, awards, recent news), and any risks such as restructures, mergers or financial pressure. Cite a source URL for every culture point. Say plainly when you could not find something; do not guess. End with good questions the candidate could ask at interview.''',
+      ),
+    ],
+    schema: EmployerBrief.schema,
+    web: true,
+    searches: 8,
+    effort: 'medium',
     onProgress: onProgress,
   );
 
@@ -400,6 +425,167 @@ Then the overall score, what was strong, what to improve (most important first),
   }
 
   String _attr(String s) => s.replaceAll('"', "'");
+
+  List<Json> _sources(List<CvSource> docs, String tag) => [
+    for (final d in docs)
+      ...switch (d) {
+        PdfCv(:final bytes) => [
+          _text('<$tag name="${_attr(d.name)}">'),
+          {
+            'type': 'document',
+            'source': {'type': 'base64', 'media_type': 'application/pdf', 'data': base64Encode(bytes)},
+          },
+          _text('</$tag>'),
+        ],
+        TextCv(:final text) => [_text('<$tag name="${_attr(d.name)}">\n$text\n</$tag>')],
+      },
+  ];
+
+  /// Reads the candidate's own documents: what each is, what it states
+  /// about them and the stories in it. A few at a time.
+  Future<List<DocumentReading>> readDocuments(
+    CandidateProfile p,
+    List<CvSource> docs, {
+    Progress? onProgress,
+  }) async {
+    final r = await ai.ask(
+      system:
+          'You read a job candidate\'s own documents (CVs, references, interview notes, application answers, '
+          'adverts they kept) and record what they state about the candidate. Today is $today. Copy facts '
+          'faithfully; never improve, guess or add. Facts about other people (referees, managers, patients) are '
+          'not recorded, and no patient or service-user details are ever copied.',
+      content: [
+        _candidate(p),
+        ..._sources(docs, 'document'),
+        _text(
+          'For each document: its kind, a one-line summary, the facts it states about the candidate (dates, roles, '
+          'duties, figures, systems, qualifications, achievements) and any real examples of their work that could '
+          'answer an interview question, as STAR stories in the candidate\'s first person. Return one entry per '
+          'document, using each document\'s name exactly.',
+        ),
+      ],
+      schema: DocumentReading.schema,
+      effort: 'medium',
+      onProgress: onProgress,
+    );
+    return objs(r.data['documents']).map(DocumentReading.fromJson).toList();
+  }
+
+  /// Questions that would make the profile accurate: documents that disagree,
+  /// claims without support, points only one old document makes.
+  Future<List<QuestionDraft>> profileQuestions(
+    CandidateProfile p, {
+    required List<({String name, String kind, List<DocumentFact> facts})> documents,
+    required List<String> settled,
+    int max = 8,
+  }) async {
+    final r = await ai.ask(
+      system: _system(p),
+      content: [
+        _candidate(p),
+        _text(
+          '<documents>\n${jsonEncode([
+            for (final d in documents) {'name': d.name, 'kind': d.kind, 'facts': d.facts.map((f) => f.toJson()).toList()},
+          ])}\n</documents>',
+        ),
+        if (settled.isNotEmpty) _text('<already_settled>\n${settled.join('\n')}\n</already_settled>'),
+        _text(
+          'Compare the profile with what the documents state. List up to $max questions for the candidate, most '
+          'important first, about: facts that disagree between documents or with the profile (dates, titles, '
+          'figures), claims an employer would ask them to prove (estimated figures, "available on request"), and '
+          'gaps in employment over three months without an explanation. Never ask about anything already settled. '
+          'Do not ask for opinions, only facts. Give likely answers as choices when the documents disagree.',
+        ),
+      ],
+      schema: QuestionDraft.schema,
+      effort: 'medium',
+      maxTokens: 12000,
+    );
+    return objs(r.data['questions']).map(QuestionDraft.fromJson).toList();
+  }
+
+  /// The profile with the candidate's confirmed answers written in.
+  Future<CandidateProfile> reviseProfile(CandidateProfile p, List<String> confirmed) async {
+    final r = await ai.ask(
+      system:
+          'You keep a job candidate\'s structured profile accurate. Today is $today. Change only what the '
+          'candidate\'s confirmed answers require; keep everything else exactly as it is, word for word.',
+      content: [
+        _candidate(p),
+        _text('<confirmed_by_candidate>\n${confirmed.join('\n')}\n</confirmed_by_candidate>'),
+        _text('Return the whole profile with these answers applied.'),
+      ],
+      schema: CandidateProfile.schema,
+      effort: 'medium',
+    );
+    final revised = CandidateProfile.fromJson(r.data);
+    // The AI never sees these as editable; keep the originals.
+    return revised.copyWith(
+      targets: p.targets,
+      cvText: p.cvText,
+      versions: p.versions,
+      notes: p.notes,
+      stories: p.stories,
+      confirmed: p.confirmed,
+    );
+  }
+
+  /// Today's check-in question: aimed at what the candidate's target roles
+  /// ask for and their evidence still lacks.
+  Future<String> checkInQuestion(
+    CandidateProfile p, {
+    required String weakest,
+    required List<String> recent,
+    String followUp = '',
+  }) async {
+    final r = await ai.ask(
+      system: _system(p),
+      content: [
+        _candidate(p),
+        _text(
+          '<recent_check_ins>\n${recent.join('\n')}\n</recent_check_ins>\n'
+          '<least_evidence>${competencyNames[weakest] ?? weakest}</least_evidence>'
+          '${followUp.isEmpty ? '' : '\n<follow_up_from_yesterday>$followUp</follow_up_from_yesterday>'}',
+        ),
+        _text(
+          'Write the one question to ask the candidate at the end of their working day. It should be quick to '
+          'answer in a few sentences, about their real day at work, and draw out an example the candidate could '
+          'use at interview for their target roles: prefer yesterday\'s follow-up if there is one, otherwise the '
+          'competency with least evidence. Plain words, second person, one question only, no preamble.',
+        ),
+      ],
+      schema: object({'question': string()}),
+      effort: 'low',
+      maxTokens: 2000,
+    );
+    return str(r.data['question']);
+  }
+
+  /// What a check-in answer adds: stories, skills, wins, learning.
+  Future<CheckInDigest> digestCheckIn(
+    CandidateProfile p, {
+    required String question,
+    required String answer,
+  }) async {
+    final r = await ai.ask(
+      system:
+          '${_system(p)}\n\nYou are reading the candidate\'s end-of-day check-in. Take only what they actually '
+          'said; never add results, figures or actions they did not state. No patient or service-user details.',
+      content: [
+        _candidate(p),
+        _text('<check_in>\n<question>$question</question>\n<answer>\n$answer\n</answer>\n</check_in>'),
+        _text(
+          'Record what this adds to the candidate\'s evidence: STAR stories (first person, only when the answer '
+          'describes a real example), skills or systems the profile lacks, CV-worthy achievements, things to learn, '
+          'and a follow-up question for tomorrow when a story is missing its result.',
+        ),
+      ],
+      schema: CheckInDigest.schema,
+      effort: 'low',
+      maxTokens: 8000,
+    );
+    return CheckInDigest.fromJson(r.data);
+  }
 }
 
 extension _Let<T> on T {

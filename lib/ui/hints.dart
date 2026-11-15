@@ -70,6 +70,9 @@ const udyogaHints = <String, String>{
   'page.linkedin':
       'Drafts for LinkedIn in your voice: your profile scored and rewritten, posts, comments, connection notes, '
       'replies and a week plan. Every draft is cleaned of machine marks. You post and send everything yourself.',
+  'page.coach':
+      'A question at the end of each day turns your real work into interview stories. Udyoga reads your '
+      'documents, asks you to confirm anything that disagrees, and shows how ready you are for each competency.',
   'page.profile':
       'Import your CV and the AI fills this in. Everything Udyoga does starts from it, so keep it accurate.',
 };
