@@ -420,13 +420,15 @@ class _Glow extends StatelessWidget {
   );
 }
 
-/// Pushed pages rise into place from slightly below and behind, while the
-/// page underneath recedes: depth without a slide across the screen.
+/// Pushed pages rise a little into place and fade in, while the page
+/// underneath dims slightly. A page opens tens of times a day, so it is short
+/// (250 ms) and leaves at once: the way back starts fast. No 3D turn: it
+/// added nothing but time.
 class RisePageTransitionsBuilder extends PageTransitionsBuilder {
   const RisePageTransitionsBuilder();
 
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 380);
+  Duration get transitionDuration => Pace.slow;
 
   @override
   Widget buildTransitions<T>(
@@ -438,101 +440,54 @@ class RisePageTransitionsBuilder extends PageTransitionsBuilder {
   ) {
     // Each page brings its own canvas, so the page beneath never shows through.
     child = Backdrop(child: child);
+    // Under reduced motion a fade remains: it moves nothing.
     if (Motion.reduced(context)) return FadeTransition(opacity: animation, child: child);
-    final inCurve = CurvedAnimation(
-      parent: animation,
-      curve: Curves.easeOutQuart,
-      reverseCurve: Curves.easeInCubic,
-    );
-    final outCurve = CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeOutCubic);
+    final inCurve = CurvedAnimation(parent: animation, curve: Ease.out, reverseCurve: Ease.out.flipped);
+    final outCurve = CurvedAnimation(parent: secondaryAnimation, curve: Ease.out);
     return AnimatedBuilder(
       animation: Listenable.merge([inCurve, outCurve]),
       child: child,
-      builder: (context, child) {
-        final t = inCurve.value;
-        final back = outCurve.value;
-        final m = Matrix4.identity()
-          ..setEntry(3, 2, 0.0009)
-          ..translateByDouble(0, (1 - t) * 48, 0, 1)
-          ..rotateX((1 - t) * 0.08)
-          ..scaleByDouble(1 - back * 0.04, 1 - back * 0.04, 1, 1);
-        return Opacity(
-          opacity: (t.clamp(0, 1) * (1 - back * 0.3)).toDouble(),
-          child: Transform(transform: m, alignment: Alignment.topCenter, child: child),
-        );
-      },
+      builder: (context, child) => Opacity(
+        opacity: (inCurve.value.clamp(0, 1) * (1 - outCurve.value * 0.2)).toDouble(),
+        child: Transform.translate(offset: Offset(0, (1 - inCurve.value) * 24), child: child),
+      ),
     );
   }
 }
 
-/// Tilts its child towards the pointer in 3D and lifts it on hover; presses
-/// sink it slightly. Static when the system asks for reduced motion.
+/// Press feedback for a card that opens something: it sinks a touch while
+/// held, so the app is seen to have heard. It used to tilt towards the
+/// pointer in 3D as well; that ran on every hover over every list, tens of
+/// times a day, and said nothing, so it is gone. Hover is left to the
+/// card's own highlight (SpotlightCard). Still under reduced motion.
 class Tilt extends StatefulWidget {
-  const Tilt({super.key, required this.child, this.maxAngle = 0.07});
+  const Tilt({super.key, required this.child});
   final Widget child;
-
-  /// Radians at the edges.
-  final double maxAngle;
 
   @override
   State<Tilt> createState() => _TiltState();
 }
 
 class _TiltState extends State<Tilt> {
-  var _x = 0.0, _y = 0.0;
-  var _hover = false, _down = false;
+  var _down = false;
 
-  void _move(Offset local, Size size) {
-    setState(() {
-      _x = (local.dx / size.width - 0.5) * 2;
-      _y = (local.dy / size.height - 0.5) * 2;
-    });
+  void _press(bool down) {
+    if (_down != down) setState(() => _down = down);
   }
 
   @override
   Widget build(BuildContext context) {
     if (Motion.reduced(context)) return widget.child;
-    return LayoutBuilder(
-      builder: (context, box) {
-        final size = Size(box.maxWidth.isFinite ? box.maxWidth : 300, 120);
-        return MouseRegion(
-          onEnter: (_) => setState(() => _hover = true),
-          onHover: (e) {
-            final rb = context.findRenderObject() as RenderBox?;
-            _move(e.localPosition, rb?.size ?? size);
-          },
-          onExit: (_) => setState(() {
-            _hover = false;
-            _x = 0;
-            _y = 0;
-          }),
-          child: Listener(
-            onPointerDown: (_) => setState(() => _down = true),
-            onPointerUp: (_) => setState(() => _down = false),
-            onPointerCancel: (_) => setState(() => _down = false),
-            child: TweenAnimationBuilder<Offset>(
-              tween: Tween(end: _hover ? Offset(_x, _y) : Offset.zero),
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              builder: (context, o, child) {
-                final scale = _down ? 0.985 : (_hover ? 1.012 : 1.0);
-                final m = Matrix4.identity()
-                  ..setEntry(3, 2, 0.0012)
-                  ..rotateX(-o.dy * widget.maxAngle)
-                  ..rotateY(o.dx * widget.maxAngle)
-                  ..scaleByDouble(scale, scale, 1, 1);
-                return AnimatedSlide(
-                  offset: Offset(0, _hover ? -0.012 : 0),
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                  child: Transform(transform: m, alignment: Alignment.center, child: child),
-                );
-              },
-              child: widget.child,
-            ),
-          ),
-        );
-      },
+    return Listener(
+      onPointerDown: (_) => _press(true),
+      onPointerUp: (_) => _press(false),
+      onPointerCancel: (_) => _press(false),
+      child: AnimatedScale(
+        scale: _down ? 0.98 : 1,
+        duration: Pace.fast,
+        curve: Ease.out,
+        child: widget.child,
+      ),
     );
   }
 }
@@ -592,6 +547,9 @@ class OrgLogo extends StatelessWidget {
 }
 
 /// A small tinted label: "Remote", "Shortlisted", "Closes in 3 days".
+///
+/// The kit's StatusPill replaces it; it stays only for Contacts and LinkedIn
+/// until those pages move to the kit.
 class Pill extends StatelessWidget {
   const Pill(this.label, {super.key, this.status, this.icon});
   final String label;
@@ -656,7 +614,7 @@ class Headline extends StatelessWidget {
   }
 }
 
-/// A [TileGrid] whose tiles tilt towards the pointer.
+/// A [TileGrid] whose tiles sink a touch when pressed (see [Tilt]).
 class TiltGrid extends StatelessWidget {
   const TiltGrid({super.key, required this.children, this.minWidth = 200});
   final List<Widget> children;
@@ -665,6 +623,6 @@ class TiltGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) => TileGrid(
     minWidth: minWidth,
-    children: [for (final c in children) Tilt(maxAngle: 0.1, child: c)],
+    children: [for (final c in children) Tilt(child: c)],
   );
 }
