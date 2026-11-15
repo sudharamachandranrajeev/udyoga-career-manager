@@ -34,8 +34,9 @@ class AppHarness {
     });
   }
 
-  /// Starts the app; [overrides] stand in for more (a fake mail server).
-  Future<void> run({List<Override> overrides = const []}) async {
+  /// Starts the app; [overrides] stand in for more (a fake mail server),
+  /// and [home] shows one widget in place of the shell.
+  Future<void> run({List<Override> overrides = const [], Widget? home}) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -44,7 +45,7 @@ class AppHarness {
           ...overrides,
         ],
         retry: (_, _) => null,
-        child: const UdyogaApp(),
+        child: home == null ? const UdyogaApp() : UdyogaApp(home: home),
       ),
     );
     await settle();
