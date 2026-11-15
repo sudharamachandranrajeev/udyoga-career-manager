@@ -296,6 +296,11 @@ void main() {
       source: '',
       status: 'new',
       notes: '',
+      sourceUrl: '',
+      sourceKind: 'other',
+      basis: 'legitimate_interest',
+      basisNote: '',
+      doNotContact: false,
     );
     final pack = answerPack(clerk, statement: 'I keep ward records accurate.', referees: [referee]);
     final byTitle = {for (final s in pack) s.title: s};

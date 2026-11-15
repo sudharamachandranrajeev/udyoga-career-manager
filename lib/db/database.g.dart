@@ -3390,6 +3390,75 @@ class $CareerContactsTable extends CareerContacts with TableInfo<$CareerContacts
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _sourceUrlMeta = const VerificationMeta('sourceUrl');
+  @override
+  late final GeneratedColumn<String> sourceUrl = GeneratedColumn<String>(
+    'source_url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _sourceKindMeta = const VerificationMeta('sourceKind');
+  @override
+  late final GeneratedColumn<String> sourceKind = GeneratedColumn<String>(
+    'source_kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('other'),
+  );
+  static const VerificationMeta _foundOnMeta = const VerificationMeta('foundOn');
+  @override
+  late final GeneratedColumn<String> foundOn = GeneratedColumn<String>(
+    'found_on',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _basisMeta = const VerificationMeta('basis');
+  @override
+  late final GeneratedColumn<String> basis = GeneratedColumn<String>(
+    'basis',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('legitimate_interest'),
+  );
+  static const VerificationMeta _basisNoteMeta = const VerificationMeta('basisNote');
+  @override
+  late final GeneratedColumn<String> basisNote = GeneratedColumn<String>(
+    'basis_note',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _doNotContactMeta = const VerificationMeta('doNotContact');
+  @override
+  late final GeneratedColumn<bool> doNotContact = GeneratedColumn<bool>(
+    'do_not_contact',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("do_not_contact" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _keepInTouchWeeksMeta = const VerificationMeta('keepInTouchWeeks');
+  @override
+  late final GeneratedColumn<int> keepInTouchWeeks = GeneratedColumn<int>(
+    'keep_in_touch_weeks',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3408,6 +3477,13 @@ class $CareerContactsTable extends CareerContacts with TableInfo<$CareerContacts
     followUp,
     jobId,
     notes,
+    sourceUrl,
+    sourceKind,
+    foundOn,
+    basis,
+    basisNote,
+    doNotContact,
+    keepInTouchWeeks,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3473,6 +3549,36 @@ class $CareerContactsTable extends CareerContacts with TableInfo<$CareerContacts
     if (data.containsKey('notes')) {
       context.handle(_notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
     }
+    if (data.containsKey('source_url')) {
+      context.handle(_sourceUrlMeta, sourceUrl.isAcceptableOrUnknown(data['source_url']!, _sourceUrlMeta));
+    }
+    if (data.containsKey('source_kind')) {
+      context.handle(
+        _sourceKindMeta,
+        sourceKind.isAcceptableOrUnknown(data['source_kind']!, _sourceKindMeta),
+      );
+    }
+    if (data.containsKey('found_on')) {
+      context.handle(_foundOnMeta, foundOn.isAcceptableOrUnknown(data['found_on']!, _foundOnMeta));
+    }
+    if (data.containsKey('basis')) {
+      context.handle(_basisMeta, basis.isAcceptableOrUnknown(data['basis']!, _basisMeta));
+    }
+    if (data.containsKey('basis_note')) {
+      context.handle(_basisNoteMeta, basisNote.isAcceptableOrUnknown(data['basis_note']!, _basisNoteMeta));
+    }
+    if (data.containsKey('do_not_contact')) {
+      context.handle(
+        _doNotContactMeta,
+        doNotContact.isAcceptableOrUnknown(data['do_not_contact']!, _doNotContactMeta),
+      );
+    }
+    if (data.containsKey('keep_in_touch_weeks')) {
+      context.handle(
+        _keepInTouchWeeksMeta,
+        keepInTouchWeeks.isAcceptableOrUnknown(data['keep_in_touch_weeks']!, _keepInTouchWeeksMeta),
+      );
+    }
     return context;
   }
 
@@ -3501,6 +3607,28 @@ class $CareerContactsTable extends CareerContacts with TableInfo<$CareerContacts
       followUp: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}follow_up']),
       jobId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}job_id']),
       notes: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}notes'])!,
+      sourceUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_url'],
+      )!,
+      sourceKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_kind'],
+      )!,
+      foundOn: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}found_on']),
+      basis: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}basis'])!,
+      basisNote: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}basis_note'],
+      )!,
+      doNotContact: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}do_not_contact'],
+      )!,
+      keepInTouchWeeks: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}keep_in_touch_weeks'],
+      ),
     );
   }
 
@@ -3527,12 +3655,35 @@ class Lead extends DataClass implements Insertable<Lead> {
   /// Where the lead was found (a team page, a job advert...).
   final String source;
 
-  /// new | contacted | replied | cold
+  /// new | contacted | replied | cold. Since schema 4 these three follow the
+  /// person's newest conversation (domain/conversations.dart); they are kept
+  /// so the Contacts and Today pages read them as before.
   final String status;
   final String? lastContact;
   final String? followUp;
   final String? jobId;
   final String notes;
+
+  /// The page the person was found on (an advert, a team page...).
+  final String sourceUrl;
+
+  /// advert | team_page | speaker | register | met | archive | inbound |
+  /// referral | other
+  final String sourceKind;
+
+  /// When they were found, yyyy-MM-dd.
+  final String? foundOn;
+
+  /// legitimate_interest | they_contacted | consent
+  final String basis;
+  final String basisNote;
+
+  /// True when the person asked not to be contacted: the composer is
+  /// blocked and lead imports skip their address and profile.
+  final bool doNotContact;
+
+  /// "Keep in touch every N weeks", or null for no reminder.
+  final int? keepInTouchWeeks;
   const Lead({
     required this.id,
     required this.hlc,
@@ -3550,6 +3701,13 @@ class Lead extends DataClass implements Insertable<Lead> {
     this.followUp,
     this.jobId,
     required this.notes,
+    required this.sourceUrl,
+    required this.sourceKind,
+    this.foundOn,
+    required this.basis,
+    required this.basisNote,
+    required this.doNotContact,
+    this.keepInTouchWeeks,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3576,6 +3734,17 @@ class Lead extends DataClass implements Insertable<Lead> {
       map['job_id'] = Variable<String>(jobId);
     }
     map['notes'] = Variable<String>(notes);
+    map['source_url'] = Variable<String>(sourceUrl);
+    map['source_kind'] = Variable<String>(sourceKind);
+    if (!nullToAbsent || foundOn != null) {
+      map['found_on'] = Variable<String>(foundOn);
+    }
+    map['basis'] = Variable<String>(basis);
+    map['basis_note'] = Variable<String>(basisNote);
+    map['do_not_contact'] = Variable<bool>(doNotContact);
+    if (!nullToAbsent || keepInTouchWeeks != null) {
+      map['keep_in_touch_weeks'] = Variable<int>(keepInTouchWeeks);
+    }
     return map;
   }
 
@@ -3597,6 +3766,15 @@ class Lead extends DataClass implements Insertable<Lead> {
       followUp: followUp == null && nullToAbsent ? const Value.absent() : Value(followUp),
       jobId: jobId == null && nullToAbsent ? const Value.absent() : Value(jobId),
       notes: Value(notes),
+      sourceUrl: Value(sourceUrl),
+      sourceKind: Value(sourceKind),
+      foundOn: foundOn == null && nullToAbsent ? const Value.absent() : Value(foundOn),
+      basis: Value(basis),
+      basisNote: Value(basisNote),
+      doNotContact: Value(doNotContact),
+      keepInTouchWeeks: keepInTouchWeeks == null && nullToAbsent
+          ? const Value.absent()
+          : Value(keepInTouchWeeks),
     );
   }
 
@@ -3619,6 +3797,13 @@ class Lead extends DataClass implements Insertable<Lead> {
       followUp: serializer.fromJson<String?>(json['followUp']),
       jobId: serializer.fromJson<String?>(json['jobId']),
       notes: serializer.fromJson<String>(json['notes']),
+      sourceUrl: serializer.fromJson<String>(json['sourceUrl']),
+      sourceKind: serializer.fromJson<String>(json['sourceKind']),
+      foundOn: serializer.fromJson<String?>(json['foundOn']),
+      basis: serializer.fromJson<String>(json['basis']),
+      basisNote: serializer.fromJson<String>(json['basisNote']),
+      doNotContact: serializer.fromJson<bool>(json['doNotContact']),
+      keepInTouchWeeks: serializer.fromJson<int?>(json['keepInTouchWeeks']),
     );
   }
   @override
@@ -3641,6 +3826,13 @@ class Lead extends DataClass implements Insertable<Lead> {
       'followUp': serializer.toJson<String?>(followUp),
       'jobId': serializer.toJson<String?>(jobId),
       'notes': serializer.toJson<String>(notes),
+      'sourceUrl': serializer.toJson<String>(sourceUrl),
+      'sourceKind': serializer.toJson<String>(sourceKind),
+      'foundOn': serializer.toJson<String?>(foundOn),
+      'basis': serializer.toJson<String>(basis),
+      'basisNote': serializer.toJson<String>(basisNote),
+      'doNotContact': serializer.toJson<bool>(doNotContact),
+      'keepInTouchWeeks': serializer.toJson<int?>(keepInTouchWeeks),
     };
   }
 
@@ -3661,6 +3853,13 @@ class Lead extends DataClass implements Insertable<Lead> {
     Value<String?> followUp = const Value.absent(),
     Value<String?> jobId = const Value.absent(),
     String? notes,
+    String? sourceUrl,
+    String? sourceKind,
+    Value<String?> foundOn = const Value.absent(),
+    String? basis,
+    String? basisNote,
+    bool? doNotContact,
+    Value<int?> keepInTouchWeeks = const Value.absent(),
   }) => Lead(
     id: id ?? this.id,
     hlc: hlc ?? this.hlc,
@@ -3678,6 +3877,13 @@ class Lead extends DataClass implements Insertable<Lead> {
     followUp: followUp.present ? followUp.value : this.followUp,
     jobId: jobId.present ? jobId.value : this.jobId,
     notes: notes ?? this.notes,
+    sourceUrl: sourceUrl ?? this.sourceUrl,
+    sourceKind: sourceKind ?? this.sourceKind,
+    foundOn: foundOn.present ? foundOn.value : this.foundOn,
+    basis: basis ?? this.basis,
+    basisNote: basisNote ?? this.basisNote,
+    doNotContact: doNotContact ?? this.doNotContact,
+    keepInTouchWeeks: keepInTouchWeeks.present ? keepInTouchWeeks.value : this.keepInTouchWeeks,
   );
   Lead copyWithCompanion(CareerContactsCompanion data) {
     return Lead(
@@ -3697,6 +3903,13 @@ class Lead extends DataClass implements Insertable<Lead> {
       followUp: data.followUp.present ? data.followUp.value : this.followUp,
       jobId: data.jobId.present ? data.jobId.value : this.jobId,
       notes: data.notes.present ? data.notes.value : this.notes,
+      sourceUrl: data.sourceUrl.present ? data.sourceUrl.value : this.sourceUrl,
+      sourceKind: data.sourceKind.present ? data.sourceKind.value : this.sourceKind,
+      foundOn: data.foundOn.present ? data.foundOn.value : this.foundOn,
+      basis: data.basis.present ? data.basis.value : this.basis,
+      basisNote: data.basisNote.present ? data.basisNote.value : this.basisNote,
+      doNotContact: data.doNotContact.present ? data.doNotContact.value : this.doNotContact,
+      keepInTouchWeeks: data.keepInTouchWeeks.present ? data.keepInTouchWeeks.value : this.keepInTouchWeeks,
     );
   }
 
@@ -3718,13 +3931,20 @@ class Lead extends DataClass implements Insertable<Lead> {
           ..write('lastContact: $lastContact, ')
           ..write('followUp: $followUp, ')
           ..write('jobId: $jobId, ')
-          ..write('notes: $notes')
+          ..write('notes: $notes, ')
+          ..write('sourceUrl: $sourceUrl, ')
+          ..write('sourceKind: $sourceKind, ')
+          ..write('foundOn: $foundOn, ')
+          ..write('basis: $basis, ')
+          ..write('basisNote: $basisNote, ')
+          ..write('doNotContact: $doNotContact, ')
+          ..write('keepInTouchWeeks: $keepInTouchWeeks')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     hlc,
     deleted,
@@ -3741,7 +3961,14 @@ class Lead extends DataClass implements Insertable<Lead> {
     followUp,
     jobId,
     notes,
-  );
+    sourceUrl,
+    sourceKind,
+    foundOn,
+    basis,
+    basisNote,
+    doNotContact,
+    keepInTouchWeeks,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3761,7 +3988,14 @@ class Lead extends DataClass implements Insertable<Lead> {
           other.lastContact == this.lastContact &&
           other.followUp == this.followUp &&
           other.jobId == this.jobId &&
-          other.notes == this.notes);
+          other.notes == this.notes &&
+          other.sourceUrl == this.sourceUrl &&
+          other.sourceKind == this.sourceKind &&
+          other.foundOn == this.foundOn &&
+          other.basis == this.basis &&
+          other.basisNote == this.basisNote &&
+          other.doNotContact == this.doNotContact &&
+          other.keepInTouchWeeks == this.keepInTouchWeeks);
 }
 
 class CareerContactsCompanion extends UpdateCompanion<Lead> {
@@ -3781,6 +4015,13 @@ class CareerContactsCompanion extends UpdateCompanion<Lead> {
   final Value<String?> followUp;
   final Value<String?> jobId;
   final Value<String> notes;
+  final Value<String> sourceUrl;
+  final Value<String> sourceKind;
+  final Value<String?> foundOn;
+  final Value<String> basis;
+  final Value<String> basisNote;
+  final Value<bool> doNotContact;
+  final Value<int?> keepInTouchWeeks;
   final Value<int> rowid;
   const CareerContactsCompanion({
     this.id = const Value.absent(),
@@ -3799,6 +4040,13 @@ class CareerContactsCompanion extends UpdateCompanion<Lead> {
     this.followUp = const Value.absent(),
     this.jobId = const Value.absent(),
     this.notes = const Value.absent(),
+    this.sourceUrl = const Value.absent(),
+    this.sourceKind = const Value.absent(),
+    this.foundOn = const Value.absent(),
+    this.basis = const Value.absent(),
+    this.basisNote = const Value.absent(),
+    this.doNotContact = const Value.absent(),
+    this.keepInTouchWeeks = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CareerContactsCompanion.insert({
@@ -3818,6 +4066,13 @@ class CareerContactsCompanion extends UpdateCompanion<Lead> {
     this.followUp = const Value.absent(),
     this.jobId = const Value.absent(),
     this.notes = const Value.absent(),
+    this.sourceUrl = const Value.absent(),
+    this.sourceKind = const Value.absent(),
+    this.foundOn = const Value.absent(),
+    this.basis = const Value.absent(),
+    this.basisNote = const Value.absent(),
+    this.doNotContact = const Value.absent(),
+    this.keepInTouchWeeks = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name);
@@ -3838,6 +4093,13 @@ class CareerContactsCompanion extends UpdateCompanion<Lead> {
     Expression<String>? followUp,
     Expression<String>? jobId,
     Expression<String>? notes,
+    Expression<String>? sourceUrl,
+    Expression<String>? sourceKind,
+    Expression<String>? foundOn,
+    Expression<String>? basis,
+    Expression<String>? basisNote,
+    Expression<bool>? doNotContact,
+    Expression<int>? keepInTouchWeeks,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3857,6 +4119,13 @@ class CareerContactsCompanion extends UpdateCompanion<Lead> {
       if (followUp != null) 'follow_up': followUp,
       if (jobId != null) 'job_id': jobId,
       if (notes != null) 'notes': notes,
+      if (sourceUrl != null) 'source_url': sourceUrl,
+      if (sourceKind != null) 'source_kind': sourceKind,
+      if (foundOn != null) 'found_on': foundOn,
+      if (basis != null) 'basis': basis,
+      if (basisNote != null) 'basis_note': basisNote,
+      if (doNotContact != null) 'do_not_contact': doNotContact,
+      if (keepInTouchWeeks != null) 'keep_in_touch_weeks': keepInTouchWeeks,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3878,6 +4147,13 @@ class CareerContactsCompanion extends UpdateCompanion<Lead> {
     Value<String?>? followUp,
     Value<String?>? jobId,
     Value<String>? notes,
+    Value<String>? sourceUrl,
+    Value<String>? sourceKind,
+    Value<String?>? foundOn,
+    Value<String>? basis,
+    Value<String>? basisNote,
+    Value<bool>? doNotContact,
+    Value<int?>? keepInTouchWeeks,
     Value<int>? rowid,
   }) {
     return CareerContactsCompanion(
@@ -3897,6 +4173,13 @@ class CareerContactsCompanion extends UpdateCompanion<Lead> {
       followUp: followUp ?? this.followUp,
       jobId: jobId ?? this.jobId,
       notes: notes ?? this.notes,
+      sourceUrl: sourceUrl ?? this.sourceUrl,
+      sourceKind: sourceKind ?? this.sourceKind,
+      foundOn: foundOn ?? this.foundOn,
+      basis: basis ?? this.basis,
+      basisNote: basisNote ?? this.basisNote,
+      doNotContact: doNotContact ?? this.doNotContact,
+      keepInTouchWeeks: keepInTouchWeeks ?? this.keepInTouchWeeks,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3952,6 +4235,27 @@ class CareerContactsCompanion extends UpdateCompanion<Lead> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (sourceUrl.present) {
+      map['source_url'] = Variable<String>(sourceUrl.value);
+    }
+    if (sourceKind.present) {
+      map['source_kind'] = Variable<String>(sourceKind.value);
+    }
+    if (foundOn.present) {
+      map['found_on'] = Variable<String>(foundOn.value);
+    }
+    if (basis.present) {
+      map['basis'] = Variable<String>(basis.value);
+    }
+    if (basisNote.present) {
+      map['basis_note'] = Variable<String>(basisNote.value);
+    }
+    if (doNotContact.present) {
+      map['do_not_contact'] = Variable<bool>(doNotContact.value);
+    }
+    if (keepInTouchWeeks.present) {
+      map['keep_in_touch_weeks'] = Variable<int>(keepInTouchWeeks.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3977,6 +4281,13 @@ class CareerContactsCompanion extends UpdateCompanion<Lead> {
           ..write('followUp: $followUp, ')
           ..write('jobId: $jobId, ')
           ..write('notes: $notes, ')
+          ..write('sourceUrl: $sourceUrl, ')
+          ..write('sourceKind: $sourceKind, ')
+          ..write('foundOn: $foundOn, ')
+          ..write('basis: $basis, ')
+          ..write('basisNote: $basisNote, ')
+          ..write('doNotContact: $doNotContact, ')
+          ..write('keepInTouchWeeks: $keepInTouchWeeks, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8735,6 +9046,1796 @@ class CareerStoriesCompanion extends UpdateCompanion<Story> {
   }
 }
 
+class $ContactHandlesTable extends ContactHandles with TableInfo<$ContactHandlesTable, ContactHandle> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ContactHandlesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hlcMeta = const VerificationMeta('hlc');
+  @override
+  late final GeneratedColumn<String> hlc = GeneratedColumn<String>(
+    'hlc',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta('deleted');
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("deleted" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _contactIdMeta = const VerificationMeta('contactId');
+  @override
+  late final GeneratedColumn<String> contactId = GeneratedColumn<String>(
+    'contact_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _channelMeta = const VerificationMeta('channel');
+  @override
+  late final GeneratedColumn<String> channel = GeneratedColumn<String>(
+    'channel',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _handleMeta = const VerificationMeta('handle');
+  @override
+  late final GeneratedColumn<String> handle = GeneratedColumn<String>(
+    'handle',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _accountMeta = const VerificationMeta('account');
+  @override
+  late final GeneratedColumn<String> account = GeneratedColumn<String>(
+    'account',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _primaryMeta = const VerificationMeta('primary');
+  @override
+  late final GeneratedColumn<bool> primary = GeneratedColumn<bool>(
+    'is_primary',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("is_primary" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, hlc, deleted, contactId, channel, handle, account, primary];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'career_handles';
+  @override
+  VerificationContext validateIntegrity(Insertable<ContactHandle> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('hlc')) {
+      context.handle(_hlcMeta, hlc.isAcceptableOrUnknown(data['hlc']!, _hlcMeta));
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(_deletedMeta, deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta));
+    }
+    if (data.containsKey('contact_id')) {
+      context.handle(_contactIdMeta, contactId.isAcceptableOrUnknown(data['contact_id']!, _contactIdMeta));
+    } else if (isInserting) {
+      context.missing(_contactIdMeta);
+    }
+    if (data.containsKey('channel')) {
+      context.handle(_channelMeta, channel.isAcceptableOrUnknown(data['channel']!, _channelMeta));
+    } else if (isInserting) {
+      context.missing(_channelMeta);
+    }
+    if (data.containsKey('handle')) {
+      context.handle(_handleMeta, handle.isAcceptableOrUnknown(data['handle']!, _handleMeta));
+    } else if (isInserting) {
+      context.missing(_handleMeta);
+    }
+    if (data.containsKey('account')) {
+      context.handle(_accountMeta, account.isAcceptableOrUnknown(data['account']!, _accountMeta));
+    }
+    if (data.containsKey('is_primary')) {
+      context.handle(_primaryMeta, primary.isAcceptableOrUnknown(data['is_primary']!, _primaryMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ContactHandle map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ContactHandle(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      hlc: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}hlc'])!,
+      deleted: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}deleted'])!,
+      contactId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}contact_id'],
+      )!,
+      channel: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}channel'])!,
+      handle: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}handle'])!,
+      account: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}account'])!,
+      primary: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}is_primary'])!,
+    );
+  }
+
+  @override
+  $ContactHandlesTable createAlias(String alias) {
+    return $ContactHandlesTable(attachedDatabase, alias);
+  }
+}
+
+class ContactHandle extends DataClass implements Insertable<ContactHandle> {
+  final String id;
+  final String hlc;
+  final bool deleted;
+  final String contactId;
+
+  /// email | linkedin | bluesky | phone | in_person | other
+  final String channel;
+
+  /// The address, profile URL, Bluesky handle or number.
+  final String handle;
+
+  /// Which of the user's own accounts talks to it ('' for any).
+  final String account;
+
+  /// The one to use first on this channel. ("primary" is an SQL keyword.)
+  final bool primary;
+  const ContactHandle({
+    required this.id,
+    required this.hlc,
+    required this.deleted,
+    required this.contactId,
+    required this.channel,
+    required this.handle,
+    required this.account,
+    required this.primary,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['hlc'] = Variable<String>(hlc);
+    map['deleted'] = Variable<bool>(deleted);
+    map['contact_id'] = Variable<String>(contactId);
+    map['channel'] = Variable<String>(channel);
+    map['handle'] = Variable<String>(handle);
+    map['account'] = Variable<String>(account);
+    map['is_primary'] = Variable<bool>(primary);
+    return map;
+  }
+
+  ContactHandlesCompanion toCompanion(bool nullToAbsent) {
+    return ContactHandlesCompanion(
+      id: Value(id),
+      hlc: Value(hlc),
+      deleted: Value(deleted),
+      contactId: Value(contactId),
+      channel: Value(channel),
+      handle: Value(handle),
+      account: Value(account),
+      primary: Value(primary),
+    );
+  }
+
+  factory ContactHandle.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ContactHandle(
+      id: serializer.fromJson<String>(json['id']),
+      hlc: serializer.fromJson<String>(json['hlc']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
+      contactId: serializer.fromJson<String>(json['contactId']),
+      channel: serializer.fromJson<String>(json['channel']),
+      handle: serializer.fromJson<String>(json['handle']),
+      account: serializer.fromJson<String>(json['account']),
+      primary: serializer.fromJson<bool>(json['primary']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'hlc': serializer.toJson<String>(hlc),
+      'deleted': serializer.toJson<bool>(deleted),
+      'contactId': serializer.toJson<String>(contactId),
+      'channel': serializer.toJson<String>(channel),
+      'handle': serializer.toJson<String>(handle),
+      'account': serializer.toJson<String>(account),
+      'primary': serializer.toJson<bool>(primary),
+    };
+  }
+
+  ContactHandle copyWith({
+    String? id,
+    String? hlc,
+    bool? deleted,
+    String? contactId,
+    String? channel,
+    String? handle,
+    String? account,
+    bool? primary,
+  }) => ContactHandle(
+    id: id ?? this.id,
+    hlc: hlc ?? this.hlc,
+    deleted: deleted ?? this.deleted,
+    contactId: contactId ?? this.contactId,
+    channel: channel ?? this.channel,
+    handle: handle ?? this.handle,
+    account: account ?? this.account,
+    primary: primary ?? this.primary,
+  );
+  ContactHandle copyWithCompanion(ContactHandlesCompanion data) {
+    return ContactHandle(
+      id: data.id.present ? data.id.value : this.id,
+      hlc: data.hlc.present ? data.hlc.value : this.hlc,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+      contactId: data.contactId.present ? data.contactId.value : this.contactId,
+      channel: data.channel.present ? data.channel.value : this.channel,
+      handle: data.handle.present ? data.handle.value : this.handle,
+      account: data.account.present ? data.account.value : this.account,
+      primary: data.primary.present ? data.primary.value : this.primary,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContactHandle(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('contactId: $contactId, ')
+          ..write('channel: $channel, ')
+          ..write('handle: $handle, ')
+          ..write('account: $account, ')
+          ..write('primary: $primary')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, hlc, deleted, contactId, channel, handle, account, primary);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ContactHandle &&
+          other.id == this.id &&
+          other.hlc == this.hlc &&
+          other.deleted == this.deleted &&
+          other.contactId == this.contactId &&
+          other.channel == this.channel &&
+          other.handle == this.handle &&
+          other.account == this.account &&
+          other.primary == this.primary);
+}
+
+class ContactHandlesCompanion extends UpdateCompanion<ContactHandle> {
+  final Value<String> id;
+  final Value<String> hlc;
+  final Value<bool> deleted;
+  final Value<String> contactId;
+  final Value<String> channel;
+  final Value<String> handle;
+  final Value<String> account;
+  final Value<bool> primary;
+  final Value<int> rowid;
+  const ContactHandlesCompanion({
+    this.id = const Value.absent(),
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.contactId = const Value.absent(),
+    this.channel = const Value.absent(),
+    this.handle = const Value.absent(),
+    this.account = const Value.absent(),
+    this.primary = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ContactHandlesCompanion.insert({
+    required String id,
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    required String contactId,
+    required String channel,
+    required String handle,
+    this.account = const Value.absent(),
+    this.primary = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       contactId = Value(contactId),
+       channel = Value(channel),
+       handle = Value(handle);
+  static Insertable<ContactHandle> custom({
+    Expression<String>? id,
+    Expression<String>? hlc,
+    Expression<bool>? deleted,
+    Expression<String>? contactId,
+    Expression<String>? channel,
+    Expression<String>? handle,
+    Expression<String>? account,
+    Expression<bool>? primary,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (hlc != null) 'hlc': hlc,
+      if (deleted != null) 'deleted': deleted,
+      if (contactId != null) 'contact_id': contactId,
+      if (channel != null) 'channel': channel,
+      if (handle != null) 'handle': handle,
+      if (account != null) 'account': account,
+      if (primary != null) 'is_primary': primary,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ContactHandlesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? hlc,
+    Value<bool>? deleted,
+    Value<String>? contactId,
+    Value<String>? channel,
+    Value<String>? handle,
+    Value<String>? account,
+    Value<bool>? primary,
+    Value<int>? rowid,
+  }) {
+    return ContactHandlesCompanion(
+      id: id ?? this.id,
+      hlc: hlc ?? this.hlc,
+      deleted: deleted ?? this.deleted,
+      contactId: contactId ?? this.contactId,
+      channel: channel ?? this.channel,
+      handle: handle ?? this.handle,
+      account: account ?? this.account,
+      primary: primary ?? this.primary,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (hlc.present) {
+      map['hlc'] = Variable<String>(hlc.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
+    if (contactId.present) {
+      map['contact_id'] = Variable<String>(contactId.value);
+    }
+    if (channel.present) {
+      map['channel'] = Variable<String>(channel.value);
+    }
+    if (handle.present) {
+      map['handle'] = Variable<String>(handle.value);
+    }
+    if (account.present) {
+      map['account'] = Variable<String>(account.value);
+    }
+    if (primary.present) {
+      map['is_primary'] = Variable<bool>(primary.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContactHandlesCompanion(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('contactId: $contactId, ')
+          ..write('channel: $channel, ')
+          ..write('handle: $handle, ')
+          ..write('account: $account, ')
+          ..write('primary: $primary, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ConversationsTable extends Conversations with TableInfo<$ConversationsTable, Conversation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ConversationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hlcMeta = const VerificationMeta('hlc');
+  @override
+  late final GeneratedColumn<String> hlc = GeneratedColumn<String>(
+    'hlc',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta('deleted');
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("deleted" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _contactIdMeta = const VerificationMeta('contactId');
+  @override
+  late final GeneratedColumn<String> contactId = GeneratedColumn<String>(
+    'contact_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _channelMeta = const VerificationMeta('channel');
+  @override
+  late final GeneratedColumn<String> channel = GeneratedColumn<String>(
+    'channel',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _accountMeta = const VerificationMeta('account');
+  @override
+  late final GeneratedColumn<String> account = GeneratedColumn<String>(
+    'account',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _modeMeta = const VerificationMeta('mode');
+  @override
+  late final GeneratedColumn<String> mode = GeneratedColumn<String>(
+    'mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('manual'),
+  );
+  static const VerificationMeta _externalIdMeta = const VerificationMeta('externalId');
+  @override
+  late final GeneratedColumn<String> externalId = GeneratedColumn<String>(
+    'external_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _peerMeta = const VerificationMeta('peer');
+  @override
+  late final GeneratedColumn<String> peer = GeneratedColumn<String>(
+    'peer',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _subjectMeta = const VerificationMeta('subject');
+  @override
+  late final GeneratedColumn<String> subject = GeneratedColumn<String>(
+    'subject',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('draft'),
+  );
+  static const VerificationMeta _followUpMeta = const VerificationMeta('followUp');
+  @override
+  late final GeneratedColumn<String> followUp = GeneratedColumn<String>(
+    'follow_up',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _jobIdMeta = const VerificationMeta('jobId');
+  @override
+  late final GeneratedColumn<String> jobId = GeneratedColumn<String>(
+    'job_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastAtMeta = const VerificationMeta('lastAt');
+  @override
+  late final GeneratedColumn<String> lastAt = GeneratedColumn<String>(
+    'last_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _unreadMeta = const VerificationMeta('unread');
+  @override
+  late final GeneratedColumn<int> unread = GeneratedColumn<int>(
+    'unread',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    hlc,
+    deleted,
+    contactId,
+    channel,
+    account,
+    mode,
+    externalId,
+    peer,
+    subject,
+    status,
+    followUp,
+    jobId,
+    lastAt,
+    unread,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'career_conversations';
+  @override
+  VerificationContext validateIntegrity(Insertable<Conversation> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('hlc')) {
+      context.handle(_hlcMeta, hlc.isAcceptableOrUnknown(data['hlc']!, _hlcMeta));
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(_deletedMeta, deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta));
+    }
+    if (data.containsKey('contact_id')) {
+      context.handle(_contactIdMeta, contactId.isAcceptableOrUnknown(data['contact_id']!, _contactIdMeta));
+    }
+    if (data.containsKey('channel')) {
+      context.handle(_channelMeta, channel.isAcceptableOrUnknown(data['channel']!, _channelMeta));
+    } else if (isInserting) {
+      context.missing(_channelMeta);
+    }
+    if (data.containsKey('account')) {
+      context.handle(_accountMeta, account.isAcceptableOrUnknown(data['account']!, _accountMeta));
+    }
+    if (data.containsKey('mode')) {
+      context.handle(_modeMeta, mode.isAcceptableOrUnknown(data['mode']!, _modeMeta));
+    }
+    if (data.containsKey('external_id')) {
+      context.handle(
+        _externalIdMeta,
+        externalId.isAcceptableOrUnknown(data['external_id']!, _externalIdMeta),
+      );
+    }
+    if (data.containsKey('peer')) {
+      context.handle(_peerMeta, peer.isAcceptableOrUnknown(data['peer']!, _peerMeta));
+    }
+    if (data.containsKey('subject')) {
+      context.handle(_subjectMeta, subject.isAcceptableOrUnknown(data['subject']!, _subjectMeta));
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta, status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    }
+    if (data.containsKey('follow_up')) {
+      context.handle(_followUpMeta, followUp.isAcceptableOrUnknown(data['follow_up']!, _followUpMeta));
+    }
+    if (data.containsKey('job_id')) {
+      context.handle(_jobIdMeta, jobId.isAcceptableOrUnknown(data['job_id']!, _jobIdMeta));
+    }
+    if (data.containsKey('last_at')) {
+      context.handle(_lastAtMeta, lastAt.isAcceptableOrUnknown(data['last_at']!, _lastAtMeta));
+    } else if (isInserting) {
+      context.missing(_lastAtMeta);
+    }
+    if (data.containsKey('unread')) {
+      context.handle(_unreadMeta, unread.isAcceptableOrUnknown(data['unread']!, _unreadMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Conversation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Conversation(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      hlc: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}hlc'])!,
+      deleted: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}deleted'])!,
+      contactId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}contact_id']),
+      channel: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}channel'])!,
+      account: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}account'])!,
+      mode: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}mode'])!,
+      externalId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}external_id'],
+      ),
+      peer: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}peer'])!,
+      subject: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}subject'])!,
+      status: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      followUp: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}follow_up']),
+      jobId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}job_id']),
+      lastAt: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}last_at'])!,
+      unread: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}unread'])!,
+    );
+  }
+
+  @override
+  $ConversationsTable createAlias(String alias) {
+    return $ConversationsTable(attachedDatabase, alias);
+  }
+}
+
+class Conversation extends DataClass implements Insertable<Conversation> {
+  final String id;
+  final String hlc;
+  final bool deleted;
+
+  /// The person (career_contacts id); null while the sender is unknown and
+  /// the thread waits in the Screener.
+  final String? contactId;
+
+  /// email | linkedin | bluesky | phone | in_person | other
+  final String channel;
+
+  /// The user's own account on that channel ('' when there is one only).
+  final String account;
+
+  /// api (sent and received by Udyoga) | manual (logged by the user) |
+  /// import (from an export file)
+  final String mode;
+
+  /// The channel's own thread id (a Gmail thread, a Bluesky convo), so a
+  /// later fetch or import adds to this thread.
+  final String? externalId;
+
+  /// Who the other side is as the channel gave it (an address or profile
+  /// URL); names the sender of a Screener thread.
+  final String peer;
+  final String subject;
+
+  /// draft | to_send | awaiting_reply | replied | follow_up | closed
+  final String status;
+  final String? followUp;
+  final String? jobId;
+
+  /// Time of the newest message, for sorting.
+  final String lastAt;
+  final int unread;
+  const Conversation({
+    required this.id,
+    required this.hlc,
+    required this.deleted,
+    this.contactId,
+    required this.channel,
+    required this.account,
+    required this.mode,
+    this.externalId,
+    required this.peer,
+    required this.subject,
+    required this.status,
+    this.followUp,
+    this.jobId,
+    required this.lastAt,
+    required this.unread,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['hlc'] = Variable<String>(hlc);
+    map['deleted'] = Variable<bool>(deleted);
+    if (!nullToAbsent || contactId != null) {
+      map['contact_id'] = Variable<String>(contactId);
+    }
+    map['channel'] = Variable<String>(channel);
+    map['account'] = Variable<String>(account);
+    map['mode'] = Variable<String>(mode);
+    if (!nullToAbsent || externalId != null) {
+      map['external_id'] = Variable<String>(externalId);
+    }
+    map['peer'] = Variable<String>(peer);
+    map['subject'] = Variable<String>(subject);
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || followUp != null) {
+      map['follow_up'] = Variable<String>(followUp);
+    }
+    if (!nullToAbsent || jobId != null) {
+      map['job_id'] = Variable<String>(jobId);
+    }
+    map['last_at'] = Variable<String>(lastAt);
+    map['unread'] = Variable<int>(unread);
+    return map;
+  }
+
+  ConversationsCompanion toCompanion(bool nullToAbsent) {
+    return ConversationsCompanion(
+      id: Value(id),
+      hlc: Value(hlc),
+      deleted: Value(deleted),
+      contactId: contactId == null && nullToAbsent ? const Value.absent() : Value(contactId),
+      channel: Value(channel),
+      account: Value(account),
+      mode: Value(mode),
+      externalId: externalId == null && nullToAbsent ? const Value.absent() : Value(externalId),
+      peer: Value(peer),
+      subject: Value(subject),
+      status: Value(status),
+      followUp: followUp == null && nullToAbsent ? const Value.absent() : Value(followUp),
+      jobId: jobId == null && nullToAbsent ? const Value.absent() : Value(jobId),
+      lastAt: Value(lastAt),
+      unread: Value(unread),
+    );
+  }
+
+  factory Conversation.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Conversation(
+      id: serializer.fromJson<String>(json['id']),
+      hlc: serializer.fromJson<String>(json['hlc']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
+      contactId: serializer.fromJson<String?>(json['contactId']),
+      channel: serializer.fromJson<String>(json['channel']),
+      account: serializer.fromJson<String>(json['account']),
+      mode: serializer.fromJson<String>(json['mode']),
+      externalId: serializer.fromJson<String?>(json['externalId']),
+      peer: serializer.fromJson<String>(json['peer']),
+      subject: serializer.fromJson<String>(json['subject']),
+      status: serializer.fromJson<String>(json['status']),
+      followUp: serializer.fromJson<String?>(json['followUp']),
+      jobId: serializer.fromJson<String?>(json['jobId']),
+      lastAt: serializer.fromJson<String>(json['lastAt']),
+      unread: serializer.fromJson<int>(json['unread']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'hlc': serializer.toJson<String>(hlc),
+      'deleted': serializer.toJson<bool>(deleted),
+      'contactId': serializer.toJson<String?>(contactId),
+      'channel': serializer.toJson<String>(channel),
+      'account': serializer.toJson<String>(account),
+      'mode': serializer.toJson<String>(mode),
+      'externalId': serializer.toJson<String?>(externalId),
+      'peer': serializer.toJson<String>(peer),
+      'subject': serializer.toJson<String>(subject),
+      'status': serializer.toJson<String>(status),
+      'followUp': serializer.toJson<String?>(followUp),
+      'jobId': serializer.toJson<String?>(jobId),
+      'lastAt': serializer.toJson<String>(lastAt),
+      'unread': serializer.toJson<int>(unread),
+    };
+  }
+
+  Conversation copyWith({
+    String? id,
+    String? hlc,
+    bool? deleted,
+    Value<String?> contactId = const Value.absent(),
+    String? channel,
+    String? account,
+    String? mode,
+    Value<String?> externalId = const Value.absent(),
+    String? peer,
+    String? subject,
+    String? status,
+    Value<String?> followUp = const Value.absent(),
+    Value<String?> jobId = const Value.absent(),
+    String? lastAt,
+    int? unread,
+  }) => Conversation(
+    id: id ?? this.id,
+    hlc: hlc ?? this.hlc,
+    deleted: deleted ?? this.deleted,
+    contactId: contactId.present ? contactId.value : this.contactId,
+    channel: channel ?? this.channel,
+    account: account ?? this.account,
+    mode: mode ?? this.mode,
+    externalId: externalId.present ? externalId.value : this.externalId,
+    peer: peer ?? this.peer,
+    subject: subject ?? this.subject,
+    status: status ?? this.status,
+    followUp: followUp.present ? followUp.value : this.followUp,
+    jobId: jobId.present ? jobId.value : this.jobId,
+    lastAt: lastAt ?? this.lastAt,
+    unread: unread ?? this.unread,
+  );
+  Conversation copyWithCompanion(ConversationsCompanion data) {
+    return Conversation(
+      id: data.id.present ? data.id.value : this.id,
+      hlc: data.hlc.present ? data.hlc.value : this.hlc,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+      contactId: data.contactId.present ? data.contactId.value : this.contactId,
+      channel: data.channel.present ? data.channel.value : this.channel,
+      account: data.account.present ? data.account.value : this.account,
+      mode: data.mode.present ? data.mode.value : this.mode,
+      externalId: data.externalId.present ? data.externalId.value : this.externalId,
+      peer: data.peer.present ? data.peer.value : this.peer,
+      subject: data.subject.present ? data.subject.value : this.subject,
+      status: data.status.present ? data.status.value : this.status,
+      followUp: data.followUp.present ? data.followUp.value : this.followUp,
+      jobId: data.jobId.present ? data.jobId.value : this.jobId,
+      lastAt: data.lastAt.present ? data.lastAt.value : this.lastAt,
+      unread: data.unread.present ? data.unread.value : this.unread,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Conversation(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('contactId: $contactId, ')
+          ..write('channel: $channel, ')
+          ..write('account: $account, ')
+          ..write('mode: $mode, ')
+          ..write('externalId: $externalId, ')
+          ..write('peer: $peer, ')
+          ..write('subject: $subject, ')
+          ..write('status: $status, ')
+          ..write('followUp: $followUp, ')
+          ..write('jobId: $jobId, ')
+          ..write('lastAt: $lastAt, ')
+          ..write('unread: $unread')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    hlc,
+    deleted,
+    contactId,
+    channel,
+    account,
+    mode,
+    externalId,
+    peer,
+    subject,
+    status,
+    followUp,
+    jobId,
+    lastAt,
+    unread,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Conversation &&
+          other.id == this.id &&
+          other.hlc == this.hlc &&
+          other.deleted == this.deleted &&
+          other.contactId == this.contactId &&
+          other.channel == this.channel &&
+          other.account == this.account &&
+          other.mode == this.mode &&
+          other.externalId == this.externalId &&
+          other.peer == this.peer &&
+          other.subject == this.subject &&
+          other.status == this.status &&
+          other.followUp == this.followUp &&
+          other.jobId == this.jobId &&
+          other.lastAt == this.lastAt &&
+          other.unread == this.unread);
+}
+
+class ConversationsCompanion extends UpdateCompanion<Conversation> {
+  final Value<String> id;
+  final Value<String> hlc;
+  final Value<bool> deleted;
+  final Value<String?> contactId;
+  final Value<String> channel;
+  final Value<String> account;
+  final Value<String> mode;
+  final Value<String?> externalId;
+  final Value<String> peer;
+  final Value<String> subject;
+  final Value<String> status;
+  final Value<String?> followUp;
+  final Value<String?> jobId;
+  final Value<String> lastAt;
+  final Value<int> unread;
+  final Value<int> rowid;
+  const ConversationsCompanion({
+    this.id = const Value.absent(),
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.contactId = const Value.absent(),
+    this.channel = const Value.absent(),
+    this.account = const Value.absent(),
+    this.mode = const Value.absent(),
+    this.externalId = const Value.absent(),
+    this.peer = const Value.absent(),
+    this.subject = const Value.absent(),
+    this.status = const Value.absent(),
+    this.followUp = const Value.absent(),
+    this.jobId = const Value.absent(),
+    this.lastAt = const Value.absent(),
+    this.unread = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ConversationsCompanion.insert({
+    required String id,
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.contactId = const Value.absent(),
+    required String channel,
+    this.account = const Value.absent(),
+    this.mode = const Value.absent(),
+    this.externalId = const Value.absent(),
+    this.peer = const Value.absent(),
+    this.subject = const Value.absent(),
+    this.status = const Value.absent(),
+    this.followUp = const Value.absent(),
+    this.jobId = const Value.absent(),
+    required String lastAt,
+    this.unread = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       channel = Value(channel),
+       lastAt = Value(lastAt);
+  static Insertable<Conversation> custom({
+    Expression<String>? id,
+    Expression<String>? hlc,
+    Expression<bool>? deleted,
+    Expression<String>? contactId,
+    Expression<String>? channel,
+    Expression<String>? account,
+    Expression<String>? mode,
+    Expression<String>? externalId,
+    Expression<String>? peer,
+    Expression<String>? subject,
+    Expression<String>? status,
+    Expression<String>? followUp,
+    Expression<String>? jobId,
+    Expression<String>? lastAt,
+    Expression<int>? unread,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (hlc != null) 'hlc': hlc,
+      if (deleted != null) 'deleted': deleted,
+      if (contactId != null) 'contact_id': contactId,
+      if (channel != null) 'channel': channel,
+      if (account != null) 'account': account,
+      if (mode != null) 'mode': mode,
+      if (externalId != null) 'external_id': externalId,
+      if (peer != null) 'peer': peer,
+      if (subject != null) 'subject': subject,
+      if (status != null) 'status': status,
+      if (followUp != null) 'follow_up': followUp,
+      if (jobId != null) 'job_id': jobId,
+      if (lastAt != null) 'last_at': lastAt,
+      if (unread != null) 'unread': unread,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ConversationsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? hlc,
+    Value<bool>? deleted,
+    Value<String?>? contactId,
+    Value<String>? channel,
+    Value<String>? account,
+    Value<String>? mode,
+    Value<String?>? externalId,
+    Value<String>? peer,
+    Value<String>? subject,
+    Value<String>? status,
+    Value<String?>? followUp,
+    Value<String?>? jobId,
+    Value<String>? lastAt,
+    Value<int>? unread,
+    Value<int>? rowid,
+  }) {
+    return ConversationsCompanion(
+      id: id ?? this.id,
+      hlc: hlc ?? this.hlc,
+      deleted: deleted ?? this.deleted,
+      contactId: contactId ?? this.contactId,
+      channel: channel ?? this.channel,
+      account: account ?? this.account,
+      mode: mode ?? this.mode,
+      externalId: externalId ?? this.externalId,
+      peer: peer ?? this.peer,
+      subject: subject ?? this.subject,
+      status: status ?? this.status,
+      followUp: followUp ?? this.followUp,
+      jobId: jobId ?? this.jobId,
+      lastAt: lastAt ?? this.lastAt,
+      unread: unread ?? this.unread,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (hlc.present) {
+      map['hlc'] = Variable<String>(hlc.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
+    if (contactId.present) {
+      map['contact_id'] = Variable<String>(contactId.value);
+    }
+    if (channel.present) {
+      map['channel'] = Variable<String>(channel.value);
+    }
+    if (account.present) {
+      map['account'] = Variable<String>(account.value);
+    }
+    if (mode.present) {
+      map['mode'] = Variable<String>(mode.value);
+    }
+    if (externalId.present) {
+      map['external_id'] = Variable<String>(externalId.value);
+    }
+    if (peer.present) {
+      map['peer'] = Variable<String>(peer.value);
+    }
+    if (subject.present) {
+      map['subject'] = Variable<String>(subject.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (followUp.present) {
+      map['follow_up'] = Variable<String>(followUp.value);
+    }
+    if (jobId.present) {
+      map['job_id'] = Variable<String>(jobId.value);
+    }
+    if (lastAt.present) {
+      map['last_at'] = Variable<String>(lastAt.value);
+    }
+    if (unread.present) {
+      map['unread'] = Variable<int>(unread.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ConversationsCompanion(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('contactId: $contactId, ')
+          ..write('channel: $channel, ')
+          ..write('account: $account, ')
+          ..write('mode: $mode, ')
+          ..write('externalId: $externalId, ')
+          ..write('peer: $peer, ')
+          ..write('subject: $subject, ')
+          ..write('status: $status, ')
+          ..write('followUp: $followUp, ')
+          ..write('jobId: $jobId, ')
+          ..write('lastAt: $lastAt, ')
+          ..write('unread: $unread, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MessagesTable extends Messages with TableInfo<$MessagesTable, ThreadMessage> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MessagesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hlcMeta = const VerificationMeta('hlc');
+  @override
+  late final GeneratedColumn<String> hlc = GeneratedColumn<String>(
+    'hlc',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta('deleted');
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("deleted" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _conversationIdMeta = const VerificationMeta('conversationId');
+  @override
+  late final GeneratedColumn<String> conversationId = GeneratedColumn<String>(
+    'conversation_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _directionMeta = const VerificationMeta('direction');
+  @override
+  late final GeneratedColumn<String> direction = GeneratedColumn<String>(
+    'direction',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _sentAtMeta = const VerificationMeta('sentAt');
+  @override
+  late final GeneratedColumn<String> sentAt = GeneratedColumn<String>(
+    'sent_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('manual'),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('logged'),
+  );
+  static const VerificationMeta _externalIdMeta = const VerificationMeta('externalId');
+  @override
+  late final GeneratedColumn<String> externalId = GeneratedColumn<String>(
+    'external_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _inReplyToMeta = const VerificationMeta('inReplyTo');
+  @override
+  late final GeneratedColumn<String> inReplyTo = GeneratedColumn<String>(
+    'in_reply_to',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _draftOfMeta = const VerificationMeta('draftOf');
+  @override
+  late final GeneratedColumn<String> draftOf = GeneratedColumn<String>(
+    'draft_of',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    hlc,
+    deleted,
+    conversationId,
+    direction,
+    body,
+    sentAt,
+    source,
+    status,
+    externalId,
+    inReplyTo,
+    draftOf,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'career_messages';
+  @override
+  VerificationContext validateIntegrity(Insertable<ThreadMessage> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('hlc')) {
+      context.handle(_hlcMeta, hlc.isAcceptableOrUnknown(data['hlc']!, _hlcMeta));
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(_deletedMeta, deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta));
+    }
+    if (data.containsKey('conversation_id')) {
+      context.handle(
+        _conversationIdMeta,
+        conversationId.isAcceptableOrUnknown(data['conversation_id']!, _conversationIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_conversationIdMeta);
+    }
+    if (data.containsKey('direction')) {
+      context.handle(_directionMeta, direction.isAcceptableOrUnknown(data['direction']!, _directionMeta));
+    } else if (isInserting) {
+      context.missing(_directionMeta);
+    }
+    if (data.containsKey('body')) {
+      context.handle(_bodyMeta, body.isAcceptableOrUnknown(data['body']!, _bodyMeta));
+    }
+    if (data.containsKey('sent_at')) {
+      context.handle(_sentAtMeta, sentAt.isAcceptableOrUnknown(data['sent_at']!, _sentAtMeta));
+    } else if (isInserting) {
+      context.missing(_sentAtMeta);
+    }
+    if (data.containsKey('source')) {
+      context.handle(_sourceMeta, source.isAcceptableOrUnknown(data['source']!, _sourceMeta));
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta, status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    }
+    if (data.containsKey('external_id')) {
+      context.handle(
+        _externalIdMeta,
+        externalId.isAcceptableOrUnknown(data['external_id']!, _externalIdMeta),
+      );
+    }
+    if (data.containsKey('in_reply_to')) {
+      context.handle(_inReplyToMeta, inReplyTo.isAcceptableOrUnknown(data['in_reply_to']!, _inReplyToMeta));
+    }
+    if (data.containsKey('draft_of')) {
+      context.handle(_draftOfMeta, draftOf.isAcceptableOrUnknown(data['draft_of']!, _draftOfMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ThreadMessage map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ThreadMessage(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      hlc: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}hlc'])!,
+      deleted: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}deleted'])!,
+      conversationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}conversation_id'],
+      )!,
+      direction: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}direction'])!,
+      body: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}body'])!,
+      sentAt: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}sent_at'])!,
+      source: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}source'])!,
+      status: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      externalId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}external_id'],
+      ),
+      inReplyTo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}in_reply_to'],
+      ),
+      draftOf: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}draft_of']),
+    );
+  }
+
+  @override
+  $MessagesTable createAlias(String alias) {
+    return $MessagesTable(attachedDatabase, alias);
+  }
+}
+
+class ThreadMessage extends DataClass implements Insertable<ThreadMessage> {
+  final String id;
+  final String hlc;
+  final bool deleted;
+  final String conversationId;
+
+  /// out | in | note
+  final String direction;
+
+  /// Plain text.
+  final String body;
+
+  /// When it was sent; for a logged message, when the user says it was.
+  final String sentAt;
+
+  /// api | manual | import | ai_draft
+  final String source;
+
+  /// logged | invite (a LinkedIn connection note, logged) | draft | queued |
+  /// sent | failed | received
+  final String status;
+
+  /// The provider's message id (Message-ID...), so nothing is stored twice.
+  final String? externalId;
+  final String? inReplyTo;
+
+  /// The AI draft this message came from.
+  final String? draftOf;
+  const ThreadMessage({
+    required this.id,
+    required this.hlc,
+    required this.deleted,
+    required this.conversationId,
+    required this.direction,
+    required this.body,
+    required this.sentAt,
+    required this.source,
+    required this.status,
+    this.externalId,
+    this.inReplyTo,
+    this.draftOf,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['hlc'] = Variable<String>(hlc);
+    map['deleted'] = Variable<bool>(deleted);
+    map['conversation_id'] = Variable<String>(conversationId);
+    map['direction'] = Variable<String>(direction);
+    map['body'] = Variable<String>(body);
+    map['sent_at'] = Variable<String>(sentAt);
+    map['source'] = Variable<String>(source);
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || externalId != null) {
+      map['external_id'] = Variable<String>(externalId);
+    }
+    if (!nullToAbsent || inReplyTo != null) {
+      map['in_reply_to'] = Variable<String>(inReplyTo);
+    }
+    if (!nullToAbsent || draftOf != null) {
+      map['draft_of'] = Variable<String>(draftOf);
+    }
+    return map;
+  }
+
+  MessagesCompanion toCompanion(bool nullToAbsent) {
+    return MessagesCompanion(
+      id: Value(id),
+      hlc: Value(hlc),
+      deleted: Value(deleted),
+      conversationId: Value(conversationId),
+      direction: Value(direction),
+      body: Value(body),
+      sentAt: Value(sentAt),
+      source: Value(source),
+      status: Value(status),
+      externalId: externalId == null && nullToAbsent ? const Value.absent() : Value(externalId),
+      inReplyTo: inReplyTo == null && nullToAbsent ? const Value.absent() : Value(inReplyTo),
+      draftOf: draftOf == null && nullToAbsent ? const Value.absent() : Value(draftOf),
+    );
+  }
+
+  factory ThreadMessage.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ThreadMessage(
+      id: serializer.fromJson<String>(json['id']),
+      hlc: serializer.fromJson<String>(json['hlc']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
+      conversationId: serializer.fromJson<String>(json['conversationId']),
+      direction: serializer.fromJson<String>(json['direction']),
+      body: serializer.fromJson<String>(json['body']),
+      sentAt: serializer.fromJson<String>(json['sentAt']),
+      source: serializer.fromJson<String>(json['source']),
+      status: serializer.fromJson<String>(json['status']),
+      externalId: serializer.fromJson<String?>(json['externalId']),
+      inReplyTo: serializer.fromJson<String?>(json['inReplyTo']),
+      draftOf: serializer.fromJson<String?>(json['draftOf']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'hlc': serializer.toJson<String>(hlc),
+      'deleted': serializer.toJson<bool>(deleted),
+      'conversationId': serializer.toJson<String>(conversationId),
+      'direction': serializer.toJson<String>(direction),
+      'body': serializer.toJson<String>(body),
+      'sentAt': serializer.toJson<String>(sentAt),
+      'source': serializer.toJson<String>(source),
+      'status': serializer.toJson<String>(status),
+      'externalId': serializer.toJson<String?>(externalId),
+      'inReplyTo': serializer.toJson<String?>(inReplyTo),
+      'draftOf': serializer.toJson<String?>(draftOf),
+    };
+  }
+
+  ThreadMessage copyWith({
+    String? id,
+    String? hlc,
+    bool? deleted,
+    String? conversationId,
+    String? direction,
+    String? body,
+    String? sentAt,
+    String? source,
+    String? status,
+    Value<String?> externalId = const Value.absent(),
+    Value<String?> inReplyTo = const Value.absent(),
+    Value<String?> draftOf = const Value.absent(),
+  }) => ThreadMessage(
+    id: id ?? this.id,
+    hlc: hlc ?? this.hlc,
+    deleted: deleted ?? this.deleted,
+    conversationId: conversationId ?? this.conversationId,
+    direction: direction ?? this.direction,
+    body: body ?? this.body,
+    sentAt: sentAt ?? this.sentAt,
+    source: source ?? this.source,
+    status: status ?? this.status,
+    externalId: externalId.present ? externalId.value : this.externalId,
+    inReplyTo: inReplyTo.present ? inReplyTo.value : this.inReplyTo,
+    draftOf: draftOf.present ? draftOf.value : this.draftOf,
+  );
+  ThreadMessage copyWithCompanion(MessagesCompanion data) {
+    return ThreadMessage(
+      id: data.id.present ? data.id.value : this.id,
+      hlc: data.hlc.present ? data.hlc.value : this.hlc,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+      conversationId: data.conversationId.present ? data.conversationId.value : this.conversationId,
+      direction: data.direction.present ? data.direction.value : this.direction,
+      body: data.body.present ? data.body.value : this.body,
+      sentAt: data.sentAt.present ? data.sentAt.value : this.sentAt,
+      source: data.source.present ? data.source.value : this.source,
+      status: data.status.present ? data.status.value : this.status,
+      externalId: data.externalId.present ? data.externalId.value : this.externalId,
+      inReplyTo: data.inReplyTo.present ? data.inReplyTo.value : this.inReplyTo,
+      draftOf: data.draftOf.present ? data.draftOf.value : this.draftOf,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ThreadMessage(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('conversationId: $conversationId, ')
+          ..write('direction: $direction, ')
+          ..write('body: $body, ')
+          ..write('sentAt: $sentAt, ')
+          ..write('source: $source, ')
+          ..write('status: $status, ')
+          ..write('externalId: $externalId, ')
+          ..write('inReplyTo: $inReplyTo, ')
+          ..write('draftOf: $draftOf')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    hlc,
+    deleted,
+    conversationId,
+    direction,
+    body,
+    sentAt,
+    source,
+    status,
+    externalId,
+    inReplyTo,
+    draftOf,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ThreadMessage &&
+          other.id == this.id &&
+          other.hlc == this.hlc &&
+          other.deleted == this.deleted &&
+          other.conversationId == this.conversationId &&
+          other.direction == this.direction &&
+          other.body == this.body &&
+          other.sentAt == this.sentAt &&
+          other.source == this.source &&
+          other.status == this.status &&
+          other.externalId == this.externalId &&
+          other.inReplyTo == this.inReplyTo &&
+          other.draftOf == this.draftOf);
+}
+
+class MessagesCompanion extends UpdateCompanion<ThreadMessage> {
+  final Value<String> id;
+  final Value<String> hlc;
+  final Value<bool> deleted;
+  final Value<String> conversationId;
+  final Value<String> direction;
+  final Value<String> body;
+  final Value<String> sentAt;
+  final Value<String> source;
+  final Value<String> status;
+  final Value<String?> externalId;
+  final Value<String?> inReplyTo;
+  final Value<String?> draftOf;
+  final Value<int> rowid;
+  const MessagesCompanion({
+    this.id = const Value.absent(),
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.conversationId = const Value.absent(),
+    this.direction = const Value.absent(),
+    this.body = const Value.absent(),
+    this.sentAt = const Value.absent(),
+    this.source = const Value.absent(),
+    this.status = const Value.absent(),
+    this.externalId = const Value.absent(),
+    this.inReplyTo = const Value.absent(),
+    this.draftOf = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MessagesCompanion.insert({
+    required String id,
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    required String conversationId,
+    required String direction,
+    this.body = const Value.absent(),
+    required String sentAt,
+    this.source = const Value.absent(),
+    this.status = const Value.absent(),
+    this.externalId = const Value.absent(),
+    this.inReplyTo = const Value.absent(),
+    this.draftOf = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       conversationId = Value(conversationId),
+       direction = Value(direction),
+       sentAt = Value(sentAt);
+  static Insertable<ThreadMessage> custom({
+    Expression<String>? id,
+    Expression<String>? hlc,
+    Expression<bool>? deleted,
+    Expression<String>? conversationId,
+    Expression<String>? direction,
+    Expression<String>? body,
+    Expression<String>? sentAt,
+    Expression<String>? source,
+    Expression<String>? status,
+    Expression<String>? externalId,
+    Expression<String>? inReplyTo,
+    Expression<String>? draftOf,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (hlc != null) 'hlc': hlc,
+      if (deleted != null) 'deleted': deleted,
+      if (conversationId != null) 'conversation_id': conversationId,
+      if (direction != null) 'direction': direction,
+      if (body != null) 'body': body,
+      if (sentAt != null) 'sent_at': sentAt,
+      if (source != null) 'source': source,
+      if (status != null) 'status': status,
+      if (externalId != null) 'external_id': externalId,
+      if (inReplyTo != null) 'in_reply_to': inReplyTo,
+      if (draftOf != null) 'draft_of': draftOf,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MessagesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? hlc,
+    Value<bool>? deleted,
+    Value<String>? conversationId,
+    Value<String>? direction,
+    Value<String>? body,
+    Value<String>? sentAt,
+    Value<String>? source,
+    Value<String>? status,
+    Value<String?>? externalId,
+    Value<String?>? inReplyTo,
+    Value<String?>? draftOf,
+    Value<int>? rowid,
+  }) {
+    return MessagesCompanion(
+      id: id ?? this.id,
+      hlc: hlc ?? this.hlc,
+      deleted: deleted ?? this.deleted,
+      conversationId: conversationId ?? this.conversationId,
+      direction: direction ?? this.direction,
+      body: body ?? this.body,
+      sentAt: sentAt ?? this.sentAt,
+      source: source ?? this.source,
+      status: status ?? this.status,
+      externalId: externalId ?? this.externalId,
+      inReplyTo: inReplyTo ?? this.inReplyTo,
+      draftOf: draftOf ?? this.draftOf,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (hlc.present) {
+      map['hlc'] = Variable<String>(hlc.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
+    if (conversationId.present) {
+      map['conversation_id'] = Variable<String>(conversationId.value);
+    }
+    if (direction.present) {
+      map['direction'] = Variable<String>(direction.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (sentAt.present) {
+      map['sent_at'] = Variable<String>(sentAt.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (externalId.present) {
+      map['external_id'] = Variable<String>(externalId.value);
+    }
+    if (inReplyTo.present) {
+      map['in_reply_to'] = Variable<String>(inReplyTo.value);
+    }
+    if (draftOf.present) {
+      map['draft_of'] = Variable<String>(draftOf.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MessagesCompanion(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('conversationId: $conversationId, ')
+          ..write('direction: $direction, ')
+          ..write('body: $body, ')
+          ..write('sentAt: $sentAt, ')
+          ..write('source: $source, ')
+          ..write('status: $status, ')
+          ..write('externalId: $externalId, ')
+          ..write('inReplyTo: $inReplyTo, ')
+          ..write('draftOf: $draftOf, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PrefsTable extends Prefs with TableInfo<$PrefsTable, Pref> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -9602,6 +11703,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CareerQuestionsTable careerQuestions = $CareerQuestionsTable(this);
   late final $CareerJournalTable careerJournal = $CareerJournalTable(this);
   late final $CareerStoriesTable careerStories = $CareerStoriesTable(this);
+  late final $ContactHandlesTable contactHandles = $ContactHandlesTable(this);
+  late final $ConversationsTable conversations = $ConversationsTable(this);
+  late final $MessagesTable messages = $MessagesTable(this);
   late final $PrefsTable prefs = $PrefsTable(this);
   late final $OutboxTable outbox = $OutboxTable(this);
   late final $SyncCursorsTable syncCursors = $SyncCursorsTable(this);
@@ -9626,6 +11730,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     careerQuestions,
     careerJournal,
     careerStories,
+    contactHandles,
+    conversations,
+    messages,
     prefs,
     outbox,
     syncCursors,
@@ -11087,6 +13194,13 @@ typedef $$CareerContactsTableCreateCompanionBuilder = CareerContactsCompanion Fu
   Value<String?> followUp,
   Value<String?> jobId,
   Value<String> notes,
+  Value<String> sourceUrl,
+  Value<String> sourceKind,
+  Value<String?> foundOn,
+  Value<String> basis,
+  Value<String> basisNote,
+  Value<bool> doNotContact,
+  Value<int?> keepInTouchWeeks,
   Value<int> rowid,
 });
 typedef $$CareerContactsTableUpdateCompanionBuilder = CareerContactsCompanion Function({
@@ -11106,6 +13220,13 @@ typedef $$CareerContactsTableUpdateCompanionBuilder = CareerContactsCompanion Fu
   Value<String?> followUp,
   Value<String?> jobId,
   Value<String> notes,
+  Value<String> sourceUrl,
+  Value<String> sourceKind,
+  Value<String?> foundOn,
+  Value<String> basis,
+  Value<String> basisNote,
+  Value<bool> doNotContact,
+  Value<int?> keepInTouchWeeks,
   Value<int> rowid,
 });
 
@@ -11164,6 +13285,27 @@ class $$CareerContactsTableFilterComposer extends Composer<_$AppDatabase, $Caree
 
   ColumnFilters<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sourceUrl =>
+      $composableBuilder(column: $table.sourceUrl, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sourceKind =>
+      $composableBuilder(column: $table.sourceKind, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get foundOn =>
+      $composableBuilder(column: $table.foundOn, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get basis =>
+      $composableBuilder(column: $table.basis, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get basisNote =>
+      $composableBuilder(column: $table.basisNote, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get doNotContact =>
+      $composableBuilder(column: $table.doNotContact, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get keepInTouchWeeks =>
+      $composableBuilder(column: $table.keepInTouchWeeks, builder: (column) => ColumnFilters(column));
 }
 
 class $$CareerContactsTableOrderingComposer extends Composer<_$AppDatabase, $CareerContactsTable> {
@@ -11221,6 +13363,27 @@ class $$CareerContactsTableOrderingComposer extends Composer<_$AppDatabase, $Car
 
   ColumnOrderings<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sourceUrl =>
+      $composableBuilder(column: $table.sourceUrl, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sourceKind =>
+      $composableBuilder(column: $table.sourceKind, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get foundOn =>
+      $composableBuilder(column: $table.foundOn, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get basis =>
+      $composableBuilder(column: $table.basis, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get basisNote =>
+      $composableBuilder(column: $table.basisNote, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get doNotContact =>
+      $composableBuilder(column: $table.doNotContact, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get keepInTouchWeeks =>
+      $composableBuilder(column: $table.keepInTouchWeeks, builder: (column) => ColumnOrderings(column));
 }
 
 class $$CareerContactsTableAnnotationComposer extends Composer<_$AppDatabase, $CareerContactsTable> {
@@ -11269,6 +13432,26 @@ class $$CareerContactsTableAnnotationComposer extends Composer<_$AppDatabase, $C
   GeneratedColumn<String> get jobId => $composableBuilder(column: $table.jobId, builder: (column) => column);
 
   GeneratedColumn<String> get notes => $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceUrl =>
+      $composableBuilder(column: $table.sourceUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceKind =>
+      $composableBuilder(column: $table.sourceKind, builder: (column) => column);
+
+  GeneratedColumn<String> get foundOn =>
+      $composableBuilder(column: $table.foundOn, builder: (column) => column);
+
+  GeneratedColumn<String> get basis => $composableBuilder(column: $table.basis, builder: (column) => column);
+
+  GeneratedColumn<String> get basisNote =>
+      $composableBuilder(column: $table.basisNote, builder: (column) => column);
+
+  GeneratedColumn<bool> get doNotContact =>
+      $composableBuilder(column: $table.doNotContact, builder: (column) => column);
+
+  GeneratedColumn<int> get keepInTouchWeeks =>
+      $composableBuilder(column: $table.keepInTouchWeeks, builder: (column) => column);
 }
 
 class $$CareerContactsTableTableManager
@@ -11312,6 +13495,13 @@ class $$CareerContactsTableTableManager
                 Value<String?> followUp = const Value.absent(),
                 Value<String?> jobId = const Value.absent(),
                 Value<String> notes = const Value.absent(),
+                Value<String> sourceUrl = const Value.absent(),
+                Value<String> sourceKind = const Value.absent(),
+                Value<String?> foundOn = const Value.absent(),
+                Value<String> basis = const Value.absent(),
+                Value<String> basisNote = const Value.absent(),
+                Value<bool> doNotContact = const Value.absent(),
+                Value<int?> keepInTouchWeeks = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CareerContactsCompanion(
                 id: id,
@@ -11330,6 +13520,13 @@ class $$CareerContactsTableTableManager
                 followUp: followUp,
                 jobId: jobId,
                 notes: notes,
+                sourceUrl: sourceUrl,
+                sourceKind: sourceKind,
+                foundOn: foundOn,
+                basis: basis,
+                basisNote: basisNote,
+                doNotContact: doNotContact,
+                keepInTouchWeeks: keepInTouchWeeks,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -11350,6 +13547,13 @@ class $$CareerContactsTableTableManager
                 Value<String?> followUp = const Value.absent(),
                 Value<String?> jobId = const Value.absent(),
                 Value<String> notes = const Value.absent(),
+                Value<String> sourceUrl = const Value.absent(),
+                Value<String> sourceKind = const Value.absent(),
+                Value<String?> foundOn = const Value.absent(),
+                Value<String> basis = const Value.absent(),
+                Value<String> basisNote = const Value.absent(),
+                Value<bool> doNotContact = const Value.absent(),
+                Value<int?> keepInTouchWeeks = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CareerContactsCompanion.insert(
                 id: id,
@@ -11368,6 +13572,13 @@ class $$CareerContactsTableTableManager
                 followUp: followUp,
                 jobId: jobId,
                 notes: notes,
+                sourceUrl: sourceUrl,
+                sourceKind: sourceKind,
+                foundOn: foundOn,
+                basis: basis,
+                basisNote: basisNote,
+                doNotContact: doNotContact,
+                keepInTouchWeeks: keepInTouchWeeks,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -13621,6 +15832,808 @@ typedef $$CareerStoriesTableProcessedTableManager =
       Story,
       PrefetchHooks Function()
     >;
+typedef $$ContactHandlesTableCreateCompanionBuilder = ContactHandlesCompanion Function({
+  required String id,
+  Value<String> hlc,
+  Value<bool> deleted,
+  required String contactId,
+  required String channel,
+  required String handle,
+  Value<String> account,
+  Value<bool> primary,
+  Value<int> rowid,
+});
+typedef $$ContactHandlesTableUpdateCompanionBuilder = ContactHandlesCompanion Function({
+  Value<String> id,
+  Value<String> hlc,
+  Value<bool> deleted,
+  Value<String> contactId,
+  Value<String> channel,
+  Value<String> handle,
+  Value<String> account,
+  Value<bool> primary,
+  Value<int> rowid,
+});
+
+class $$ContactHandlesTableFilterComposer extends Composer<_$AppDatabase, $ContactHandlesTable> {
+  $$ContactHandlesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get contactId =>
+      $composableBuilder(column: $table.contactId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get channel =>
+      $composableBuilder(column: $table.channel, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get handle =>
+      $composableBuilder(column: $table.handle, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get account =>
+      $composableBuilder(column: $table.account, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get primary =>
+      $composableBuilder(column: $table.primary, builder: (column) => ColumnFilters(column));
+}
+
+class $$ContactHandlesTableOrderingComposer extends Composer<_$AppDatabase, $ContactHandlesTable> {
+  $$ContactHandlesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get contactId =>
+      $composableBuilder(column: $table.contactId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get channel =>
+      $composableBuilder(column: $table.channel, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get handle =>
+      $composableBuilder(column: $table.handle, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get account =>
+      $composableBuilder(column: $table.account, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get primary =>
+      $composableBuilder(column: $table.primary, builder: (column) => ColumnOrderings(column));
+}
+
+class $$ContactHandlesTableAnnotationComposer extends Composer<_$AppDatabase, $ContactHandlesTable> {
+  $$ContactHandlesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get hlc => $composableBuilder(column: $table.hlc, builder: (column) => column);
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
+
+  GeneratedColumn<String> get contactId =>
+      $composableBuilder(column: $table.contactId, builder: (column) => column);
+
+  GeneratedColumn<String> get channel =>
+      $composableBuilder(column: $table.channel, builder: (column) => column);
+
+  GeneratedColumn<String> get handle =>
+      $composableBuilder(column: $table.handle, builder: (column) => column);
+
+  GeneratedColumn<String> get account =>
+      $composableBuilder(column: $table.account, builder: (column) => column);
+
+  GeneratedColumn<bool> get primary =>
+      $composableBuilder(column: $table.primary, builder: (column) => column);
+}
+
+class $$ContactHandlesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ContactHandlesTable,
+          ContactHandle,
+          $$ContactHandlesTableFilterComposer,
+          $$ContactHandlesTableOrderingComposer,
+          $$ContactHandlesTableAnnotationComposer,
+          $$ContactHandlesTableCreateCompanionBuilder,
+          $$ContactHandlesTableUpdateCompanionBuilder,
+          (ContactHandle, BaseReferences<_$AppDatabase, $ContactHandlesTable, ContactHandle>),
+          ContactHandle,
+          PrefetchHooks Function()
+        > {
+  $$ContactHandlesTableTableManager(_$AppDatabase db, $ContactHandlesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$ContactHandlesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$ContactHandlesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$ContactHandlesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<String> contactId = const Value.absent(),
+                Value<String> channel = const Value.absent(),
+                Value<String> handle = const Value.absent(),
+                Value<String> account = const Value.absent(),
+                Value<bool> primary = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ContactHandlesCompanion(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                contactId: contactId,
+                channel: channel,
+                handle: handle,
+                account: account,
+                primary: primary,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                required String contactId,
+                required String channel,
+                required String handle,
+                Value<String> account = const Value.absent(),
+                Value<bool> primary = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ContactHandlesCompanion.insert(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                contactId: contactId,
+                channel: channel,
+                handle: handle,
+                account: account,
+                primary: primary,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ContactHandlesTable, ContactHandle>(table),
+                  BaseReferences<_$AppDatabase, $ContactHandlesTable, ContactHandle>(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ContactHandlesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ContactHandlesTable,
+      ContactHandle,
+      $$ContactHandlesTableFilterComposer,
+      $$ContactHandlesTableOrderingComposer,
+      $$ContactHandlesTableAnnotationComposer,
+      $$ContactHandlesTableCreateCompanionBuilder,
+      $$ContactHandlesTableUpdateCompanionBuilder,
+      (ContactHandle, BaseReferences<_$AppDatabase, $ContactHandlesTable, ContactHandle>),
+      ContactHandle,
+      PrefetchHooks Function()
+    >;
+typedef $$ConversationsTableCreateCompanionBuilder = ConversationsCompanion Function({
+  required String id,
+  Value<String> hlc,
+  Value<bool> deleted,
+  Value<String?> contactId,
+  required String channel,
+  Value<String> account,
+  Value<String> mode,
+  Value<String?> externalId,
+  Value<String> peer,
+  Value<String> subject,
+  Value<String> status,
+  Value<String?> followUp,
+  Value<String?> jobId,
+  required String lastAt,
+  Value<int> unread,
+  Value<int> rowid,
+});
+typedef $$ConversationsTableUpdateCompanionBuilder = ConversationsCompanion Function({
+  Value<String> id,
+  Value<String> hlc,
+  Value<bool> deleted,
+  Value<String?> contactId,
+  Value<String> channel,
+  Value<String> account,
+  Value<String> mode,
+  Value<String?> externalId,
+  Value<String> peer,
+  Value<String> subject,
+  Value<String> status,
+  Value<String?> followUp,
+  Value<String?> jobId,
+  Value<String> lastAt,
+  Value<int> unread,
+  Value<int> rowid,
+});
+
+class $$ConversationsTableFilterComposer extends Composer<_$AppDatabase, $ConversationsTable> {
+  $$ConversationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get contactId =>
+      $composableBuilder(column: $table.contactId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get channel =>
+      $composableBuilder(column: $table.channel, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get account =>
+      $composableBuilder(column: $table.account, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get mode =>
+      $composableBuilder(column: $table.mode, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get externalId =>
+      $composableBuilder(column: $table.externalId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get peer =>
+      $composableBuilder(column: $table.peer, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get subject =>
+      $composableBuilder(column: $table.subject, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get followUp =>
+      $composableBuilder(column: $table.followUp, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get jobId =>
+      $composableBuilder(column: $table.jobId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get lastAt =>
+      $composableBuilder(column: $table.lastAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get unread =>
+      $composableBuilder(column: $table.unread, builder: (column) => ColumnFilters(column));
+}
+
+class $$ConversationsTableOrderingComposer extends Composer<_$AppDatabase, $ConversationsTable> {
+  $$ConversationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get contactId =>
+      $composableBuilder(column: $table.contactId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get channel =>
+      $composableBuilder(column: $table.channel, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get account =>
+      $composableBuilder(column: $table.account, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get mode =>
+      $composableBuilder(column: $table.mode, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get externalId =>
+      $composableBuilder(column: $table.externalId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get peer =>
+      $composableBuilder(column: $table.peer, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get subject =>
+      $composableBuilder(column: $table.subject, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get followUp =>
+      $composableBuilder(column: $table.followUp, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get jobId =>
+      $composableBuilder(column: $table.jobId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get lastAt =>
+      $composableBuilder(column: $table.lastAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get unread =>
+      $composableBuilder(column: $table.unread, builder: (column) => ColumnOrderings(column));
+}
+
+class $$ConversationsTableAnnotationComposer extends Composer<_$AppDatabase, $ConversationsTable> {
+  $$ConversationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get hlc => $composableBuilder(column: $table.hlc, builder: (column) => column);
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
+
+  GeneratedColumn<String> get contactId =>
+      $composableBuilder(column: $table.contactId, builder: (column) => column);
+
+  GeneratedColumn<String> get channel =>
+      $composableBuilder(column: $table.channel, builder: (column) => column);
+
+  GeneratedColumn<String> get account =>
+      $composableBuilder(column: $table.account, builder: (column) => column);
+
+  GeneratedColumn<String> get mode => $composableBuilder(column: $table.mode, builder: (column) => column);
+
+  GeneratedColumn<String> get externalId =>
+      $composableBuilder(column: $table.externalId, builder: (column) => column);
+
+  GeneratedColumn<String> get peer => $composableBuilder(column: $table.peer, builder: (column) => column);
+
+  GeneratedColumn<String> get subject =>
+      $composableBuilder(column: $table.subject, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get followUp =>
+      $composableBuilder(column: $table.followUp, builder: (column) => column);
+
+  GeneratedColumn<String> get jobId => $composableBuilder(column: $table.jobId, builder: (column) => column);
+
+  GeneratedColumn<String> get lastAt =>
+      $composableBuilder(column: $table.lastAt, builder: (column) => column);
+
+  GeneratedColumn<int> get unread => $composableBuilder(column: $table.unread, builder: (column) => column);
+}
+
+class $$ConversationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ConversationsTable,
+          Conversation,
+          $$ConversationsTableFilterComposer,
+          $$ConversationsTableOrderingComposer,
+          $$ConversationsTableAnnotationComposer,
+          $$ConversationsTableCreateCompanionBuilder,
+          $$ConversationsTableUpdateCompanionBuilder,
+          (Conversation, BaseReferences<_$AppDatabase, $ConversationsTable, Conversation>),
+          Conversation,
+          PrefetchHooks Function()
+        > {
+  $$ConversationsTableTableManager(_$AppDatabase db, $ConversationsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$ConversationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$ConversationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$ConversationsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<String?> contactId = const Value.absent(),
+                Value<String> channel = const Value.absent(),
+                Value<String> account = const Value.absent(),
+                Value<String> mode = const Value.absent(),
+                Value<String?> externalId = const Value.absent(),
+                Value<String> peer = const Value.absent(),
+                Value<String> subject = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> followUp = const Value.absent(),
+                Value<String?> jobId = const Value.absent(),
+                Value<String> lastAt = const Value.absent(),
+                Value<int> unread = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ConversationsCompanion(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                contactId: contactId,
+                channel: channel,
+                account: account,
+                mode: mode,
+                externalId: externalId,
+                peer: peer,
+                subject: subject,
+                status: status,
+                followUp: followUp,
+                jobId: jobId,
+                lastAt: lastAt,
+                unread: unread,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<String?> contactId = const Value.absent(),
+                required String channel,
+                Value<String> account = const Value.absent(),
+                Value<String> mode = const Value.absent(),
+                Value<String?> externalId = const Value.absent(),
+                Value<String> peer = const Value.absent(),
+                Value<String> subject = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> followUp = const Value.absent(),
+                Value<String?> jobId = const Value.absent(),
+                required String lastAt,
+                Value<int> unread = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ConversationsCompanion.insert(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                contactId: contactId,
+                channel: channel,
+                account: account,
+                mode: mode,
+                externalId: externalId,
+                peer: peer,
+                subject: subject,
+                status: status,
+                followUp: followUp,
+                jobId: jobId,
+                lastAt: lastAt,
+                unread: unread,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ConversationsTable, Conversation>(table),
+                  BaseReferences<_$AppDatabase, $ConversationsTable, Conversation>(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ConversationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ConversationsTable,
+      Conversation,
+      $$ConversationsTableFilterComposer,
+      $$ConversationsTableOrderingComposer,
+      $$ConversationsTableAnnotationComposer,
+      $$ConversationsTableCreateCompanionBuilder,
+      $$ConversationsTableUpdateCompanionBuilder,
+      (Conversation, BaseReferences<_$AppDatabase, $ConversationsTable, Conversation>),
+      Conversation,
+      PrefetchHooks Function()
+    >;
+typedef $$MessagesTableCreateCompanionBuilder = MessagesCompanion Function({
+  required String id,
+  Value<String> hlc,
+  Value<bool> deleted,
+  required String conversationId,
+  required String direction,
+  Value<String> body,
+  required String sentAt,
+  Value<String> source,
+  Value<String> status,
+  Value<String?> externalId,
+  Value<String?> inReplyTo,
+  Value<String?> draftOf,
+  Value<int> rowid,
+});
+typedef $$MessagesTableUpdateCompanionBuilder = MessagesCompanion Function({
+  Value<String> id,
+  Value<String> hlc,
+  Value<bool> deleted,
+  Value<String> conversationId,
+  Value<String> direction,
+  Value<String> body,
+  Value<String> sentAt,
+  Value<String> source,
+  Value<String> status,
+  Value<String?> externalId,
+  Value<String?> inReplyTo,
+  Value<String?> draftOf,
+  Value<int> rowid,
+});
+
+class $$MessagesTableFilterComposer extends Composer<_$AppDatabase, $MessagesTable> {
+  $$MessagesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get conversationId =>
+      $composableBuilder(column: $table.conversationId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get direction =>
+      $composableBuilder(column: $table.direction, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sentAt =>
+      $composableBuilder(column: $table.sentAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get externalId =>
+      $composableBuilder(column: $table.externalId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get inReplyTo =>
+      $composableBuilder(column: $table.inReplyTo, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get draftOf =>
+      $composableBuilder(column: $table.draftOf, builder: (column) => ColumnFilters(column));
+}
+
+class $$MessagesTableOrderingComposer extends Composer<_$AppDatabase, $MessagesTable> {
+  $$MessagesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get conversationId =>
+      $composableBuilder(column: $table.conversationId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get direction =>
+      $composableBuilder(column: $table.direction, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sentAt =>
+      $composableBuilder(column: $table.sentAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get externalId =>
+      $composableBuilder(column: $table.externalId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get inReplyTo =>
+      $composableBuilder(column: $table.inReplyTo, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get draftOf =>
+      $composableBuilder(column: $table.draftOf, builder: (column) => ColumnOrderings(column));
+}
+
+class $$MessagesTableAnnotationComposer extends Composer<_$AppDatabase, $MessagesTable> {
+  $$MessagesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get hlc => $composableBuilder(column: $table.hlc, builder: (column) => column);
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
+
+  GeneratedColumn<String> get conversationId =>
+      $composableBuilder(column: $table.conversationId, builder: (column) => column);
+
+  GeneratedColumn<String> get direction =>
+      $composableBuilder(column: $table.direction, builder: (column) => column);
+
+  GeneratedColumn<String> get body => $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<String> get sentAt =>
+      $composableBuilder(column: $table.sentAt, builder: (column) => column);
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get externalId =>
+      $composableBuilder(column: $table.externalId, builder: (column) => column);
+
+  GeneratedColumn<String> get inReplyTo =>
+      $composableBuilder(column: $table.inReplyTo, builder: (column) => column);
+
+  GeneratedColumn<String> get draftOf =>
+      $composableBuilder(column: $table.draftOf, builder: (column) => column);
+}
+
+class $$MessagesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MessagesTable,
+          ThreadMessage,
+          $$MessagesTableFilterComposer,
+          $$MessagesTableOrderingComposer,
+          $$MessagesTableAnnotationComposer,
+          $$MessagesTableCreateCompanionBuilder,
+          $$MessagesTableUpdateCompanionBuilder,
+          (ThreadMessage, BaseReferences<_$AppDatabase, $MessagesTable, ThreadMessage>),
+          ThreadMessage,
+          PrefetchHooks Function()
+        > {
+  $$MessagesTableTableManager(_$AppDatabase db, $MessagesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$MessagesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$MessagesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$MessagesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<String> conversationId = const Value.absent(),
+                Value<String> direction = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<String> sentAt = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> externalId = const Value.absent(),
+                Value<String?> inReplyTo = const Value.absent(),
+                Value<String?> draftOf = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MessagesCompanion(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                conversationId: conversationId,
+                direction: direction,
+                body: body,
+                sentAt: sentAt,
+                source: source,
+                status: status,
+                externalId: externalId,
+                inReplyTo: inReplyTo,
+                draftOf: draftOf,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                required String conversationId,
+                required String direction,
+                Value<String> body = const Value.absent(),
+                required String sentAt,
+                Value<String> source = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> externalId = const Value.absent(),
+                Value<String?> inReplyTo = const Value.absent(),
+                Value<String?> draftOf = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MessagesCompanion.insert(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                conversationId: conversationId,
+                direction: direction,
+                body: body,
+                sentAt: sentAt,
+                source: source,
+                status: status,
+                externalId: externalId,
+                inReplyTo: inReplyTo,
+                draftOf: draftOf,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$MessagesTable, ThreadMessage>(table),
+                  BaseReferences<_$AppDatabase, $MessagesTable, ThreadMessage>(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MessagesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MessagesTable,
+      ThreadMessage,
+      $$MessagesTableFilterComposer,
+      $$MessagesTableOrderingComposer,
+      $$MessagesTableAnnotationComposer,
+      $$MessagesTableCreateCompanionBuilder,
+      $$MessagesTableUpdateCompanionBuilder,
+      (ThreadMessage, BaseReferences<_$AppDatabase, $MessagesTable, ThreadMessage>),
+      ThreadMessage,
+      PrefetchHooks Function()
+    >;
 typedef $$PrefsTableCreateCompanionBuilder = PrefsCompanion Function({
   required String id,
   Value<String> hlc,
@@ -14145,6 +17158,11 @@ class $AppDatabaseManager {
       $$CareerJournalTableTableManager(_db, _db.careerJournal);
   $$CareerStoriesTableTableManager get careerStories =>
       $$CareerStoriesTableTableManager(_db, _db.careerStories);
+  $$ContactHandlesTableTableManager get contactHandles =>
+      $$ContactHandlesTableTableManager(_db, _db.contactHandles);
+  $$ConversationsTableTableManager get conversations =>
+      $$ConversationsTableTableManager(_db, _db.conversations);
+  $$MessagesTableTableManager get messages => $$MessagesTableTableManager(_db, _db.messages);
   $$PrefsTableTableManager get prefs => $$PrefsTableTableManager(_db, _db.prefs);
   $$OutboxTableTableManager get outbox => $$OutboxTableTableManager(_db, _db.outbox);
   $$SyncCursorsTableTableManager get syncCursors => $$SyncCursorsTableTableManager(_db, _db.syncCursors);
