@@ -10,6 +10,7 @@ import '../domain/conversations.dart';
 import '../domain/countries.dart';
 import '../domain/humanizer.dart';
 import '../domain/pipeline.dart';
+import 'accounts_page.dart';
 import 'common.dart';
 
 // Conversations: one list of every thread, the channel always shown, and a
@@ -84,6 +85,18 @@ class _ConversationsPageState extends ConsumerState<ConversationsPage> {
         child: PageScaffold(
           title: 'Conversations',
           actions: [
+            if (ref.watch(mailAccountsProvider).value?.isNotEmpty ?? false)
+              IconButton(
+                icon: const Icon(Icons.sync),
+                tooltip: 'Check mail',
+                onPressed: ref.watch(mailSyncProvider).running ? null : () => checkMailNow(context, ref),
+              ),
+            IconButton(
+              icon: const Icon(Icons.alternate_email),
+              tooltip: 'Connected accounts',
+              onPressed: () =>
+                  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountsPage())),
+            ),
             IconButton(
               icon: const Icon(Icons.add_comment_outlined),
               tooltip: 'New conversation',
@@ -606,13 +619,14 @@ class MessageList extends ConsumerWidget {
   );
 }
 
-/// Outgoing on the right, incoming on the left, notes in the middle.
-class MessageBubble extends StatelessWidget {
+/// Outgoing on the right, incoming on the left, notes in the middle. A
+/// message that failed to send offers Retry.
+class MessageBubble extends ConsumerWidget {
   const MessageBubble(this.message, {super.key});
   final ThreadMessage message;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final m = message;
     final (align, color, label) = switch (m.direction) {
@@ -625,6 +639,9 @@ class MessageBubble extends StatelessWidget {
       _ => (Alignment.center, scheme.tertiaryContainer.withValues(alpha: 0.5), 'Note'),
     };
     final source = switch (m.source) {
+      'api' when m.status == 'failed' => 'Not sent',
+      'api' when m.status == 'sending' => 'Sending…',
+      'api' when m.status == 'sent' => 'Sent from Udyoga',
       'api' => 'Synced',
       'import' => 'Imported',
       'ai_draft' => 'AI draft',
@@ -648,13 +665,41 @@ class MessageBubble extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 '$label · ${niceDateTime(m.sentAt)} · $source',
-                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: m.status == 'failed' ? scheme.error : scheme.onSurfaceVariant,
+                ),
               ),
+              if (m.source == 'api' && m.status == 'failed')
+                TextButton.icon(
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                  onPressed: () => _retry(context, ref),
+                ),
             ],
           ),
         ),
       ),
     );
+  }
+}
+
+extension on MessageBubble {
+  Future<void> _retry(BuildContext context, WidgetRef ref) async {
+    final book = ref.read(sessionProvider).book;
+    final sender = senderFor(
+      await book.conversation(message.conversationId),
+      ref.read(channelSendersProvider),
+    );
+    if (!context.mounted) return;
+    if (sender == null) return showMessage(context, 'Connect the account this was sent from first.');
+    try {
+      await ref.mutate((s) => s.book.retrySend(sender, message.id));
+      if (context.mounted) showMessage(context, 'Sent.');
+    } catch (e) {
+      ref.changed();
+      if (context.mounted) showError(context, e);
+    }
   }
 }
 
@@ -683,6 +728,9 @@ class _ComposerState extends ConsumerState<Composer> {
   /// apart).
   var invite = false;
 
+  /// A message is going out through a connected account.
+  var sending = false;
+
   @override
   void dispose() {
     text.dispose();
@@ -701,7 +749,8 @@ class _ComposerState extends ConsumerState<Composer> {
     final messages = ref.watch(threadMessagesProvider(thread.id)).value ?? const <ThreadMessage>[];
     final first = !messages.any((m) => m.direction == 'out');
     final opener = howIFoundYou(l);
-    final target = openTarget(thread, l, subject: thread.subject, body: '');
+    final sender = senderFor(thread, ref.watch(channelSendersProvider));
+    final target = sender != null ? null : openTarget(thread, l, subject: thread.subject, body: '');
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -745,17 +794,24 @@ class _ComposerState extends ConsumerState<Composer> {
                   selected: invite,
                   onSelected: (v) => setState(() => invite = v),
                 ),
+              if (sender != null)
+                FilledButton.icon(
+                  onPressed: sending ? null : () => _send(sender, first),
+                  icon: const Icon(Icons.send),
+                  label: Text('Send from ${sender.account}'),
+                ),
               if (target != null)
                 FilledButton.icon(
                   onPressed: _copyAndOpen,
                   icon: const Icon(Icons.open_in_new),
                   label: Text(thread.channel == 'email' ? 'Copy & open mail' : 'Copy & open'),
                 ),
-              OutlinedButton.icon(
-                onPressed: () => _log(text.text),
-                icon: const Icon(Icons.done),
-                label: const Text('Log as sent'),
-              ),
+              if (sender == null)
+                OutlinedButton.icon(
+                  onPressed: () => _log(text.text),
+                  icon: const Icon(Icons.done),
+                  label: const Text('Log as sent'),
+                ),
               OutlinedButton.icon(
                 onPressed: _logReply,
                 icon: const Icon(Icons.reply),
@@ -771,6 +827,44 @@ class _ComposerState extends ConsumerState<Composer> {
         ],
       ),
     );
+  }
+
+  /// Sends through the connected account: a subject first if the thread
+  /// has none, and the PECR reminder before the first mail to a personal
+  /// address. A failed send stays in the thread with Retry.
+  Future<void> _send(ChannelSender sender, bool first) async {
+    final body = text.text.trim();
+    if (body.isEmpty) return showMessage(context, 'Write the message first.');
+    final l = contact!;
+    var subject = thread.subject;
+    if (subject.isEmpty) {
+      subject =
+          (await pasteDialog(context, title: 'Subject', label: 'What the e-mail is about'))?.trim() ?? '';
+      if (subject.isEmpty || !mounted) return;
+    }
+    if (first && thread.channel == 'email' && emailKind(l.email.ifEmpty(thread.peer)) == 'personal') {
+      final ok = await confirm(
+        context,
+        title: 'Personal address',
+        message:
+            'This goes to ${l.name}\'s personal address. PECR consent rules apply to marketing-style or '
+            'templated e-mail; keep it a one-to-one message about work.',
+        action: 'Send',
+      );
+      if (!ok || !mounted) return;
+    }
+    setState(() => sending = true);
+    try {
+      await ref.read(sessionProvider).book.sendVia(sender, thread.id, body, at: nowLocal(), subject: subject);
+      if (!mounted) return;
+      text.clear();
+      showMessage(context, 'Sent.');
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      ref.changed();
+      if (mounted) setState(() => sending = false);
+    }
   }
 
   Future<void> _copyAndOpen() async {

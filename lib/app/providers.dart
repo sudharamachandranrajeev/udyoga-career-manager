@@ -18,6 +18,9 @@ import '../domain/conversations.dart';
 import '../domain/gemini.dart';
 import '../domain/insights.dart';
 import '../domain/linkedin_messages.dart';
+import '../domain/mail.dart';
+import '../domain/mail_sync.dart';
+import '../domain/mail_transport.dart';
 import '../domain/pay.dart';
 import '../domain/profile.dart';
 import '../domain/refresh.dart';
@@ -25,6 +28,7 @@ import '../domain/n8n.dart';
 import '../domain/subscription.dart';
 import '../domain/update.dart';
 import '../ui/hints.dart';
+import 'mail_alerts.dart';
 import 'security_checks.dart';
 import 'session.dart';
 
@@ -223,10 +227,71 @@ final targetEmployersProvider = FutureProvider<List<String>>((ref) {
   return ref.watch(sessionProvider).book.targetEmployers();
 });
 
+/// IMAP and SMTP over the network; tests put a fake in its place.
+final mailTransportProvider = Provider<MailTransport>((ref) => const EnoughMailTransport());
+
+/// Connected mail accounts: settings on this device, passwords in its
+/// keychain.
+final mailServiceProvider = Provider<MailService>((ref) {
+  final s = ref.watch(sessionProvider);
+  return MailService(s.book, s.keys.store, ref.watch(mailTransportProvider));
+});
+
+final mailAccountsProvider = FutureProvider<List<ChannelAccount>>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(mailServiceProvider).accounts();
+});
+
 /// The channels Udyoga can send on by itself, once the user connects an
-/// account (e-mail, Bluesky). Empty until then: every message is sent by
-/// the user and logged. LinkedIn never has one.
-final channelSendersProvider = Provider<List<ChannelSender>>((ref) => const []);
+/// account (e-mail). Empty until then: every message is sent by the user
+/// and logged. LinkedIn never has one.
+final channelSendersProvider = Provider<List<ChannelSender>>((ref) {
+  final service = ref.watch(mailServiceProvider);
+  return [
+    for (final a in ref.watch(mailAccountsProvider).value ?? const <ChannelAccount>[])
+      EmailSender(service, a),
+  ];
+});
+
+class MailSyncState {
+  const MailSyncState({this.running = false, this.status = ''});
+  final bool running;
+  final String status;
+}
+
+/// Checks the connected mail accounts: at start and with the hourly
+/// refresh when the last check is over 15 minutes old, or now when the
+/// user asks.
+class MailSyncController extends Notifier<MailSyncState> {
+  @override
+  MailSyncState build() => const MailSyncState();
+
+  Future<MailSyncReport?> run({bool force = false}) async {
+    if (state.running) return null;
+    state = const MailSyncState(running: true, status: 'Checking mail…');
+    try {
+      final report = await ref.read(mailServiceProvider).syncDue(force: force);
+      state = MailSyncState(
+        status: [
+          if (report.added == 0)
+            'No new mail from your contacts.'
+          else
+            '${report.added} new message${report.added == 1 ? '' : 's'}.',
+          ...report.failed,
+        ].join('\n'),
+      );
+      ref.read(revisionProvider.notifier).bump();
+      await ref.read(mailNotifierProvider).show(report.alerts).catchError((_) {});
+      return report;
+    } catch (e) {
+      state = MailSyncState(status: describeError(e));
+      ref.read(revisionProvider.notifier).bump();
+      rethrow;
+    }
+  }
+}
+
+final mailSyncProvider = NotifierProvider<MailSyncController, MailSyncState>(MailSyncController.new);
 
 /// The folders this device reads documents from.
 final documentFoldersProvider = FutureProvider<List<String>>((ref) {
@@ -341,10 +406,14 @@ class RefreshController extends Notifier<RefreshState> {
 
 final refreshProvider = NotifierProvider<RefreshController, RefreshState>(RefreshController.new);
 
-/// Runs the routine refresh now and then hourly while the app is open;
-/// each run does only what is due. Read once at start-up.
+/// Runs the routine refresh and the mail check now and then hourly while
+/// the app is open; each run does only what is due. Read once at start-up.
 final refreshTickerProvider = Provider<void>((ref) {
-  void tick() => ref.read(refreshProvider.notifier).run().catchError((_) => null).ignore();
+  void tick() {
+    ref.read(refreshProvider.notifier).run().catchError((_) => null).ignore();
+    ref.read(mailSyncProvider.notifier).run().catchError((_) => null).ignore();
+  }
+
   tick();
   final timer = Timer.periodic(const Duration(hours: 1), (_) => tick());
   ref.onDispose(timer.cancel);
