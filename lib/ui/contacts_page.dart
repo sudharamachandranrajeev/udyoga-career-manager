@@ -12,7 +12,7 @@ import '../domain/pipeline.dart';
 import 'applications_page.dart';
 import '../domain/conversations.dart';
 import 'common.dart';
-import 'conversations_page.dart' hide StatusPill;
+import 'conversations_page.dart';
 import 'kit/kit.dart';
 import 'linkedin_page.dart';
 import 'look.dart';

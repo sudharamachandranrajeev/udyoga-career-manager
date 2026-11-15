@@ -12,14 +12,16 @@ import '../domain/humanizer.dart';
 import '../domain/pipeline.dart';
 import 'accounts_page.dart';
 import 'common.dart';
+import 'kit/kit.dart';
+import 'look.dart' hide Pace;
 
 // Conversations: one list of every thread, the channel always shown, and a
 // thread view with a composer. Udyoga never sends on LinkedIn or reads its
 // pages: the user copies the text, sends it themselves, then logs it. The
 // clipboard is only read when the user presses Paste.
 //
-// Plain Material widgets, kept small and named so the look can change
-// without touching the logic.
+// Small named widgets on the kit (ChannelChip, StatusPill), so the look can
+// change without touching the logic.
 
 /// From this width the list and the thread sit side by side.
 const _twoPaneWidth = 840.0;
@@ -226,6 +228,9 @@ class ThreadList extends ConsumerWidget {
                     ],
                   )
                 : ListView.builder(
+                    // A new list, from the top, for each tab and filter: the
+                    // Screener does not open where the Inbox was scrolled to.
+                    key: ValueKey('$screener/$filter'),
                     itemCount: shown.length,
                     itemBuilder: (_, i) => ConversationTile(
                       shown[i],
@@ -260,8 +265,9 @@ class ThreadFilterChips extends StatelessWidget {
   );
 }
 
-/// One row: who, where, the last message, its status and where the record
-/// came from.
+/// One row: who, when, the last message, then the channel, where the thread
+/// stands and where the record came from. Every line keeps to one line, so a
+/// long name or subject never pushes the row out of shape.
 class ConversationTile extends StatelessWidget {
   const ConversationTile(this.row, {super.key, this.selected = false, required this.onTap});
   final ThreadRow row;
@@ -273,51 +279,69 @@ class ConversationTile extends StatelessWidget {
     final t = row.thread;
     final l = row.contact;
     final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
     final muted = theme.colorScheme.onSurfaceVariant;
+    final name = l?.name ?? senderName(t).ifEmpty('Unknown sender');
     final role = l == null ? '' : [l.title, l.company].where((s) => s.isNotEmpty).join(' · ');
-    return Material(
-      color: selected ? theme.colorScheme.secondaryContainer.withValues(alpha: 0.5) : Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              InitialsAvatar(l?.name ?? ''),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            l?.name ?? senderName(t).ifEmpty('Unknown sender'),
-                            style: theme.textTheme.titleSmall,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: Material(
+        color: selected ? azure.withValues(alpha: dark ? 0.22 : 0.09) : Colors.transparent,
+        borderRadius: BorderRadius.circular(Radii.sm),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                OrgLogo(name, size: 40),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              name,
+                              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                        Text(whenText(t.lastAt), style: theme.textTheme.bodySmall?.copyWith(color: muted)),
-                      ],
-                    ),
-                    if (role.isNotEmpty)
-                      Text(
-                        role,
-                        style: theme.textTheme.bodySmall?.copyWith(color: muted),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                          const SizedBox(width: 8),
+                          Text(whenText(t.lastAt), style: theme.textTheme.bodySmall?.copyWith(color: muted)),
+                        ],
                       ),
-                    ChannelLabel(t.channel, account: t.account),
-                    if (row.last != null) LastMessageLine(row.last!),
-                    const SizedBox(height: 4),
-                    Wrap(spacing: 6, runSpacing: 4, children: [StatusPill(row), SourceBadge(t.mode)]),
-                  ],
+                      if (role.isNotEmpty)
+                        Text(
+                          role,
+                          style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      if (row.last != null) ...[
+                        const SizedBox(height: 2),
+                        LastMessageLine(row.last!, strong: row.needsReply),
+                      ],
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          ChannelChip(t.channel, account: t.account),
+                          ThreadStatusPill(row),
+                          SourceBadge(t.mode),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -332,66 +356,17 @@ String whenText(String at) {
   return day == now && at.length >= 16 ? at.substring(11, 16) : relativeDay(day, now);
 }
 
-class InitialsAvatar extends StatelessWidget {
-  const InitialsAvatar(this.name, {super.key, this.radius = 20});
-  final String name;
-  final double radius;
-
-  static String initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (parts.isEmpty) return '?';
-    return (parts.first[0] + (parts.length > 1 ? parts.last[0] : '')).toUpperCase();
-  }
-
-  @override
-  Widget build(BuildContext context) => CircleAvatar(
-    radius: radius,
-    child: Text(initials(name), style: TextStyle(fontSize: radius * 0.7)),
-  );
-}
-
-const _channelIcons = {
-  'linkedin': Icons.work_outline,
-  'email': Icons.email_outlined,
-  'phone': Icons.call_outlined,
-  'in_person': Icons.people_outline,
-  'bluesky': Icons.cloud_outlined,
-  'other': Icons.chat_bubble_outline,
-};
-
-/// The channel, with the account: "Email · you@example.org".
-class ChannelLabel extends StatelessWidget {
-  const ChannelLabel(this.channel, {super.key, this.account = ''});
-  final String channel, account;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
-    return Row(
-      children: [
-        Icon(_channelIcons[channel] ?? Icons.chat_bubble_outline, size: 14, color: color),
-        const SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            channelLabel(channel, account: account),
-            style: TextStyle(fontSize: 12, color: color),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// The newest message: which way it went and how it starts.
+/// The newest message: which way it went and how it starts, on one line.
+/// [strong] picks it out when it waits on a reply.
 class LastMessageLine extends StatelessWidget {
-  const LastMessageLine(this.message, {super.key});
+  const LastMessageLine(this.message, {super.key, this.strong = false});
   final ThreadMessage message;
+  final bool strong;
 
   @override
   Widget build(BuildContext context) {
-    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    final scheme = Theme.of(context).colorScheme;
+    final color = strong ? scheme.onSurface : scheme.onSurfaceVariant;
     final (icon, who) = switch (message.direction) {
       'out' => (Icons.north_east, 'You: '),
       'in' => (Icons.south_west, ''),
@@ -399,14 +374,14 @@ class LastMessageLine extends StatelessWidget {
     };
     return Row(
       children: [
-        Icon(icon, size: 14, color: muted),
+        Icon(icon, size: 14, color: scheme.onSurfaceVariant),
         const SizedBox(width: 4),
         Expanded(
           child: Text(
             '$who${message.body.replaceAll('\n', ' ')}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: muted),
+            style: TextStyle(color: color, fontWeight: strong ? FontWeight.w500 : null),
           ),
         ),
       ],
@@ -416,8 +391,8 @@ class LastMessageLine extends StatelessWidget {
 
 /// Where the thread stands, with "needs reply" and due follow-ups picked
 /// out.
-class StatusPill extends StatelessWidget {
-  const StatusPill(this.row, {super.key});
+class ThreadStatusPill extends StatelessWidget {
+  const ThreadStatusPill(this.row, {super.key});
   final ThreadRow row;
 
   @override
@@ -429,55 +404,28 @@ class StatusPill extends StatelessWidget {
         : row.followUpDue(now)
         ? ('Follow up ${t.followUp == null ? 'now' : relativeDay(t.followUp!, now)}', Status.serious)
         : t.status == 'closed'
-        ? ('Closed', Status.info)
-        : (threadStatuses[t.status] ?? t.status, t.status == 'replied' ? Status.good : Status.info);
-    return SmallPill(label, color: status.color);
+        ? ('Closed', null)
+        : (threadStatuses[t.status] ?? t.status, t.status == 'replied' ? Status.good : null);
+    return StatusPill(label, status: status);
   }
 }
 
 /// "Synced", "Imported" or "Logged by you": is this the real record or the
-/// user's note of it?
+/// user's note of it? On record, not to act on, so it stays quiet.
 class SourceBadge extends StatelessWidget {
   const SourceBadge(this.mode, {super.key});
   final String mode;
 
   @override
-  Widget build(BuildContext context) => SmallPill(
+  Widget build(BuildContext context) => StatusPill(
     threadSources[mode] ?? mode,
+    quiet: true,
     icon: switch (mode) {
       'api' => Icons.sync,
       'import' => Icons.download_outlined,
       _ => Icons.edit_note,
     },
   );
-}
-
-/// A small rounded label.
-class SmallPill extends StatelessWidget {
-  const SmallPill(this.label, {super.key, this.color, this.icon});
-  final String label;
-  final Color? color;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = color ?? Theme.of(context).colorScheme.onSurfaceVariant;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[Icon(icon, size: 12, color: c), const SizedBox(width: 3)],
-          Text(label, style: TextStyle(fontSize: 11, color: c)),
-        ],
-      ),
-    );
-  }
 }
 
 // ---- the thread ----
@@ -497,6 +445,7 @@ class ThreadView extends ConsumerWidget {
     if (row == null) {
       return const EmptyState(icon: Icons.forum_outlined, title: 'This conversation is gone');
     }
+    final scheme = Theme.of(context).colorScheme;
     return LayoutBuilder(
       builder: (context, box) {
         final panel = box.maxWidth >= _panelWidth;
@@ -523,15 +472,20 @@ class ThreadView extends ConsumerWidget {
                       ),
                     ),
             ),
-            const Divider(height: 1),
             Expanded(child: MessageList(conversationId)),
-            const Divider(height: 1),
-            // On a short screen the composer scrolls rather than squeezing
-            // the messages out.
-            ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: box.maxHeight * 0.55),
-              child: SingleChildScrollView(
-                child: Composer(row, key: ValueKey('composer-$conversationId'), onOpen: onOpen),
+            // The composer stays at the foot of the thread while the messages
+            // scroll. On a short screen it scrolls itself rather than
+            // squeezing the messages out.
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: scheme.surface.withValues(alpha: 0.92),
+                border: Border(top: BorderSide(color: scheme.outlineVariant)),
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: box.maxHeight * 0.55),
+                child: SingleChildScrollView(
+                  child: Composer(row, key: ValueKey('composer-$conversationId'), onOpen: onOpen),
+                ),
               ),
             ),
           ],
@@ -551,7 +505,9 @@ class ThreadView extends ConsumerWidget {
 }
 
 /// "To Jordan Example · Practice Manager, Example Health Trust · via
-/// LinkedIn message · found on ...", always, and the thread's status menu.
+/// LinkedIn message · found on ...", always and in full: who this goes to,
+/// how and why is the point of the page. Then the subject, where the thread
+/// stands and the status menu.
 class ThreadHeader extends ConsumerWidget {
   const ThreadHeader(this.row, {super.key, this.onBack, this.onDetails});
   final ThreadRow row;
@@ -560,37 +516,97 @@ class ThreadHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = row.thread;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-      child: Row(
-        children: [
-          if (onBack != null)
-            IconButton(icon: const Icon(Icons.arrow_back), tooltip: 'All conversations', onPressed: onBack),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(threadHeader(t, row.contact), style: Theme.of(context).textTheme.titleSmall),
-                if (t.subject.isNotEmpty)
-                  Text(t.subject, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-              ],
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final muted = theme.colorScheme.onSurfaceVariant;
+    final pills = Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [ThreadStatusPill(row), SourceBadge(t.mode)],
+    );
+    final words = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          threadHeader(t, row.contact),
+          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600, height: 1.35),
+        ),
+        if (t.subject.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              t.subject,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(color: muted),
             ),
           ),
-          if (row.contact != null)
-            PopupMenuButton<String>(
-              tooltip: 'Status',
-              icon: const Icon(Icons.flag_outlined),
-              onSelected: (v) => _setStatus(context, ref, v),
-              itemBuilder: (_) => [
-                for (final e in threadStatuses.entries)
-                  if (e.key != 'follow_up') PopupMenuItem(value: e.key, child: Text(e.value)),
-                const PopupMenuItem(value: 'follow_up', child: Text('Follow up on…')),
+      ],
+    );
+    final buttons = [
+      if (row.contact != null)
+        PopupMenuButton<String>(
+          tooltip: 'Status',
+          icon: const Icon(Icons.flag_outlined),
+          onSelected: (v) => _setStatus(context, ref, v),
+          itemBuilder: (_) => [
+            for (final e in threadStatuses.entries)
+              if (e.key != 'follow_up') PopupMenuItem(value: e.key, child: Text(e.value)),
+            const PopupMenuItem(value: 'follow_up', child: Text('Follow up on…')),
+          ],
+        ),
+      if (onDetails != null)
+        IconButton(icon: const Icon(Icons.info_outline), tooltip: 'Details', onPressed: onDetails),
+    ];
+    final back = onBack == null
+        ? null
+        : IconButton(icon: const Icon(Icons.arrow_back), tooltip: 'All conversations', onPressed: onBack);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 12),
+      decoration: BoxDecoration(
+        color: azure.withValues(alpha: dark ? 0.14 : 0.06),
+        borderRadius: BorderRadius.circular(Radii.lg),
+        border: Border.all(color: azure.withValues(alpha: dark ? 0.35 : 0.22)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, box) {
+          // On a phone the words take the full width under the buttons;
+          // wider, they sit between them.
+          if (box.maxWidth < 560) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    ?back,
+                    Expanded(child: pills),
+                    ...buttons,
+                  ],
+                ),
+                const SizedBox(height: 6),
+                words,
               ],
-            ),
-          if (onDetails != null)
-            IconButton(icon: const Icon(Icons.info_outline), tooltip: 'Details', onPressed: onDetails),
-        ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ?back,
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [words, const SizedBox(height: 8), pills],
+                  ),
+                ),
+              ),
+              ...buttons,
+            ],
+          );
+        },
       ),
     );
   }
@@ -614,46 +630,111 @@ class ThreadHeader extends ConsumerWidget {
   }
 }
 
-class MessageList extends ConsumerWidget {
+/// The messages, newest at the foot. A message that arrives from them while
+/// the thread is open fades in; what the user sends or notes appears at
+/// once, so typing and sending never waits on an animation.
+class MessageList extends ConsumerStatefulWidget {
   const MessageList(this.conversationId, {super.key});
   final String conversationId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => AsyncView(
-    ref.watch(threadMessagesProvider(conversationId)),
-    builder: (messages) => messages.isEmpty
-        ? const EmptyState(
-            icon: Icons.chat_bubble_outline,
-            title: 'Nothing yet',
-            message: 'Write below, send it yourself, then log it here.',
-          )
-        : ListView.builder(
+  ConsumerState<MessageList> createState() => _MessageListState();
+}
+
+class _MessageListState extends ConsumerState<MessageList> {
+  /// The messages already shown (null until the first load).
+  Set<String>? _shown;
+
+  /// Their messages that arrived after the thread opened.
+  final _arrived = <String>{};
+
+  @override
+  Widget build(BuildContext context) => AsyncView(
+    ref.watch(threadMessagesProvider(widget.conversationId)),
+    builder: (messages) {
+      final shown = _shown;
+      if (shown == null) {
+        _shown = {for (final m in messages) m.id};
+      } else {
+        for (final m in messages) {
+          if (shown.add(m.id) && m.direction == 'in') _arrived.add(m.id);
+        }
+      }
+      if (messages.isEmpty) {
+        return const EmptyState(
+          icon: Icons.chat_bubble_outline,
+          title: 'Nothing yet',
+          message: 'Write below, send it yourself, then log it here.',
+        );
+      }
+      final newestFirst = messages.reversed.toList();
+      return LayoutBuilder(
+        builder: (context, box) {
+          final width = (box.maxWidth * 0.84).clamp(200.0, 560.0);
+          return ListView.builder(
             reverse: true,
-            padding: const EdgeInsets.all(12),
-            itemCount: messages.length,
-            itemBuilder: (_, i) => MessageBubble(messages[messages.length - 1 - i]),
-          ),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+            itemCount: newestFirst.length,
+            // Keyed by id so a new message at the foot does not hand its
+            // place (and an animation) to the one above it.
+            findChildIndexCallback: (key) {
+              final i = newestFirst.indexWhere((m) => ValueKey(m.id) == key);
+              return i < 0 ? null : i;
+            },
+            itemBuilder: (_, i) {
+              final m = newestFirst[i];
+              final bubble = MessageBubble(m, maxWidth: width);
+              return KeyedSubtree(
+                key: ValueKey(m.id),
+                child: _arrived.contains(m.id) ? BlurFadeIn(child: bubble) : bubble,
+              );
+            },
+          );
+        },
+      );
+    },
   );
 }
 
-/// Outgoing on the right, incoming on the left, notes in the middle. A
-/// message that failed to send offers Retry.
+/// Outgoing on the right in the brand tint, incoming on the left on the
+/// surface, notes in the middle and muted. A message that failed to send
+/// offers Retry.
 class MessageBubble extends ConsumerWidget {
-  const MessageBubble(this.message, {super.key});
+  const MessageBubble(this.message, {super.key, this.maxWidth = 520});
   final ThreadMessage message;
+  final double maxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
     final m = message;
-    final (align, color, label) = switch (m.direction) {
+    final note = m.direction != 'out' && m.direction != 'in';
+    const r = Radius.circular(Radii.lg);
+    const tight = Radius.circular(4);
+    final (align, color, border, shape, label) = switch (m.direction) {
       'out' => (
         Alignment.centerRight,
-        scheme.primaryContainer,
+        azure.withValues(alpha: dark ? 0.3 : 0.11),
+        azure.withValues(alpha: dark ? 0.4 : 0.18),
+        const BorderRadius.only(topLeft: r, topRight: r, bottomLeft: r, bottomRight: tight),
         m.status == 'invite' ? 'Connection note' : 'You',
       ),
-      'in' => (Alignment.centerLeft, scheme.surfaceContainerHighest, 'Them'),
-      _ => (Alignment.center, scheme.tertiaryContainer.withValues(alpha: 0.5), 'Note'),
+      'in' => (
+        Alignment.centerLeft,
+        dark ? scheme.surfaceContainerHigh : scheme.surface,
+        scheme.outlineVariant,
+        const BorderRadius.only(topLeft: r, topRight: r, bottomLeft: tight, bottomRight: r),
+        'Them',
+      ),
+      _ => (
+        Alignment.center,
+        Colors.transparent,
+        scheme.outlineVariant,
+        const BorderRadius.all(Radius.circular(Radii.sm)),
+        'Note',
+      ),
     };
     final source = switch (m.source) {
       'api' when m.status == 'failed' => 'Not sent',
@@ -664,29 +745,40 @@ class MessageBubble extends ConsumerWidget {
       'ai_draft' => 'AI draft',
       _ => 'Logged by you',
     };
+    final meta = TextStyle(
+      fontSize: 11,
+      color: m.status == 'failed' ? scheme.error : scheme.onSurfaceVariant,
+    );
     return Align(
       alignment: align,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
+        constraints: BoxConstraints(maxWidth: note ? maxWidth * 0.9 : maxWidth),
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: shape,
+            border: Border.all(color: border),
+          ),
           child: Column(
-            crossAxisAlignment: m.direction == 'note' ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+            crossAxisAlignment: note ? CrossAxisAlignment.center : CrossAxisAlignment.start,
             children: [
+              if (note)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Icon(Icons.sticky_note_2_outlined, size: 14, color: scheme.onSurfaceVariant),
+                ),
               SelectableText(
                 m.body,
-                style: m.direction == 'note' ? const TextStyle(fontStyle: FontStyle.italic) : null,
+                textDirection: textDirectionOf(m.body),
+                textAlign: note ? TextAlign.center : TextAlign.start,
+                style: note
+                    ? TextStyle(fontStyle: FontStyle.italic, fontSize: 13, color: scheme.onSurfaceVariant)
+                    : const TextStyle(height: 1.4),
               ),
               const SizedBox(height: 4),
-              Text(
-                '$label · ${niceDateTime(m.sentAt)} · $source',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: m.status == 'failed' ? scheme.error : scheme.onSurfaceVariant,
-                ),
-              ),
+              Text('$label · ${niceDateTime(m.sentAt)} · $source', style: meta),
               if (m.source == 'api' && m.status == 'failed')
                 TextButton.icon(
                   icon: const Icon(Icons.refresh),
@@ -791,55 +883,57 @@ class _ComposerState extends ConsumerState<Composer> {
             controller: text,
             minLines: 1,
             maxLines: 6,
-            decoration: const InputDecoration(labelText: 'Message', border: OutlineInputBorder()),
+            decoration: const InputDecoration(labelText: 'Message'),
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              if (hasAi)
+          _CompactButtons(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (hasAi)
+                  OutlinedButton.icon(
+                    onPressed: () => _draft(first),
+                    icon: const Icon(Icons.auto_awesome),
+                    label: const Text('Draft with AI'),
+                  ),
+                if (thread.channel == 'linkedin')
+                  FilterChip(
+                    label: const Text('Connection note'),
+                    selected: invite,
+                    onSelected: (v) => setState(() => invite = v),
+                  ),
+                if (sender != null)
+                  FilledButton.icon(
+                    onPressed: sending ? null : () => _send(sender, first),
+                    icon: const Icon(Icons.send),
+                    label: Text('Send from ${sender.account}'),
+                  ),
+                if (target != null)
+                  FilledButton.icon(
+                    onPressed: _copyAndOpen,
+                    icon: const Icon(Icons.open_in_new),
+                    label: Text(thread.channel == 'email' ? 'Copy & open mail' : 'Copy & open'),
+                  ),
+                if (sender == null)
+                  OutlinedButton.icon(
+                    onPressed: () => _log(text.text),
+                    icon: const Icon(Icons.done),
+                    label: const Text('Log as sent'),
+                  ),
                 OutlinedButton.icon(
-                  onPressed: () => _draft(first),
-                  icon: const Icon(Icons.auto_awesome),
-                  label: const Text('Draft with AI'),
+                  onPressed: _logReply,
+                  icon: const Icon(Icons.reply),
+                  label: const Text('Log a reply'),
                 ),
-              if (thread.channel == 'linkedin')
-                FilterChip(
-                  label: const Text('Connection note'),
-                  selected: invite,
-                  onSelected: (v) => setState(() => invite = v),
+                TextButton.icon(
+                  onPressed: _note,
+                  icon: const Icon(Icons.sticky_note_2_outlined),
+                  label: const Text('Add note'),
                 ),
-              if (sender != null)
-                FilledButton.icon(
-                  onPressed: sending ? null : () => _send(sender, first),
-                  icon: const Icon(Icons.send),
-                  label: Text('Send from ${sender.account}'),
-                ),
-              if (target != null)
-                FilledButton.icon(
-                  onPressed: _copyAndOpen,
-                  icon: const Icon(Icons.open_in_new),
-                  label: Text(thread.channel == 'email' ? 'Copy & open mail' : 'Copy & open'),
-                ),
-              if (sender == null)
-                OutlinedButton.icon(
-                  onPressed: () => _log(text.text),
-                  icon: const Icon(Icons.done),
-                  label: const Text('Log as sent'),
-                ),
-              OutlinedButton.icon(
-                onPressed: _logReply,
-                icon: const Icon(Icons.reply),
-                label: const Text('Log a reply'),
-              ),
-              TextButton.icon(
-                onPressed: _note,
-                icon: const Icon(Icons.sticky_note_2_outlined),
-                label: const Text('Add note'),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -975,6 +1069,31 @@ class _ComposerState extends ConsumerState<Composer> {
   }
 }
 
+/// The composer's buttons a size smaller than the page's, so on a phone
+/// they leave room for the messages.
+class _CompactButtons extends StatelessWidget {
+  const _CompactButtons({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    const compact = ButtonStyle(
+      minimumSize: WidgetStatePropertyAll(Size(0, 38)),
+      padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 14)),
+      visualDensity: VisualDensity.compact,
+    );
+    return Theme(
+      data: theme.copyWith(
+        filledButtonTheme: FilledButtonThemeData(style: compact.merge(theme.filledButtonTheme.style)),
+        outlinedButtonTheme: OutlinedButtonThemeData(style: compact.merge(theme.outlinedButtonTheme.style)),
+        textButtonTheme: TextButtonThemeData(style: compact.merge(theme.textButtonTheme.style)),
+      ),
+      child: child,
+    );
+  }
+}
+
 /// Where "Copy & open" goes: the person's LinkedIn profile (or a people
 /// search), a mailto: link, a tel: link; null for channels with nowhere to
 /// open (in person).
@@ -1030,9 +1149,9 @@ Future<String?> pasteDialog(
     ],
     onSave: () async => c.text.trim().isEmpty ? 'Paste or type the text.' : null,
   );
-  final text = c.text.trim();
-  c.dispose();
-  return ok ? text : null;
+  // Not disposed, like the other form dialogs' fields: the dialog still
+  // draws the box while it closes, after this returns.
+  return ok ? c.text.trim() : null;
 }
 
 /// "Did you send it?" after Copy & open.
@@ -1041,23 +1160,36 @@ class SentCheckBar extends StatelessWidget {
   final VoidCallback onYes, onEdited, onNotYet;
 
   @override
-  Widget build(BuildContext context) => Card(
-    color: Theme.of(context).colorScheme.secondaryContainer,
-    child: Padding(
-      padding: const EdgeInsets.all(8),
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+      decoration: BoxDecoration(
+        color: azure.withValues(alpha: dark ? 0.2 : 0.08),
+        borderRadius: BorderRadius.circular(Radii.sm),
+        border: Border.all(color: azure.withValues(alpha: dark ? 0.45 : 0.3)),
+      ),
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          const Text('Did you send it?', style: TextStyle(fontWeight: FontWeight.w600)),
+          const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.outbox_outlined, size: 18, color: azure),
+              SizedBox(width: 8),
+              Text('Did you send it?', style: TextStyle(fontWeight: FontWeight.w600)),
+            ],
+          ),
           FilledButton(onPressed: onYes, child: const Text('Yes, log it')),
           OutlinedButton(onPressed: onEdited, child: const Text('Edited, paste final')),
           TextButton(onPressed: onNotYet, child: const Text('Not yet')),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// A gentle note when the user has sent a lot on LinkedIn lately. Never a
@@ -1121,14 +1253,20 @@ class Hint extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(Radii.sm),
+      border: Border.all(color: color.withValues(alpha: 0.3)),
+    ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, size: 18, color: color),
         const SizedBox(width: 8),
-        Expanded(child: Text(text, style: const TextStyle(fontSize: 12))),
+        Expanded(child: Text(text, style: const TextStyle(fontSize: 12, height: 1.35))),
       ],
     ),
   );
@@ -1279,7 +1417,7 @@ class ContactPanel extends ConsumerWidget {
       children: [
         Row(
           children: [
-            InitialsAvatar(l.name, radius: 24),
+            OrgLogo(l.name, size: 48),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -1301,11 +1439,11 @@ class ContactPanel extends ConsumerWidget {
             padding: const EdgeInsets.only(bottom: 4),
             child: Row(
               children: [
-                Icon(_channelIcons[h.channel] ?? Icons.alternate_email, size: 16, color: muted),
+                Icon(ChannelLook.of(h.channel).icon, size: 16, color: muted),
                 const SizedBox(width: 8),
                 Expanded(child: SelectableText(h.handle)),
                 if (h.channel == 'email' && emailKind(h.handle).isNotEmpty)
-                  SmallPill(emailKind(h.handle) == 'work' ? 'Work' : 'Personal'),
+                  StatusPill(emailKind(h.handle) == 'work' ? 'Work' : 'Personal', quiet: true),
               ],
             ),
           ),
@@ -1318,8 +1456,9 @@ class ContactPanel extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 children: [
-                  Expanded(child: ChannelLabel(r.thread.channel, account: r.thread.account)),
-                  StatusPill(r),
+                  Flexible(child: ChannelChip(r.thread.channel, account: r.thread.account)),
+                  const SizedBox(width: 6),
+                  ThreadStatusPill(r),
                 ],
               ),
             ),
@@ -1511,7 +1650,6 @@ Future<String?> startConversationDialog(BuildContext context, WidgetRef ref, {Le
       return null;
     },
   );
-  subject.dispose();
   return id;
 }
 
