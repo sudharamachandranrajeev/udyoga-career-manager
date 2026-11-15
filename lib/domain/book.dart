@@ -6,10 +6,12 @@ import 'package:drift/drift.dart';
 import '../db/database.dart';
 import 'ai.dart';
 import 'companion_book.dart';
+import 'conversations.dart';
 import 'feeds.dart';
 import 'insights.dart';
 import 'json.dart';
 import 'linkedin_export.dart';
+import 'linkedin_messages.dart';
 import 'matching.dart';
 import 'n8n.dart';
 import 'pay.dart';
@@ -138,7 +140,8 @@ class CareerBook {
   /// Brings a LinkedIn export into every part of the app it helps: the
   /// profile (filled in, never overwritten), held certifications and
   /// recommendations on the Growth page, contacts at the employers the user
-  /// is pursuing (and recruiters), recent applications and saved jobs.
+  /// is pursuing (and recruiters), recent applications and saved jobs, and
+  /// the messages and connection requests as imported conversations.
   Future<LinkedInImport> importLinkedIn(LinkedInExport x, {required String today}) async {
     final before = await profile();
     final after = x.mergeInto(before);
@@ -219,7 +222,9 @@ class CareerBook {
       ],
       today: today,
       chase: false,
+      sourceKind: 'archive',
     );
+    final said = await importLinkedInMessages(x, today: today);
 
     return (
       jobs: after.experience.length - before.experience.length,
@@ -229,6 +234,8 @@ class CareerBook {
       applications: sent,
       savedJobs: saved.length,
       contacts: contacts,
+      messages: said.messages,
+      invitations: said.invitations,
     );
   }
 
@@ -776,16 +783,28 @@ class CareerBook {
   // ---- leads ----
 
   /// Adds leads not already known. With [chase], each gets a follow-up today.
+  /// Anyone whose e-mail address or LinkedIn profile belongs to a person
+  /// marked "do not contact" is skipped. Each new lead records where it was
+  /// found ([sourceKind], the source link) and the day.
   Future<int> importLeads(
     List<LeadSuggestion> leads, {
     String? jobId,
     required String today,
     bool chase = true,
+    String sourceKind = 'other',
   }) => db.transaction(() async {
     final existing = await (db.select(db.careerContacts)..where((c) => c.deleted.not())).get();
     final known = {for (final c in existing) _key(c.name, c.company)};
+    final blocked = suppressionKeys(
+      existing,
+      await (db.select(db.contactHandles)..where((h) => h.deleted.not())).get(),
+    );
     var added = 0;
     for (final l in leads) {
+      if (blocked.contains(handleKey('email', l.email)) ||
+          blocked.contains(handleKey('linkedin', l.linkedin))) {
+        continue;
+      }
       if (l.name.isEmpty || !known.add(_key(l.name, l.company))) continue;
       final id = newId();
       await save(
@@ -797,8 +816,14 @@ class CareerBook {
           title: Value(l.title),
           company: Value(l.company),
           email: Value(l.email),
+          phone: Value(l.phone),
           linkedin: Value(l.linkedin),
           source: Value(l.source),
+          sourceUrl: Value(
+            l.sourceUrl.isNotEmpty ? l.sourceUrl : (l.source.startsWith('http') ? l.source : ''),
+          ),
+          sourceKind: Value(sourceKind),
+          foundOn: Value(today),
           jobId: Value(jobId),
           followUp: Value(chase ? today : null),
           notes: Value([l.why, if (l.approach.isNotEmpty) 'Approach: ${l.approach}'].join('\n')),

@@ -24,6 +24,9 @@ part 'database.g.dart';
     CareerQuestions,
     CareerJournal,
     CareerStories,
+    ContactHandles,
+    Conversations,
+    Messages,
     Prefs,
     Outbox,
     SyncCursors,
@@ -53,11 +56,14 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     'career_questions',
     'career_journal',
     'career_stories',
+    'career_handles',
+    'career_conversations',
+    'career_messages',
     'prefs',
   ];
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -84,6 +90,30 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
           await customStatement(sql);
         }
       }
+      if (from < 4) {
+        // Only the columns not there yet, so a half-finished upgrade can run
+        // again.
+        final have = await customSelect('PRAGMA table_info(career_contacts)')
+            .map((r) => r.read<String>('name'))
+            .get();
+        for (final c in [
+          careerContacts.sourceUrl,
+          careerContacts.sourceKind,
+          careerContacts.foundOn,
+          careerContacts.basis,
+          careerContacts.basisNote,
+          careerContacts.doNotContact,
+          careerContacts.keepInTouchWeeks,
+        ]) {
+          if (!have.contains(c.name)) await m.addColumn(careerContacts, c);
+        }
+        await m.createTable(contactHandles);
+        await m.createTable(conversations);
+        await m.createTable(messages);
+        for (final sql in _v4Indexes) {
+          await customStatement(sql);
+        }
+      }
     },
   );
 
@@ -94,6 +124,7 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     'CREATE INDEX career_reports_kind ON career_reports (kind, created)',
     ..._v2Indexes,
     ..._v3Indexes,
+    ..._v4Indexes,
   ];
 
   /// Added in schema 2 (pre-employment checks and the archive).
@@ -107,5 +138,13 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     'CREATE INDEX IF NOT EXISTS career_documents_hash ON career_documents (hash)',
     'CREATE INDEX IF NOT EXISTS career_journal_day ON career_journal (day)',
     'CREATE INDEX IF NOT EXISTS career_questions_status ON career_questions (status)',
+  ];
+
+  /// Added in schema 4 (conversations, handles and messages).
+  static const _v4Indexes = [
+    'CREATE INDEX IF NOT EXISTS career_handles_contact ON career_handles (contact_id)',
+    'CREATE INDEX IF NOT EXISTS career_conversations_contact ON career_conversations (contact_id)',
+    'CREATE INDEX IF NOT EXISTS career_conversations_last ON career_conversations (last_at)',
+    'CREATE INDEX IF NOT EXISTS career_messages_conversation ON career_messages (conversation_id, sent_at)',
   ];
 }

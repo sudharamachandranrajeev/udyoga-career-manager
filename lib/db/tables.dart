@@ -134,12 +134,131 @@ class CareerContacts extends Table with SyncedRow {
   /// Where the lead was found (a team page, a job advert...).
   TextColumn get source => text().withDefault(const Constant(''))();
 
-  /// new | contacted | replied | cold
+  /// new | contacted | replied | cold. Since schema 4 these three follow the
+  /// person's newest conversation (domain/conversations.dart); they are kept
+  /// so the Contacts and Today pages read them as before.
   TextColumn get status => text().withDefault(const Constant('new'))();
   TextColumn get lastContact => text().nullable()();
   TextColumn get followUp => text().nullable()();
   TextColumn get jobId => text().nullable()();
   TextColumn get notes => text().withDefault(const Constant(''))();
+
+  // Where the person was found and why the user may contact them (UK GDPR:
+  // the source and the lawful basis are recorded for every contact).
+
+  /// The page the person was found on (an advert, a team page...).
+  TextColumn get sourceUrl => text().withDefault(const Constant(''))();
+
+  /// advert | team_page | speaker | register | met | archive | inbound |
+  /// referral | other
+  TextColumn get sourceKind => text().withDefault(const Constant('other'))();
+
+  /// When they were found, yyyy-MM-dd.
+  TextColumn get foundOn => text().nullable()();
+
+  /// legitimate_interest | they_contacted | consent
+  TextColumn get basis => text().withDefault(const Constant('legitimate_interest'))();
+  TextColumn get basisNote => text().withDefault(const Constant(''))();
+
+  /// True when the person asked not to be contacted: the composer is
+  /// blocked and lead imports skip their address and profile.
+  BoolColumn get doNotContact => boolean().withDefault(const Constant(false))();
+
+  /// "Keep in touch every N weeks", or null for no reminder.
+  IntColumn get keepInTouchWeeks => integer().nullable()();
+}
+
+/// One of a person's identities on a channel: an e-mail address, a LinkedIn
+/// profile, a phone number. One person can have many.
+@DataClassName('ContactHandle')
+class ContactHandles extends Table with SyncedRow {
+  @override
+  String get tableName => 'career_handles';
+
+  TextColumn get contactId => text()();
+
+  /// email | linkedin | bluesky | phone | in_person | other
+  TextColumn get channel => text()();
+
+  /// The address, profile URL, Bluesky handle or number.
+  TextColumn get handle => text()();
+
+  /// Which of the user's own accounts talks to it ('' for any).
+  TextColumn get account => text().withDefault(const Constant(''))();
+
+  /// The one to use first on this channel. ("primary" is an SQL keyword.)
+  BoolColumn get primary => boolean().named('is_primary').withDefault(const Constant(false))();
+}
+
+/// One thread with one person on one channel.
+@DataClassName('Conversation')
+class Conversations extends Table with SyncedRow {
+  @override
+  String get tableName => 'career_conversations';
+
+  /// The person (career_contacts id); null while the sender is unknown and
+  /// the thread waits in the Screener.
+  TextColumn get contactId => text().nullable()();
+
+  /// email | linkedin | bluesky | phone | in_person | other
+  TextColumn get channel => text()();
+
+  /// The user's own account on that channel ('' when there is one only).
+  TextColumn get account => text().withDefault(const Constant(''))();
+
+  /// api (sent and received by Udyoga) | manual (logged by the user) |
+  /// import (from an export file)
+  TextColumn get mode => text().withDefault(const Constant('manual'))();
+
+  /// The channel's own thread id (a Gmail thread, a Bluesky convo), so a
+  /// later fetch or import adds to this thread.
+  TextColumn get externalId => text().nullable()();
+
+  /// Who the other side is as the channel gave it (an address or profile
+  /// URL); names the sender of a Screener thread.
+  TextColumn get peer => text().withDefault(const Constant(''))();
+  TextColumn get subject => text().withDefault(const Constant(''))();
+
+  /// draft | to_send | awaiting_reply | replied | follow_up | closed
+  TextColumn get status => text().withDefault(const Constant('draft'))();
+  TextColumn get followUp => text().nullable()();
+  TextColumn get jobId => text().nullable()();
+
+  /// Time of the newest message, for sorting.
+  TextColumn get lastAt => text()();
+  IntColumn get unread => integer().withDefault(const Constant(0))();
+}
+
+/// One message in a conversation, or the user's note on it.
+@DataClassName('ThreadMessage')
+class Messages extends Table with SyncedRow {
+  @override
+  String get tableName => 'career_messages';
+
+  TextColumn get conversationId => text()();
+
+  /// out | in | note
+  TextColumn get direction => text()();
+
+  /// Plain text.
+  TextColumn get body => text().withDefault(const Constant(''))();
+
+  /// When it was sent; for a logged message, when the user says it was.
+  TextColumn get sentAt => text()();
+
+  /// api | manual | import | ai_draft
+  TextColumn get source => text().withDefault(const Constant('manual'))();
+
+  /// logged | invite (a LinkedIn connection note, logged) | draft | queued |
+  /// sent | failed | received
+  TextColumn get status => text().withDefault(const Constant('logged'))();
+
+  /// The provider's message id (Message-ID...), so nothing is stored twice.
+  TextColumn get externalId => text().nullable()();
+  TextColumn get inReplyTo => text().nullable()();
+
+  /// The AI draft this message came from.
+  TextColumn get draftOf => text().nullable()();
 }
 
 /// CVs: the base one made from the profile and those tailored to a job.

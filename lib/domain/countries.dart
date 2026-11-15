@@ -54,9 +54,11 @@ const globalPortals = [
   Portal('Glassdoor', 'https://www.glassdoor.com/Job/jobs.htm?sc.keyword={q}&locKeyword={l}'),
 ];
 
-/// LinkedIn people search, for finding recruiters and hiring managers.
-Uri linkedInPeople(String keywords) => Uri.parse(
-  'https://www.linkedin.com/search/results/people/?keywords=${Uri.encodeQueryComponent(keywords)}',
+/// LinkedIn people search, for finding recruiters and hiring managers,
+/// narrowed to people at [company] when one is given.
+Uri linkedInPeople(String keywords, {String company = ''}) => Uri.parse(
+  'https://www.linkedin.com/search/results/people/?keywords=${Uri.encodeQueryComponent(keywords)}'
+  '${company.trim().isEmpty ? '' : '&company=${Uri.encodeQueryComponent(company.trim())}'}',
 );
 
 /// LinkedIn company page search.
