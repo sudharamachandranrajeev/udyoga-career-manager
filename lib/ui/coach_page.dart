@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:drift/drift.dart' show Value;
@@ -12,6 +13,7 @@ import '../db/database.dart';
 import '../domain/companion.dart';
 import '../domain/companion_book.dart';
 import '../domain/json.dart';
+import '../domain/vidya_link.dart';
 import 'common.dart';
 
 /// The candidate's coach: the daily check-in, questions that keep the
@@ -56,6 +58,7 @@ class CoachPage extends ConsumerWidget {
         _Readiness(stories),
         _StoryBank(stories),
         const _Documents(),
+        const _VidyaCard(),
         if (journal.any((c) => c.entry.isNotEmpty))
           SectionCard(
             title: 'Past check-ins',
@@ -515,5 +518,85 @@ class _Documents extends ConsumerWidget {
       },
     );
     if (r != null && context.mounted) showMessage(context, r.summary);
+  }
+}
+
+/// The link with Vidya: what to learn and rehearse goes out as a study
+/// plan; what was finished there comes back.
+class _VidyaCard extends ConsumerWidget {
+  const _VidyaCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => SectionCard(
+    title: 'Learn and rehearse in Vidya',
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'A study plan for Vidya from what you still need: a story for each competency, the gaps in your job '
+          'assessments and your planned learning. Your stories become review cards. In Vidya, use Import a '
+          'study plan and open the file or paste it.',
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            FilledButton.tonalIcon(
+              icon: const Icon(Icons.save_alt),
+              label: const Text('Save plan'),
+              onPressed: () async {
+                final plan = await ref.read(sessionProvider).book.vidyaPlanNow();
+                if (!context.mounted) return;
+                await saveBytes(
+                  context,
+                  'udyoga-plan-${today()}.json',
+                  Uint8List.fromList(utf8.encode(const JsonEncoder.withIndent('  ').convert(plan))),
+                  mime: 'application/json',
+                );
+              },
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.content_copy),
+              label: const Text('Copy plan'),
+              onPressed: () async {
+                final plan = await ref.read(sessionProvider).book.vidyaPlanNow();
+                if (!context.mounted) return;
+                await copyText(context, jsonEncode(plan), what: 'Plan copied. Paste it into Vidya.');
+              },
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.download_done),
+              label: const Text('What I finished in Vidya'),
+              onPressed: () => _import(context, ref),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+
+  Future<void> _import(BuildContext context, WidgetRef ref) async {
+    final text = TextEditingController();
+    String? done;
+    await showFormDialog(
+      context,
+      title: 'What you finished in Vidya',
+      action: 'Import',
+      fields: (_) => [
+        const Text('In Vidya, open Portfolio and copy it as Markdown, then paste it here.'),
+        Field(text, 'Vidya portfolio', lines: 8, autofocus: true),
+      ],
+      onSave: () async {
+        final parsed = parseVidyaPortfolio(text.text);
+        if (parsed.learning.isEmpty && parsed.skills.isEmpty) {
+          return 'No finished learning or rated skills found. Paste the whole portfolio.';
+        }
+        final r = await ref.mutate((s) => s.book.importVidya(parsed, today: today()));
+        done = '${r.learning} finished on Growth, ${r.skills} skills added to your profile.';
+        return null;
+      },
+    );
+    if (done != null && context.mounted) showMessage(context, done!);
   }
 }
