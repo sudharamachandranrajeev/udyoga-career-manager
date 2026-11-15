@@ -237,8 +237,8 @@ void main() {
     await app.close();
   });
 
-  test('thirteen pages sit under six entries, each keeping its old id', () {
-    expect(allDestinations.map((d) => d.id), ['today', 'jobs', 'conversations', 'network', 'prepare', 'you']);
+  test('thirteen pages sit under five entries, each keeping its old id', () {
+    expect(allDestinations.map((d) => d.id), ['today', 'jobs', 'network', 'prepare', 'you']);
     expect(allPages.map((p) => p.id), [
       'today',
       'jobs',
@@ -257,7 +257,7 @@ void main() {
     expect(groupOf('applications')?.id, 'jobs');
     expect(groupOf('settings')?.id, 'you');
     expect(groupOf('today'), isNull);
-    expect(groupOf('conversations'), isNull);
+    expect(groupOf('conversations')?.id, 'network');
     expect(groupOf('find-people')?.id, 'network');
   });
 

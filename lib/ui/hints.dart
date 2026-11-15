@@ -5,7 +5,9 @@ const udyogaHints = <String, String>{
   // Navigation
   'nav.today': 'Follow-ups due, interviews, new matches and your next steps.',
   'nav.jobs': 'Openings matched to your profile, and every application by stage.',
-  'nav.network': 'Your contacts, and LinkedIn posts, comments and notes to send by hand.',
+  'nav.network':
+      'Conversations with people on every channel, your contacts, people to meet, and LinkedIn posts and notes to '
+      'send by hand.',
   'nav.prepare': 'Interview practice, your coach and what to learn next.',
   'nav.you': 'Your profile and CV, your career map, and Settings.',
   'nav.applications': 'Every application by stage, with follow-up dates.',

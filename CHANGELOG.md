@@ -3,7 +3,7 @@
 ## 0.6.0 (unreleased)
 
 - A new look across the app: calmer cards with thin borders, numbers that roll to their value, a glow on the next deadline, quicker page changes, and less motion when your system asks for it. Ctrl+K (or the search button) jumps to any page or action.
-- Navigation in six places: Today, Jobs (with Applications), Conversations, Network (Contacts, Find people, LinkedIn), Prepare (Interview, Coach, Growth) and You (Profile, Career, Settings).
+- Navigation in five places: Today, Jobs (with Applications), Network (Conversations, Contacts, Find people, LinkedIn), Prepare (Interview, Coach, Growth) and You (Profile, Career, Settings).
 - Conversations (new): every exchange with a person as a chat thread, on e-mail, LinkedIn, Bluesky, phone or in person. The top of each thread says who, their role, the channel and where you found them. For LinkedIn, Udyoga copies your message and opens LinkedIn; you send it and log it. Filters for replies waiting and follow-ups due, a Screener for people you have not saved, and a gentle warning when you send a lot on LinkedIn in a day.
 - E-mail: connect Gmail, iCloud, Yahoo, Fastmail or any IMAP server with an app password. Only mail to or from people you saved is kept. Send and reply from a thread; an alert on Android when a saved contact replies.
 - Contacts: where you found each person and why you may contact them, a suggested first line saying so, *Forget this person*, *Do not contact*, keep-in-touch reminders and merging of duplicates.

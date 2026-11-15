@@ -45,6 +45,7 @@ final applicationsPage = Destination(
 );
 
 /// Every conversation with every person, on any channel, as chat threads.
+/// It opens the Network entry, so the phone dock keeps five entries that fit.
 final conversationsPage = Destination(
   id: 'conversations',
   label: 'Conversations',
@@ -142,7 +143,7 @@ final pageGroups = <PageGroup>[
     label: 'Network',
     icon: Icons.hub_outlined,
     selectedIcon: Icons.hub,
-    pages: [contactsPage, findPeoplePage, linkedinPage],
+    pages: [conversationsPage, contactsPage, findPeoplePage, linkedinPage],
   ),
   PageGroup(
     id: 'prepare',
@@ -163,12 +164,7 @@ final pageGroups = <PageGroup>[
 final careerModule = AppModule(
   id: 'career',
   name: 'Career',
-  destinations: [
-    todayPage,
-    pageGroups.first.destination,
-    conversationsPage,
-    for (final g in pageGroups.skip(1)) g.destination,
-  ],
+  destinations: [todayPage, for (final g in pageGroups) g.destination],
 );
 
 final modules = <AppModule>[careerModule];
@@ -177,12 +173,7 @@ final modules = <AppModule>[careerModule];
 List<Destination> get allDestinations => [for (final m in modules) ...m.destinations];
 
 /// Every page, in navigation order, grouped or not.
-List<Destination> get allPages => [
-  todayPage,
-  ...pageGroups.first.pages,
-  conversationsPage,
-  for (final g in pageGroups.skip(1)) ...g.pages,
-];
+List<Destination> get allPages => [todayPage, for (final g in pageGroups) ...g.pages];
 
 /// The group page [id] lives in, or null for a page of its own (Today).
 PageGroup? groupOf(String id) => pageGroups.where((g) => g.pages.any((p) => p.id == id)).firstOrNull;
