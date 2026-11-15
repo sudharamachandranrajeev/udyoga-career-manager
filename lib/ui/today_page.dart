@@ -2,6 +2,7 @@ import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, che
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/navigation.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/pipeline.dart';
@@ -12,6 +13,7 @@ import 'common.dart';
 import 'contacts_page.dart';
 import 'job_page.dart';
 import 'jobs_page.dart';
+import 'kit/kit.dart';
 import 'look.dart';
 import 'offer_checks.dart';
 import 'today_hero.dart';
@@ -143,6 +145,11 @@ class TodayPage extends ConsumerWidget {
         ),
     ]..sort((a, b) => a.date.compareTo(b.date));
     final next = deadlines.firstOrNull;
+    final followUps = dueApps.length + dueLeads.length;
+    // Contacts who have answered and are waiting on you; ones already due a
+    // follow-up are listed there instead. (Conversations will add unanswered
+    // messages here once it is merged.)
+    final replies = leads.where((l) => l.status == 'replied' && !dueLeads.contains(l)).toList();
     final sent = apps.where((a) => a.applied != null).length;
     // Heard back: shortlisted or further, up to accepted.
     final heard = apps.where((a) {
@@ -164,23 +171,57 @@ class TodayPage extends ConsumerWidget {
       children: [
         _Greeting(profile),
         TodayHero(
-          applied: sent,
-          interviews: interviews.length,
-          followUps: dueApps.length + dueLeads.length,
-          deadline: next == null ? null : _withNiceDate(next),
-        ),
-        TiltGrid(
-          minWidth: 160,
-          children: [
-            KpiTile(label: 'In progress', value: '${open.length}', icon: Icons.send_outlined),
-            KpiTile(label: 'New matches', value: '${fresh.length}', icon: Icons.work_outline),
-            KpiTile(
+          counts: [
+            (
+              label: 'Applied',
+              value: sent,
+              suffix: '',
+              icon: Icons.send_outlined,
+              caption: sent == 0 ? 'Nothing sent yet' : 'Applications sent',
+              status: null,
+            ),
+            (
+              label: 'Interviews',
+              value: interviews.length,
+              suffix: '',
+              icon: Icons.record_voice_over_outlined,
+              caption: interviews.isEmpty ? 'None booked' : 'Coming up',
+              status: null,
+            ),
+            (
+              label: 'Follow-ups due',
+              value: followUps,
+              suffix: '',
+              icon: Icons.notifications_active_outlined,
+              caption: followUps == 0 ? 'All caught up' : 'Chase them today',
+              status: followUps == 0 ? null : Status.warning,
+            ),
+            (
+              label: 'In progress',
+              value: open.length,
+              suffix: '',
+              icon: Icons.timelapse,
+              caption: open.isEmpty ? 'No open applications' : 'Open applications',
+              status: null,
+            ),
+            (
+              label: 'New matches',
+              value: fresh.length,
+              suffix: '',
+              icon: Icons.work_outline,
+              caption: fresh.isEmpty ? 'None new yet' : 'To look through',
+              status: null,
+            ),
+            (
               label: 'Response rate',
-              value: sent == 0 ? '–' : '${(heard * 100 / sent).round()}%',
+              value: sent == 0 ? null : (heard * 100 / sent).round(),
+              suffix: '%',
               icon: Icons.mark_email_unread_outlined,
               caption: sent == 0 ? 'No applications sent yet' : '$heard of $sent heard back',
+              status: null,
             ),
           ],
+          deadline: next == null ? null : _withNiceDate(next),
         ),
         if (refresh.running)
           Padding(
@@ -193,6 +234,53 @@ class TodayPage extends ConsumerWidget {
               ],
             ),
           ),
+        _NeedsYou(
+          [
+            if (replies.isNotEmpty)
+              SectionCard(
+                title: 'Replies waiting',
+                child: Column(children: [for (final l in replies) LeadTile(l)]),
+              ),
+            if (dueApps.isNotEmpty || dueLeads.isNotEmpty)
+              SectionCard(
+                title: 'Follow up today',
+                child: Column(
+                  children: [
+                    for (final a in dueApps) ApplicationTile(a),
+                    for (final l in dueLeads) LeadTile(l),
+                  ],
+                ),
+              ),
+            if (checks.isNotEmpty)
+              SectionCard(
+                title: 'Offer checks due',
+                child: Column(
+                  children: [
+                    for (final c in checks)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(checkStatus(c, now).icon, color: checkStatus(c, now).color),
+                        title: Text(c.title),
+                        subtitle: Text(
+                          '${byId[c.applicationId]!.title} · due ${niceDate(c.due!)} (${relativeDay(c.due!, now)})',
+                        ),
+                        onTap: () =>
+                            Navigator.of(context)
+                                .push(MaterialPageRoute(builder: (_) => ApplicationPage(c.applicationId))),
+                      ),
+                  ],
+                ),
+              ),
+            if (closing.isNotEmpty)
+              SectionCard(
+                title: 'Closing this week',
+                child: Column(children: [for (final j in closing) JobTile(j, list: 'closing')]),
+              ),
+          ],
+          count: replies.length + followUps + checks.length + closing.length,
+          nothingLabel: fresh.isEmpty ? 'Open Jobs' : 'See new matches',
+          onNothing: () => goToPage(ref, 'jobs'),
+        ),
         if ((eveningNow && (checkIn == null || checkIn.entry.isEmpty)) || toConfirm > 0)
           SectionCard(
             title: 'Your coach',
@@ -251,38 +339,6 @@ class TodayPage extends ConsumerWidget {
               ],
             ),
           ),
-        if (dueApps.isNotEmpty || dueLeads.isNotEmpty)
-          SectionCard(
-            title: 'Follow up today',
-            child: Column(
-              children: [for (final a in dueApps) ApplicationTile(a), for (final l in dueLeads) LeadTile(l)],
-            ),
-          ),
-        if (checks.isNotEmpty)
-          SectionCard(
-            title: 'Offer checks due',
-            child: Column(
-              children: [
-                for (final c in checks)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(checkStatus(c, now).icon, color: checkStatus(c, now).color),
-                    title: Text(c.title),
-                    subtitle: Text(
-                      '${byId[c.applicationId]!.title} · due ${niceDate(c.due!)} (${relativeDay(c.due!, now)})',
-                    ),
-                    onTap: () =>
-                        Navigator.of(context)
-                            .push(MaterialPageRoute(builder: (_) => ApplicationPage(c.applicationId))),
-                  ),
-              ],
-            ),
-          ),
-        if (closing.isNotEmpty)
-          SectionCard(
-            title: 'Closing this week',
-            child: Column(children: [for (final j in closing) JobTile(j, list: 'closing')]),
-          ),
         SectionCard(
           title: 'Best new matches',
           child: fresh.isEmpty
@@ -337,6 +393,56 @@ class _Greeting extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// What needs doing today: replies to answer, follow-ups, offer checks and
+/// jobs closing, each group a card arriving in turn. When nothing does, it
+/// says so and offers the one useful next step.
+class _NeedsYou extends StatelessWidget {
+  const _NeedsYou(this.cards, {required this.count, required this.nothingLabel, required this.onNothing});
+  final List<Widget> cards;
+  final int count;
+  final String nothingLabel;
+  final VoidCallback onNothing;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            children: [
+              Flexible(child: Text('Needs you', style: t.titleLarge)),
+              if (count > 0) ...[
+                const SizedBox(width: 10),
+                StatusPill(count == 1 ? '1 thing' : '$count things', status: Status.warning),
+              ],
+            ],
+          ),
+        ),
+        if (cards.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: SpotlightCard(
+              child: Row(
+                children: [
+                  Icon(Icons.task_alt, color: Status.good.color),
+                  const SizedBox(width: 12),
+                  const Expanded(child: Text('Nothing needs you today.')),
+                  const SizedBox(width: 8),
+                  TextButton(onPressed: onNothing, child: Text(nothingLabel)),
+                ],
+              ),
+            ),
+          )
+        else
+          for (final (i, card) in cards.indexed) BlurFadeIn(index: i, child: card),
+      ],
     );
   }
 }

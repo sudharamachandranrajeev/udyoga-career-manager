@@ -117,18 +117,36 @@ void main() {
     expect(find.text('Follow up today'), findsOneWidget);
     expect(find.text('Upcoming interviews'), findsOneWidget);
     expect(find.text('Closing this week'), findsOneWidget);
-    // The hero strip: the counts have rolled to their values, and the next
-    // deadline (a saved job closing this week) has the beam round it.
-    for (final label in ['Applied', 'Interviews', 'Follow-ups due', 'Next deadline']) {
+    // The hero strip: six counts, rolled to their values, laid out with no
+    // lone tile, and the next deadline (a saved job closing this week) with
+    // the beam round it.
+    for (final label in [
+      'Applied',
+      'Interviews',
+      'Follow-ups due',
+      'In progress',
+      'New matches',
+      'Response rate',
+      'Next deadline',
+    ]) {
       expect(find.descendant(of: find.byType(TodayHero), matching: find.text(label)), findsOneWidget);
     }
     final counts = tester.widgetList<RollingNumber>(find.byType(RollingNumber)).toList();
-    expect(counts, hasLength(3));
+    expect(counts, hasLength(6));
     for (final n in counts) {
-      expect(find.descendant(of: find.byWidget(n), matching: find.text('${n.value}')), findsOneWidget);
+      final shown = RollingNumber.format(n.value, suffix: n.suffix);
+      expect(find.descendant(of: find.byWidget(n), matching: find.text(shown)), findsOneWidget);
     }
-    expect(counts.last.value, greaterThan(0), reason: 'the seed has follow-ups due');
+    expect(counts[2].value, greaterThan(0), reason: 'the seed has follow-ups due');
+    expect(counts.last.suffix, '%', reason: 'the response rate');
     expect(find.ancestor(of: find.text('Next deadline'), matching: find.byType(BorderBeam)), findsOneWidget);
+    // The seed's due items sit under "Needs you", each group arriving in turn.
+    expect(find.text('Needs you'), findsOneWidget);
+    expect(
+      find.ancestor(of: find.text('Follow up today'), matching: find.byType(BlurFadeIn)),
+      findsOneWidget,
+    );
+    expect(find.text('Nothing needs you today.'), findsNothing);
     await app.close();
   });
 
@@ -137,8 +155,13 @@ void main() {
     await app.open();
     await app.run();
     expect(find.descendant(of: find.byType(TodayHero), matching: find.text('Applied')), findsOneWidget);
-    expect(find.descendant(of: find.byType(TodayHero), matching: find.text('0')), findsNWidgets(3));
+    // Five zero counts, and a dash for the response rate: nothing was sent.
+    expect(find.descendant(of: find.byType(TodayHero), matching: find.text('0')), findsNWidgets(5));
+    expect(find.descendant(of: find.byType(TodayHero), matching: find.text('–')), findsOneWidget);
     expect(find.text('Next deadline'), findsNothing);
+    // Nothing is due, and it says so with one next step.
+    expect(find.text('Nothing needs you today.'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Open Jobs'), findsOneWidget);
     expect(find.byType(BorderBeam), findsNothing);
     expect(tester.takeException(), isNull);
     await app.close();
