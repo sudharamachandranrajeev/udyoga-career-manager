@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:udyoga/app/app.dart';
+import 'package:udyoga/app/modules.dart';
 import 'package:udyoga/app/providers.dart';
 import 'package:udyoga/app/session.dart';
 import 'package:udyoga/domain/book.dart';
@@ -77,9 +78,19 @@ class AppHarness {
     await tester.pump();
   }
 
-  /// Goes to a top-level page through the rail (desktop) or the bar and its
-  /// More sheet (phone).
+  /// Goes to a page: through the rail (desktop) or the dock (phone) to its
+  /// navigation entry and, when the entry groups pages, through the entry's
+  /// switch to the page.
   Future<void> go(String page) async {
+    final target = allPages.where((p) => p.label == page).firstOrNull;
+    final group = target == null ? null : groupOf(target.id);
+    await _entry(group?.label ?? page);
+    if (group == null) return;
+    await tap(find.descendant(of: find.byKey(ValueKey('pills.${group.id}')), matching: find.text(page)));
+  }
+
+  /// Goes to a navigation entry through the rail or the dock.
+  Future<void> _entry(String page) async {
     final rail = find.descendant(of: find.byType(NavigationRail), matching: find.text(page));
     if (rail.evaluate().isNotEmpty) return tap(rail);
     // Phones: the dock holds every screen and scrolls to the one asked for.

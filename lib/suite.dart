@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/modules.dart';
+import 'app/navigation.dart';
 import 'app/providers.dart';
 import 'app/security_checks.dart';
 import 'app/session.dart';
@@ -20,7 +21,9 @@ final udyogaSuite = SuiteApp(
   overrides: (s) => [sessionProvider.overrideWithValue(s as AppSession)],
   hints: udyogaHints,
   theme: (_, b) => udyogaTheme(b),
-  home: (onHome) => AppShell(destinations: allDestinations, floating: true, onHome: onHome),
+  home: (onHome) => UdyogaPalette(
+    child: AppShell(destinations: allDestinations, floating: true, onHome: onHome),
+  ),
   builder: (context, child) => ShadBridge(child: Backdrop(child: child ?? const SizedBox.shrink())),
   // The routine refresh, as in the app (it runs only what is due).
   onStart: (ref) => Future.microtask(() => ref.read(refreshTickerProvider)).ignore(),

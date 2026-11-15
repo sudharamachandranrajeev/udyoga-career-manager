@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:brahma_core/brahma_core.dart' show AppShell;
 import 'package:udyoga/app/modules.dart';
+import 'package:udyoga/app/navigation.dart';
+import 'package:udyoga/app/settings_page.dart';
 import 'package:udyoga/db/database.dart';
 import 'package:udyoga/domain/pipeline.dart';
 import 'package:udyoga/ui/applications_page.dart';
+import 'package:udyoga/ui/coach_page.dart';
+import 'package:udyoga/ui/growth_page.dart';
+import 'package:udyoga/ui/kit/kit.dart';
+import 'package:udyoga/ui/linkedin_page.dart';
+import 'package:udyoga/ui/today_page.dart';
 
 import 'app_harness.dart';
 import 'seed.dart';
@@ -12,7 +22,8 @@ import 'seed.dart';
 /// Smoke tests: every page builds, with and without data, on phone and
 /// desktop widths, without throwing or overflowing; and the main flows.
 void main() {
-  final pages = [for (final d in allDestinations) d.label];
+  // Every page, including those inside a grouped navigation entry.
+  final pages = [for (final d in allPages) d.label];
 
   testWidgets('every page builds on a desktop window, empty and with data', (tester) async {
     for (final seeded in [false, true]) {
@@ -158,22 +169,90 @@ void main() {
 
   testWidgets('the side rail scrolls by touchpad on a short window', (tester) async {
     final app = AppHarness(tester);
-    tester.view.physicalSize = const Size(1000, 420);
+    tester.view.physicalSize = const Size(1000, 360);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await app.open();
     await app.run();
-    // Ten screens do not fit 420 pixels: the rail must scroll, not overflow.
+    // Five entries do not fit 360 pixels: the rail must scroll, not overflow.
     expect(tester.takeException(), isNull);
     final rail = find.byType(NavigationRail);
     final last = find.descendant(of: rail, matching: find.text(allDestinations.last.label));
-    expect(tester.getRect(last).top, greaterThan(420));
+    expect(tester.getRect(last).top, greaterThan(360));
     final pad = await tester.createGesture(kind: PointerDeviceKind.trackpad);
     await pad.panZoomStart(tester.getCenter(rail));
     await pad.panZoomUpdate(tester.getCenter(rail), pan: const Offset(0, -800));
     await pad.panZoomEnd();
     await tester.pump(const Duration(seconds: 1));
-    expect(tester.getRect(last).bottom, lessThanOrEqualTo(420));
+    expect(tester.getRect(last).bottom, lessThanOrEqualTo(360));
+    await app.close();
+  });
+
+  test('eleven pages sit under five entries, each keeping its old id', () {
+    expect(allDestinations.map((d) => d.id), ['today', 'jobs', 'network', 'prepare', 'you']);
+    expect(allPages.map((p) => p.id), [
+      'today',
+      'jobs',
+      'applications',
+      'contacts',
+      'linkedin',
+      'interview',
+      'coach',
+      'growth',
+      'profile',
+      'career',
+      'settings',
+    ]);
+    expect(groupOf('applications')?.id, 'jobs');
+    expect(groupOf('settings')?.id, 'you');
+    expect(groupOf('today'), isNull);
+  });
+
+  for (final phone in [false, true]) {
+    testWidgets('a page opened by its id lands on its tab (${phone ? 'phone' : 'desktop'})', (tester) async {
+      final app = AppHarness(tester);
+      phone ? app.phone() : app.desktop();
+      await app.open(seed: seedBook);
+      await app.run();
+      final ref = tester.element(find.byType(AppShell)) as WidgetRef;
+      for (final (id, page) in [
+        ('applications', ApplicationsPage),
+        ('growth', GrowthPage),
+        ('settings', SettingsPage),
+        ('linkedin', LinkedInPage),
+        ('coach', CoachPage),
+        ('today', TodayPage),
+      ]) {
+        expect(goToPage(ref, id), isTrue, reason: id);
+        await app.settle();
+        // Only the page on show is onstage; the others wait offstage.
+        expect(find.byType(page), findsOneWidget, reason: id);
+        expect(tester.takeException(), isNull, reason: id);
+      }
+      expect(goToPage(ref, 'nowhere'), isFalse);
+      await app.close();
+    });
+  }
+
+  testWidgets('Ctrl+K opens the palette, which jumps to a page inside a group', (tester) async {
+    final app = AppHarness(tester)..desktop();
+    await app.open(seed: seedBook);
+    await app.run();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump();
+    expect(find.byType(CommandPalette), findsOneWidget);
+    await tester.enterText(
+      find.descendant(of: find.byType(CommandPalette), matching: find.byType(EditableText)),
+      'grow',
+    );
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await app.settle();
+    expect(find.byType(CommandPalette), findsNothing);
+    expect(find.byType(GrowthPage), findsOneWidget);
+    expect(find.byType(TodayPage), findsNothing);
     await app.close();
   });
 }
