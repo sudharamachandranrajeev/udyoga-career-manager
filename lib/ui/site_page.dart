@@ -9,6 +9,7 @@ import '../domain/insights.dart';
 import '../domain/json.dart';
 import '../domain/pipeline.dart';
 import 'common.dart';
+import 'kit/kit.dart';
 import 'jobs_page.dart';
 import 'site_browser.dart';
 
@@ -236,7 +237,7 @@ class _Answers extends ConsumerWidget {
     final a = (ref.watch(applicationsProvider).value ?? const <JobApplication>[])
         .where((a) => a.id == applicationId)
         .firstOrNull;
-    if (p == null || a == null) return const Center(child: CircularProgressIndicator());
+    if (p == null || a == null) return const SkeletonCards(count: 2);
     final cvs = ref.watch(resumesProvider).value ?? const <Resume>[];
     final cv =
         cvs.where((r) => r.id == a.resumeId).firstOrNull ??
@@ -261,7 +262,10 @@ class _Answers extends ConsumerWidget {
                     tooltip: 'Copy ${s.title.toLowerCase()}',
                     onPressed: () => copyText(context, s.text, what: '${s.title} copied.'),
                   )
-                : null,
+                : const Padding(
+                    padding: EdgeInsets.only(right: 8),
+                    child: StatusPill('To fill in', status: Status.warning),
+                  ),
             child: s.ready
                 ? SelectableText(s.text)
                 : Text(s.missing, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),

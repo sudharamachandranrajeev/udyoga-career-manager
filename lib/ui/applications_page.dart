@@ -536,8 +536,8 @@ class ApplicationPage extends ConsumerWidget {
       return Scaffold(
         appBar: AppBar(),
         body: all.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : const EmptyState(icon: Icons.send_outlined, title: 'This application was removed'),
+            ? const Padding(padding: EdgeInsets.all(16), child: SkeletonCards(count: 2))
+            : Gone(icon: Icons.send_outlined, title: 'This application was removed'),
       );
     }
     final now = today();

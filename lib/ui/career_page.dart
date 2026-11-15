@@ -10,6 +10,7 @@ import '../domain/insights.dart';
 import '../domain/json.dart';
 import '../domain/profile.dart';
 import 'common.dart';
+import 'look.dart';
 
 const _directions = {
   'vertical': ('Up', Icons.north),
@@ -252,14 +253,14 @@ class _Branch extends ConsumerWidget {
         Card(
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(Radii.sm),
             side: BorderSide(
               color: recommended ? scheme.primary : scheme.outlineVariant,
               width: recommended ? 2 : 1,
             ),
           ),
           child: InkWell(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(Radii.sm),
             onTap: () => _details(context, ref),
             child: Padding(
               padding: const EdgeInsets.all(10),

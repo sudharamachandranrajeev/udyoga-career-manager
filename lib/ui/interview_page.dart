@@ -272,8 +272,8 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       return Scaffold(
         appBar: AppBar(),
         body: rounds.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : const EmptyState(icon: Icons.record_voice_over_outlined, title: 'This round was removed'),
+            ? const Padding(padding: EdgeInsets.all(16), child: SkeletonCards(count: 2))
+            : Gone(icon: Icons.record_voice_over_outlined, title: 'This round was removed'),
       );
     }
     final questions = objs(decodeList(round.questions)).map(PracticeQuestion.new).toList();
@@ -407,20 +407,13 @@ class _Metrics extends StatelessWidget {
       spacing: 6,
       runSpacing: 6,
       children: [
-        Chip(
-          label: Text('${m.words} words · ${secs ~/ 60}:${(secs % 60).toString().padLeft(2, '0')} spoken'),
-        ),
-        Chip(label: Text(m.lengthVerdict)),
-        Chip(
-          avatar: Icon(m.fillers > 3 ? Status.warning.icon : Status.good.icon, size: 16),
-          label: Text('${m.fillers} fillers'),
-        ),
-        Chip(label: Text('"I" ${m.iCount} · "we" ${m.weCount}')),
-        Chip(label: Text('${m.figures} figures')),
-        Chip(
-          label: Text(
-            'STAR: ${[for (final e in parts.entries) m.star.contains(e.key) ? e.value : '·'].join(' ')}',
-          ),
+        StatusPill('${m.words} words · ${secs ~/ 60}:${(secs % 60).toString().padLeft(2, '0')} spoken'),
+        StatusPill(m.lengthVerdict),
+        StatusPill('${m.fillers} fillers', status: m.fillers > 3 ? Status.warning : Status.good),
+        StatusPill('"I" ${m.iCount} · "we" ${m.weCount}'),
+        StatusPill('${m.figures} figures'),
+        StatusPill(
+          'STAR: ${[for (final e in parts.entries) m.star.contains(e.key) ? e.value : '·'].join(' ')}',
         ),
       ],
     );

@@ -12,7 +12,8 @@ typedef Slide = ({String title, String body});
 const _width = 1080, _height = 1350;
 
 /// The carousel as a PDF to upload as a LinkedIn document post: the cover
-/// in azure, the rest light, each signed with [name] and numbered.
+/// in azure, the rest on the light canvas in the app's own colours, each
+/// signed with [name] and numbered.
 Future<Uint8List> carouselPdf(List<Slide> slides, {String name = ''}) async => imagePdf([
   for (final (i, s) in slides.indexed) await _render(s, index: i, count: slides.length, name: name),
 ]);
@@ -20,11 +21,11 @@ Future<Uint8List> carouselPdf(List<Slide> slides, {String name = ''}) async => i
 Future<PdfPage> _render(Slide s, {required int index, required int count, required String name}) async {
   final cover = index == 0;
   final fg = cover ? Colors.white : ink;
-  final muted = cover ? Colors.white70 : const Color(0xFF5B6680);
+  final muted = cover ? Colors.white70 : palette(Brightness.light).muted;
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
   final size = const Size(1.0 * _width, 1.0 * _height);
-  canvas.drawRect(Offset.zero & size, Paint()..color = cover ? azure : const Color(0xFFF7F9FD));
+  canvas.drawRect(Offset.zero & size, Paint()..color = cover ? azure : palette(Brightness.light).bottom);
   canvas.drawCircle(
     Offset(size.width * 0.95, size.height * 0.06),
     360,

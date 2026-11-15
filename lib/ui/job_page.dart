@@ -53,8 +53,8 @@ class JobPage extends ConsumerWidget {
       return Scaffold(
         appBar: AppBar(),
         body: all.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : const EmptyState(icon: Icons.work_outline, title: 'This job was removed'),
+            ? const Padding(padding: EdgeInsets.all(16), child: SkeletonCards(count: 2))
+            : Gone(icon: Icons.work_outline, title: 'This job was removed'),
       );
     }
     final hasAi = ref.watch(advisorProvider).value != null;
@@ -502,7 +502,7 @@ class FitView extends StatelessWidget {
         if (fit.employer.isNotEmpty) ...[const Subhead('The employer'), SelectableText(fit.employer)],
         if (fit.keywords.isNotEmpty) ...[
           const Subhead('Keywords your CV needs'),
-          Wrap(spacing: 6, runSpacing: 6, children: [for (final k in fit.keywords) Chip(label: Text(k))]),
+          Wrap(spacing: 6, runSpacing: 6, children: [for (final k in fit.keywords) StatusPill(k)]),
         ],
         if (fit.tips.isNotEmpty) ...[
           const Subhead('How to apply'),

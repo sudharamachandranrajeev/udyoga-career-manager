@@ -7,6 +7,7 @@ import '../db/database.dart';
 import '../domain/insights.dart';
 import '../domain/pay.dart';
 import 'common.dart';
+import 'kit/kit.dart';
 
 String _pounds(int n) {
   final s = n.abs().toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
@@ -50,11 +51,27 @@ class PayChangeCard extends ConsumerWidget {
           else if (change == null)
             const Text('The advert gives no salary to compare with.')
           else ...[
-            Text(
-              '${_signed(change.grossYear)} a year (${change.grossPercent >= 0 ? '+' : ''}'
-              '${change.grossPercent.toStringAsFixed(1)}%)',
-              style: text.titleMedium,
+            // The headline figure rolls to its value as the page opens.
+            Wrap(
+              spacing: 10,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                RollingNumber(
+                  change.grossYear,
+                  prefix: '£',
+                  suffix: ' a year',
+                  showSign: true,
+                  style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                StatusPill(
+                  '${change.grossPercent >= 0 ? '+' : ''}${change.grossPercent.toStringAsFixed(1)}%',
+                  status: change.grossYear >= 0 ? Status.good : Status.serious,
+                  icon: change.grossYear >= 0 ? Icons.trending_up : Icons.trending_down,
+                ),
+              ],
             ),
+            const SizedBox(height: 4),
             Text(
               '${base.label.isEmpty ? _pounds(base.pay) : '${base.label} (${_pounds(base.pay)})'} to '
               '${_pounds(next!)}${band.isEmpty ? '' : ', Band $band'}${job.salaryMin == null ? ', entry point' : ''}.',

@@ -130,6 +130,24 @@ class AsyncList<T> extends StatelessWidget {
       : AsyncView(value, builder: builder, onRetry: onRetry);
 }
 
+/// Shown where an opened item has since been deleted (here or on another
+/// device): says so, with the way back.
+class Gone extends StatelessWidget {
+  const Gone({super.key, required this.icon, required this.title});
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => EmptyState(
+    icon: icon,
+    title: title,
+    message: 'It may have been deleted on another device.',
+    actions: [
+      FilledButton.tonal(onPressed: () => Navigator.of(context).maybePop(), child: const Text('Go back')),
+    ],
+  );
+}
+
 /// A plain text field with a label.
 class Field extends StatelessWidget {
   const Field(
