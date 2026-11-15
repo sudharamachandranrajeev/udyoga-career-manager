@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.0 (unreleased)
+## 0.6.0 (2026-11-15)
 
 - A new look across the app: calmer cards with thin borders, numbers that roll to their value, a glow on the next deadline, quicker page changes, and less motion when your system asks for it. Ctrl+K (or the search button) jumps to any page or action.
 - Navigation in five places: Today, Jobs (with Applications), Network (Conversations, Contacts, Find people, LinkedIn), Prepare (Interview, Coach, Growth) and You (Profile, Career, Settings).
