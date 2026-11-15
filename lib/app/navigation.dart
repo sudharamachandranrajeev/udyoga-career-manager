@@ -121,6 +121,13 @@ bool goToPage(WidgetRef ref, String id) {
   return showDestination(group?.id ?? id);
 }
 
+/// Shows the Conversations page with thread [id] asked for: the page opens
+/// it from [openThreadProvider].
+bool openThread(WidgetRef ref, String id) {
+  ref.read(openThreadProvider.notifier).open(id);
+  return goToPage(ref, 'conversations');
+}
+
 /// Switches the shell to navigation entry [id].
 ///
 /// brahma_core's AppShell keeps its selection to itself, but it marks each
