@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
+import '../domain/bluesky.dart';
 import '../domain/mail.dart';
 import 'common.dart';
 
@@ -10,6 +11,8 @@ import 'common.dart';
 // app password. Udyoga reads only mail to or from people saved in it (and
 // replies in their threads) and sends only what the user writes and sends.
 // The settings stay on this device; the password stays in its keychain.
+// Bluesky signs in with an app password too, for search, posting and the
+// user's own DMs; its session tokens stay in the keychain.
 
 class AccountsPage extends ConsumerWidget {
   const AccountsPage({super.key});
@@ -22,7 +25,7 @@ class AccountsPage extends ConsumerWidget {
       actions: [
         IconButton(
           icon: const Icon(Icons.sync),
-          tooltip: 'Check mail now',
+          tooltip: 'Check messages now',
           onPressed: sync.running ? null : () => checkMailNow(context, ref),
         ),
       ],
@@ -54,6 +57,7 @@ class AccountsPage extends ConsumerWidget {
             ),
           ),
         ),
+        const BlueskyAccountCard(),
       ],
     );
   }
@@ -236,4 +240,123 @@ Future<void> connectMailAccount(BuildContext context, WidgetRef ref) async {
   ref.read(revisionProvider.notifier).bump();
   showMessage(context, 'Connected. Checking for mail from your contacts…');
   await checkMailNow(context, ref);
+}
+
+// ---- Bluesky ----
+
+/// The Bluesky account: connect, what it allows, alerts and disconnect.
+class BlueskyAccountCard extends ConsumerWidget {
+  const BlueskyAccountCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => SectionCard(
+    title: 'Bluesky',
+    hint:
+        'Search people and posts by topic, post when you press Post, and see your direct messages with '
+        'saved contacts in Conversations.',
+    child: AsyncView(
+      ref.watch(blueskyAccountProvider),
+      builder: (a) => a == null
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Not connected.'),
+                const SizedBox(height: 8),
+                FilledButton.tonalIcon(
+                  icon: const Icon(Icons.add),
+                  label: const Text('Connect Bluesky'),
+                  onPressed: () => connectBluesky(context, ref),
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.cloud_outlined),
+                  title: Text('@${a.handle}'),
+                  subtitle: Text(
+                    a.dms
+                        ? 'Search, posting and direct messages.'
+                        : 'Search and posting. This app password does not allow direct messages: make one '
+                              'with "Allow access to your direct messages" ticked and connect again to see them.',
+                  ),
+                ),
+                if (a.dms)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    title: const Text('Alert me when a saved contact sends a DM'),
+                    value: a.notify,
+                    onChanged: (v) async {
+                      await ref.read(blueskyProvider).saveAccount(a.copyWith(notify: v));
+                      ref.read(revisionProvider.notifier).bump();
+                    },
+                  ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    icon: const Icon(Icons.link_off),
+                    label: const Text('Disconnect Bluesky'),
+                    onPressed: () async {
+                      if (!await confirm(
+                        context,
+                        title: 'Disconnect @${a.handle}?',
+                        message:
+                            'Udyoga signs out of Bluesky on this device. Messages already in your '
+                            'conversations stay.',
+                        action: 'Disconnect',
+                        destructive: true,
+                      )) {
+                        return;
+                      }
+                      await ref.read(blueskyProvider).signOut();
+                      ref.read(revisionProvider.notifier).bump();
+                    },
+                  ),
+                ),
+              ],
+            ),
+    ),
+  );
+}
+
+/// Signs in to Bluesky with an app password. Returns whether it worked.
+Future<bool> connectBluesky(BuildContext context, WidgetRef ref) async {
+  final server = TextEditingController(text: bskyService);
+  final handle = TextEditingController();
+  final password = TextEditingController();
+  final ok = await showFormDialog(
+    context,
+    title: 'Connect Bluesky',
+    action: 'Sign in',
+    fields: (_) => [
+      Field(handle, 'Handle', hint: 'you.bsky.social'),
+      Field(password, 'App password', obscure: true, hint: 'abcd-efgh-ijkl-mnop'),
+      const Text(appPasswordHelp),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          icon: const Icon(Icons.open_in_new),
+          label: const Text('Make an app password'),
+          onPressed: () => openLink(context, appPasswordUrl),
+        ),
+      ),
+      Field(server, 'Server', helper: 'Change only if your account is on your own PDS.'),
+      const Text(
+        'Udyoga keeps the sign-in tokens in this device\'s keychain, not the password. Nothing is posted or '
+        'sent unless you press Post or Send.',
+      ),
+    ],
+    onSave: () async {
+      if (handle.text.trim().isEmpty) return 'Enter your handle.';
+      await ref
+          .read(blueskyProvider)
+          .signIn(service: server.text, identifier: handle.text, appPassword: password.text);
+      return null;
+    },
+  );
+  if (ok) ref.read(revisionProvider.notifier).bump();
+  return ok;
 }

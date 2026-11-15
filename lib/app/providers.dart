@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 
 import '../db/database.dart';
 import '../domain/advisor.dart';
+import '../domain/bluesky.dart';
 import '../domain/book.dart';
 import '../domain/ai.dart';
 import '../domain/claude.dart';
@@ -242,14 +243,27 @@ final mailAccountsProvider = FutureProvider<List<ChannelAccount>>((ref) {
   return ref.watch(mailServiceProvider).accounts();
 });
 
+/// Bluesky: search, posting and DMs with the user's app password.
+final blueskyProvider = Provider<Bluesky>((ref) {
+  final s = ref.watch(sessionProvider);
+  return Bluesky(s.book, ref.watch(httpClientProvider), s.keys.store);
+});
+
+final blueskyAccountProvider = FutureProvider<BlueskyAccount?>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(blueskyProvider).account();
+});
+
 /// The channels Udyoga can send on by itself, once the user connects an
-/// account (e-mail). Empty until then: every message is sent by the user
-/// and logged. LinkedIn never has one.
+/// account (e-mail, Bluesky DMs). Empty until then: every message is sent
+/// by the user and logged. LinkedIn never has one.
 final channelSendersProvider = Provider<List<ChannelSender>>((ref) {
   final service = ref.watch(mailServiceProvider);
+  final bluesky = ref.watch(blueskyAccountProvider).value;
   return [
     for (final a in ref.watch(mailAccountsProvider).value ?? const <ChannelAccount>[])
       EmailSender(service, a),
+    if (bluesky != null && bluesky.dms) BlueskySender(ref.watch(blueskyProvider), bluesky),
   ];
 });
 
@@ -259,22 +273,35 @@ class MailSyncState {
   final String status;
 }
 
-/// Checks the connected mail accounts: at start and with the hourly
-/// refresh when the last check is over 15 minutes old, or now when the
-/// user asks.
+/// Checks the connected mail accounts and Bluesky DMs: at start and with
+/// the hourly refresh when the last check is over 15 minutes old, or now
+/// when the user asks.
 class MailSyncController extends Notifier<MailSyncState> {
   @override
   MailSyncState build() => const MailSyncState();
 
   Future<MailSyncReport?> run({bool force = false}) async {
     if (state.running) return null;
-    state = const MailSyncState(running: true, status: 'Checking mail…');
+    state = const MailSyncState(running: true, status: 'Checking messages…');
     try {
-      final report = await ref.read(mailServiceProvider).syncDue(force: force);
+      final mail = await ref.read(mailServiceProvider).syncDue(force: force);
+      // Bluesky DMs ride along; a Bluesky problem does not hide the mail.
+      var dms = (added: 0, alerts: const <MailAlert>[]);
+      String? bskyProblem;
+      try {
+        dms = await ref.read(blueskyProvider).syncDue(force: force);
+      } catch (e) {
+        bskyProblem = 'Bluesky: ${describeError(e)}';
+      }
+      final report = (
+        added: mail.added + dms.added,
+        alerts: [...mail.alerts, ...dms.alerts],
+        failed: [...mail.failed, ?bskyProblem],
+      );
       state = MailSyncState(
         status: [
           if (report.added == 0)
-            'No new mail from your contacts.'
+            'No new messages from your contacts.'
           else
             '${report.added} new message${report.added == 1 ? '' : 's'}.',
           ...report.failed,
