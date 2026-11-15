@@ -118,22 +118,85 @@ void main() {
     tester.platformDispatcher.clearPlatformBrightnessTestValue();
     tester.view.reset();
 
-    final app = AppHarness(tester)..desktop();
-    await app.open(seed: seedBook);
-    await settledLook(app);
-    await tester.pumpWidget(
-      RepaintBoundary(
-        key: key,
-        child: ProviderScope(overrides: shotOverrides(app), retry: (_, _) => null, child: const UdyogaApp()),
-      ),
-    );
-    await app.settle();
-    await shot('today-desktop');
-    await app.go('Jobs');
-    await shot('jobs-desktop');
-    await app.go('Settings');
-    await shot('settings-desktop');
-    await app.close();
+    for (final dark in [false, true]) {
+      tester.platformDispatcher.platformBrightnessTestValue = dark ? Brightness.dark : Brightness.light;
+      final mode = dark ? 'dark' : 'light';
+      final app = AppHarness(tester)..desktop();
+      await app.open(seed: seedBook);
+      await settledLook(app);
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: key,
+          child: ProviderScope(
+            overrides: shotOverrides(app),
+            retry: (_, _) => null,
+            child: const UdyogaApp(),
+          ),
+        ),
+      );
+      await app.settle();
+      await shot('today-desktop-$mode');
+      await app.go('Jobs');
+      await shot('jobs-desktop-$mode');
+      await app.go('Applications');
+      await shot('applications-desktop-$mode');
+      await app.go('Growth');
+      await shot('growth-desktop-$mode');
+      await app.go('Settings');
+      await shot('settings-desktop-$mode');
+      await app.close();
+    }
+    tester.platformDispatcher.clearPlatformBrightnessTestValue();
+    debugDisableShadows = true;
+  });
+
+  // The worst a real book could hold (see seedWorstCase), drawn with the
+  // real fonts on a tall view so each page shows whole: long names, huge
+  // counts and pay, a one-letter employer, non-Latin text.
+  testWidgets('worst-case screenshots', skip: out == null, (tester) async {
+    await tester.runAsync(loadFonts);
+    debugDisableShadows = false;
+    final key = GlobalKey();
+
+    Future<void> shot(String name) async {
+      final boundary = key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      final bytes = await tester.runAsync(() async {
+        final image = await boundary.toImage(pixelRatio: tester.view.devicePixelRatio);
+        return image.toByteData(format: ui.ImageByteFormat.png);
+      });
+      File('$out/worst/$name.png')
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(bytes!.buffer.asUint8List());
+    }
+
+    for (final (width, height) in [(320.0, 2600.0), (360.0, 2600.0), (1400.0, 2200.0)]) {
+      for (final dark in [false, true]) {
+        tester.platformDispatcher.platformBrightnessTestValue = dark ? Brightness.dark : Brightness.light;
+        tester.view.physicalSize = Size(width * 2, height * 2);
+        tester.view.devicePixelRatio = 2;
+        final app = AppHarness(tester);
+        await app.open(seed: seedWorstCase);
+        await settledLook(app);
+        await tester.pumpWidget(
+          RepaintBoundary(
+            key: key,
+            child: ProviderScope(
+              overrides: shotOverrides(app),
+              retry: (_, _) => null,
+              child: const UdyogaApp(),
+            ),
+          ),
+        );
+        await app.settle();
+        final tag = '${width.round()}-${dark ? 'dark' : 'light'}';
+        await shot('today-$tag');
+        await app.go('Jobs');
+        await shot('jobs-$tag');
+        await app.close();
+      }
+    }
+    tester.platformDispatcher.clearPlatformBrightnessTestValue();
+    tester.view.reset();
     debugDisableShadows = true;
   });
 }
