@@ -175,6 +175,30 @@ Evaluate this job for the candidate as a demanding hiring manager would. If the 
     onProgress: onProgress,
   );
 
+  /// Research on what it is like to work for [employer]: systems, culture
+  /// evidence with sources, and risks.
+  Future<AiResult> researchEmployer(
+    CandidateProfile p,
+    String employer, {
+    String place = '',
+    Progress? onProgress,
+  }) => ai.ask(
+    system: _system(p),
+    content: [
+      _candidate(p),
+      _text('<employer>$employer${place.isEmpty ? '' : ' ($place)'}</employer>'),
+      _text(
+        '''
+Research what it is like to work for this employer in the candidate's kind of role. Find the systems staff use day to day (for health employers: the electronic patient record, patient administration and rostering systems, and any planned replacement with its date), evidence on culture from official sources (the latest staff survey results such as "would recommend as a place to work", inspection ratings, awards, recent news), and any risks such as restructures, mergers or financial pressure. Cite a source URL for every culture point. Say plainly when you could not find something; do not guess. End with good questions the candidate could ask at interview.''',
+      ),
+    ],
+    schema: EmployerBrief.schema,
+    web: true,
+    searches: 8,
+    effort: 'medium',
+    onProgress: onProgress,
+  );
+
   /// A CV (and cover letter) for [job], from the profile.
   Future<AiResult> tailor(CandidateProfile p, Job job, {FitAssessment? fit, Progress? onProgress}) => ai.ask(
     system: _system(p),

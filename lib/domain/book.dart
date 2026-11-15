@@ -12,6 +12,7 @@ import 'json.dart';
 import 'linkedin_export.dart';
 import 'matching.dart';
 import 'n8n.dart';
+import 'pay.dart';
 import 'pipeline.dart';
 import 'profile.dart';
 import 'resume.dart';
@@ -37,6 +38,9 @@ abstract final class PrefKeys {
 
   /// How the user writes on LinkedIn: their notes and a few past posts.
   static const linkedInVoice = 'udyoga.linkedin.voice';
+
+  /// The candidate's current pay and rent, for the pay change on each job.
+  static const pay = 'udyoga.pay';
 }
 
 /// Device-only settings (local_settings).
@@ -866,6 +870,33 @@ class CareerBook {
             ..orderBy([(r) => OrderingTerm.desc(r.created)])
             ..limit(1))
           .getSingleOrNull();
+
+  /// The latest research on [employer], if any (matched by name, any case).
+  Future<EmployerBrief?> employerBrief(String employer) async {
+    final key = employer.toLowerCase().trim();
+    if (key.isEmpty) return null;
+    final rows =
+        await (db.select(db.careerReports)
+              ..where((r) => r.kind.equals('employer') & r.deleted.not())
+              ..orderBy([(r) => OrderingTerm.desc(r.created)]))
+            .get();
+    for (final r in rows) {
+      final j = decodeObject(r.content);
+      if (str(j['employer']).toLowerCase().trim() == key) {
+        return EmployerBrief({...j, 'researched': r.created, 'sources': decodeList(r.sources)});
+      }
+    }
+    return null;
+  }
+
+  /// Saves research on [employer] under the name the candidate's job uses.
+  Future<void> saveEmployerBrief(String employer, AiResult r, {required String at}) =>
+      saveReport('employer', {...r.data, 'employer': employer}, r.sources, at: at);
+
+  Future<PayBaseline> payBaseline() async =>
+      PayBaseline.fromJson(await pref<Map<String, Object?>>(PrefKeys.pay, const {}));
+
+  Future<void> setPayBaseline(PayBaseline b) => setPref(PrefKeys.pay, b.toJson());
 
   /// Adds learning suggestions not already on the list. Returns how many.
   Future<int> suggestLearning(List<LearningSuggestion> items, {String path = '', required String today}) =>

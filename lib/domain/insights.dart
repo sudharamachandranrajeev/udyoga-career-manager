@@ -403,3 +403,44 @@ class AnswerReview {
     'followUp': string('The probing follow-up a tough interviewer would ask next'),
   });
 }
+
+/// What it is like to work for an employer, researched with sources: the
+/// systems its staff use, culture evidence (staff survey, inspections,
+/// news) and what to watch.
+class EmployerBrief {
+  const EmployerBrief(this.j);
+  final Json j;
+  String get employer => str(j['employer']);
+  String get summary => str(j['summary']);
+  List<Json> get systems => objs(j['systems']);
+  List<Json> get culture => objs(j['culture']);
+  List<String> get watch => strs(j['watch']);
+  List<String> get askAtInterview => strs(j['askAtInterview']);
+  String get researched => str(j['researched']);
+  List<Json> get sources => objs(j['sources']);
+
+  static final schema = object({
+    'employer': string('The employer\'s name as given'),
+    'summary': string(
+      'Two or three plain sentences: what it is, its size, where, and what it is like to work for',
+    ),
+    'systems': array(
+      object({
+        'name': string(
+          'A system staff use, e.g. the electronic patient record or patient administration system',
+        ),
+        'detail': string('What it is used for, and any planned change with its date'),
+      }),
+    ),
+    'culture': array(
+      object({
+        'point': string('One piece of evidence, with its figure and year, e.g. a staff survey result'),
+        'source': string('The URL it comes from'),
+      }),
+      description: 'Staff survey results, inspection ratings, awards, news: evidence, not opinion',
+    ),
+    'watch': strings('Risks to know before joining: restructures, mergers, financial pressure, poor ratings'),
+    'askAtInterview': strings('Two or three good questions to ask the panel about the team and its work'),
+    'sources': array(object({'title': string(), 'url': string()})),
+  });
+}

@@ -15,6 +15,8 @@ import '../domain/claude_code.dart';
 import '../domain/codex.dart';
 import '../domain/companion_service.dart';
 import '../domain/gemini.dart';
+import '../domain/insights.dart';
+import '../domain/pay.dart';
 import '../domain/profile.dart';
 import '../domain/refresh.dart';
 import '../domain/n8n.dart';
@@ -208,6 +210,18 @@ final profileProvider = FutureProvider<CandidateProfile>((ref) {
 final latestReportProvider = FutureProvider.family<Report?, String>((ref, kind) {
   ref.watch(revisionProvider);
   return ref.watch(sessionProvider).book.latestReport(kind);
+});
+
+/// The latest research on an employer, by name.
+final employerBriefProvider = FutureProvider.family<EmployerBrief?, String>((ref, employer) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.employerBrief(employer);
+});
+
+/// The candidate's current pay and rent.
+final payBaselineProvider = FutureProvider<PayBaseline>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.payBaseline();
 });
 
 /// The user's n8n lead workflow (not set until they connect one).

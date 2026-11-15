@@ -16,6 +16,7 @@ import '../domain/resume.dart';
 import 'applications_page.dart';
 import 'common.dart';
 import 'contacts_page.dart';
+import 'employer_cards.dart';
 import 'interview_page.dart';
 import 'jobs_page.dart';
 import 'look.dart';
@@ -162,6 +163,8 @@ class JobPage extends ConsumerWidget {
                 )
               : FitView(fit),
         ),
+        PayChangeCard(j),
+        EmployerCard(j),
         SectionCard(
           title: 'Tailored CV',
           hint: 'job.tailor',

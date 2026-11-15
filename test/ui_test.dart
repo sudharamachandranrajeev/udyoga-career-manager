@@ -76,6 +76,10 @@ void main() {
     await app.tap(find.widgetWithText(ChoiceChip, 'Applied'));
     await app.tapText('EPR Trainer');
     expect(find.text('The advert'), findsOneWidget);
+    expect(find.text('Pay change'), findsOneWidget);
+    expect(find.textContaining('+£6,951 a year'), findsOneWidget);
+    expect(find.text('Working at Northwind Health'), findsOneWidget);
+    expect(find.textContaining('A merger is planned'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pageBack();
     await app.settle();
@@ -136,7 +140,9 @@ void main() {
     await app.close();
   });
 
-  testWidgets('the Coach shows the questions, stories and documents; Settings the check-in time', (tester) async {
+  testWidgets('the Coach shows the questions, stories and documents; Settings the check-in time', (
+    tester,
+  ) async {
     final app = AppHarness(tester)..desktop();
     await app.open(seed: seedBook);
     await app.run();
