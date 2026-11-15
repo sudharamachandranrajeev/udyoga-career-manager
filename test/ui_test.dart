@@ -12,6 +12,7 @@ import 'package:udyoga/domain/pipeline.dart';
 import 'package:udyoga/ui/applications_page.dart';
 import 'package:udyoga/ui/coach_page.dart';
 import 'package:udyoga/ui/growth_page.dart';
+import 'package:udyoga/ui/interview_page.dart';
 import 'package:udyoga/ui/kit/kit.dart';
 import 'package:udyoga/ui/linkedin_page.dart';
 import 'package:udyoga/ui/today_hero.dart';
@@ -301,6 +302,32 @@ void main() {
     expect(find.byType(CommandPalette), findsNothing);
     expect(find.byType(GrowthPage), findsOneWidget);
     expect(find.byType(TodayPage), findsNothing);
+    await app.close();
+  });
+
+  testWidgets('on a phone the search button opens the palette, whose help answers open grouped pages', (
+    tester,
+  ) async {
+    final app = AppHarness(tester)..phone();
+    await app.open(seed: seedBook);
+    await app.run();
+    await app.tap(find.byTooltip('Search pages, actions and help (Ctrl+K)'));
+    expect(find.byType(CommandPalette), findsOneWidget);
+    // A question no page name answers: the help knows it is about Interview,
+    // which lives inside Prepare.
+    await tester.enterText(
+      find.descendant(of: find.byType(CommandPalette), matching: find.byType(EditableText)),
+      'speaking time fillers',
+    );
+    await tester.pump();
+    final answer = find.text('Help · Interview');
+    expect(answer, findsWidgets);
+    await app.tap(answer.first);
+    expect(find.byType(CommandPalette), findsNothing);
+    expect(find.byType(InterviewPage), findsOneWidget);
+    expect(find.byType(TodayPage), findsNothing);
+    // Every grouped page has the button too, beside its switch.
+    expect(find.descendant(of: find.byType(GroupPage), matching: find.byType(PaletteButton)), findsOneWidget);
     await app.close();
   });
 }

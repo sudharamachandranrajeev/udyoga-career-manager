@@ -161,6 +161,7 @@ class TodayPage extends ConsumerWidget {
       title: 'Today',
       banner: 'page.today',
       actions: [
+        const PaletteButton(),
         HintIconButton(
           'apps.calendar',
           icon: Icons.event_available_outlined,
