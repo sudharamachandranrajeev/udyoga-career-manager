@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/navigation.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
+import '../domain/conversations.dart';
 import '../domain/pipeline.dart';
 import '../domain/profile.dart';
 import 'applications_page.dart';
@@ -14,7 +15,7 @@ import 'contacts_page.dart';
 import 'job_page.dart';
 import 'jobs_page.dart';
 import 'kit/kit.dart';
-import 'look.dart';
+import 'look.dart' hide Pace;
 import 'offer_checks.dart';
 import 'today_hero.dart';
 
@@ -145,11 +146,19 @@ class TodayPage extends ConsumerWidget {
         ),
     ]..sort((a, b) => a.date.compareTo(b.date));
     final next = deadlines.firstOrNull;
-    final followUps = dueApps.length + dueLeads.length;
-    // Contacts who have answered and are waiting on you; ones already due a
-    // follow-up are listed there instead. (Conversations will add unanswered
-    // messages here once it is merged.)
-    final replies = leads.where((l) => l.status == 'replied' && !dueLeads.contains(l)).toList();
+    // Threads where they wrote last, or that are marked replied.
+    final replies = filterThreads(
+      ref.watch(threadRowsProvider).value ?? const <ThreadRow>[],
+      filter: ThreadFilter.needsReply,
+      today: now,
+    );
+    // People due from a thread's follow-up or a "keep in touch" date, with
+    // why and where. Those dates also fill the contact's own follow-up, so
+    // they are left out of Follow up today rather than listed twice.
+    final keepInTouch = ref.watch(dueFollowUpsProvider).value ?? const <FollowUpDue>[];
+    final chaseLeads = dueLeads.where((l) => !keepInTouch.any((d) => d.contact.id == l.id)).toList();
+    final followUps = dueApps.length + chaseLeads.length + keepInTouch.length;
+    final pace = ref.watch(paceProvider).value;
     final sent = apps.where((a) => a.applied != null).length;
     // Heard back: shortlisted or further, up to accepted.
     final heard = apps.where((a) {
@@ -231,16 +240,29 @@ class TodayPage extends ConsumerWidget {
               SectionCard(
                 title: 'Replies waiting',
                 child: _FirstFew([
-                  for (final l in replies) LeadTile(l),
-                ], onMore: () => goToPage(ref, 'contacts')),
+                  for (final r in replies) _ReplyTile(r, onTap: () => openThread(ref, r.thread.id)),
+                ], onMore: () => goToPage(ref, 'conversations')),
               ),
-            if (dueApps.isNotEmpty || dueLeads.isNotEmpty)
+            if (dueApps.isNotEmpty || chaseLeads.isNotEmpty)
               SectionCard(
                 title: 'Follow up today',
                 child: _FirstFew([
                   for (final a in dueApps) ApplicationTile(a),
-                  for (final l in dueLeads) LeadTile(l),
+                  for (final l in chaseLeads) LeadTile(l),
                 ], onMore: () => goToPage(ref, dueApps.isNotEmpty ? 'applications' : 'contacts')),
+              ),
+            if (keepInTouch.isNotEmpty)
+              SectionCard(
+                title: 'Keep in touch',
+                child: _FirstFew([
+                  for (final d in keepInTouch)
+                    _KeepInTouchTile(
+                      d,
+                      onTap: d.thread == null
+                          ? () => openConversationWith(context, ref, d.contact)
+                          : () => openThread(ref, d.thread!.id),
+                    ),
+                ], onMore: () => goToPage(ref, 'contacts')),
               ),
             if (checks.isNotEmpty)
               SectionCard(
@@ -271,6 +293,7 @@ class TodayPage extends ConsumerWidget {
               ),
           ],
           count: replies.length + followUps + checks.length + closing.length,
+          pace: pace == null || pace.level == PaceLevel.calm ? null : pace,
           nothingLabel: fresh.isEmpty ? 'Open Jobs' : 'See new matches',
           onNothing: () => goToPage(ref, 'jobs'),
         ),
@@ -396,9 +419,18 @@ class _Greeting extends StatelessWidget {
 /// jobs closing, each group a card arriving in turn. When nothing does, it
 /// says so and offers the one useful next step.
 class _NeedsYou extends StatelessWidget {
-  const _NeedsYou(this.cards, {required this.count, required this.nothingLabel, required this.onNothing});
+  const _NeedsYou(
+    this.cards, {
+    required this.count,
+    required this.nothingLabel,
+    required this.onNothing,
+    this.pace,
+  });
   final List<Widget> cards;
   final int count;
+
+  /// LinkedIn sending that is busy or past the safe pace; null when calm.
+  final Pace? pace;
   final String nothingLabel;
   final VoidCallback onNothing;
 
@@ -420,6 +452,7 @@ class _NeedsYou extends StatelessWidget {
             ],
           ),
         ),
+        if (pace case final p?) _PaceHint(p),
         if (cards.isEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
@@ -466,4 +499,142 @@ class _FirstFew extends StatelessWidget {
         ),
     ],
   );
+}
+
+/// A thread waiting on the user: where it is, who, and how their last
+/// message starts.
+class _ReplyTile extends StatelessWidget {
+  const _ReplyTile(this.row, {required this.onTap});
+  final ThreadRow row;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    final last = row.last;
+    return _PersonRow(
+      name: row.contact?.name ?? senderName(row.thread).ifEmpty('Unknown sender'),
+      channel: row.thread.channel,
+      onTap: onTap,
+      detail: last == null
+          ? null
+          : Text(
+              last.body.replaceAll('\n', ' '),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: t.bodyMedium?.copyWith(color: muted),
+            ),
+    );
+  }
+}
+
+/// Someone to get back to: why, and how overdue.
+class _KeepInTouchTile extends StatelessWidget {
+  const _KeepInTouchTile(this.due, {required this.onTap});
+  final FollowUpDue due;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = today();
+    return _PersonRow(
+      name: due.contact.name,
+      channel: due.thread?.channel,
+      onTap: onTap,
+      detail: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          StatusPill(due.why),
+          StatusPill(
+            due.due == now ? 'Due today' : 'Due ${relativeDay(due.due, now)}',
+            status: followUpStatus(due.due, now),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A person's row in a Needs you card: their initials, name and channel,
+/// with a line of detail under them.
+class _PersonRow extends StatelessWidget {
+  const _PersonRow({required this.name, required this.channel, required this.onTap, this.detail});
+  final String name;
+  final String? channel;
+  final VoidCallback onTap;
+  final Widget? detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(Radii.sm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            OrgLogo(name, size: 36),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(name, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
+                      if (channel case final c?) ...[const SizedBox(width: 8), ChannelChip(c)],
+                    ],
+                  ),
+                  if (detail case final d?) ...[const SizedBox(height: 4), d],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The pace guard, when LinkedIn sending is busy or past the safe pace.
+class _PaceHint extends StatelessWidget {
+  const _PaceHint(this.pace);
+  final Pace pace;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final status = pace.level == PaceLevel.slowDown ? Status.serious : Status.warning;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: SpotlightCard(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.speed, color: status.color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(pace.advice, style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 4),
+                  Text(
+                    pace.summary,
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
