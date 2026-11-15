@@ -149,6 +149,7 @@ class _CheckInCardState extends ConsumerState<_CheckInCard> {
           : 'Saved: ${digest.stories.length} stories, ${digest.achievements.length} wins, '
                 '${digest.skills.length} skills added for you to check.',
     );
+    await ref.askForReminderOnce();
   }
 
   @override

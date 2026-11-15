@@ -64,6 +64,9 @@ abstract final class LocalKeys {
   /// The daily check-in time on this device, HH:mm, and whether to remind.
   static const checkInTime = 'udyoga.checkin.time';
   static const checkInReminder = 'udyoga.checkin.reminder';
+
+  /// Set once the phone has been asked to allow the reminder.
+  static const checkInAsked = 'udyoga.checkin.asked';
 }
 
 /// Udyoga's write path and the reads screens share.

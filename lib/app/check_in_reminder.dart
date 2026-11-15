@@ -97,7 +97,21 @@ Future<void> syncCheckInReminders(CheckInScheduler scheduler, CareerBook book) a
   );
 }
 
+/// After the first check-in, asks once for leave to show the reminder (the
+/// phone shows nothing without it), unless reminders are off.
+Future<void> askReminderPermissionOnce(CheckInScheduler scheduler, CareerBook book) async {
+  if (!scheduler.supported || !(await book.checkInSettings()).remind) return;
+  if (await book.db.localSetting(LocalKeys.checkInAsked) != null) return;
+  await book.db.setLocalSetting(LocalKeys.checkInAsked, 'yes');
+  await scheduler.requestPermission();
+}
+
 extension CheckInReminders on WidgetRef {
   Future<void> syncReminders() =>
       syncCheckInReminders(read(checkInSchedulerProvider), read(sessionProvider).book).catchError((_) {});
+
+  Future<void> askForReminderOnce() => askReminderPermissionOnce(
+    read(checkInSchedulerProvider),
+    read(sessionProvider).book,
+  ).catchError((_) {});
 }

@@ -114,8 +114,13 @@ class _FakeScheduler implements CheckInScheduler {
   @override
   bool get supported => true;
 
+  var asked = 0;
+
   @override
-  Future<bool> requestPermission() async => true;
+  Future<bool> requestPermission() async {
+    asked++;
+    return true;
+  }
 
   @override
   Future<void> replaceAll(List<DateTime> times) async => this.times = times;
@@ -346,6 +351,11 @@ void main() {
       await syncCheckInReminders(scheduler, book);
       expect(scheduler.times!.length, 13);
       expect(scheduler.times!.first.day, isNot(DateTime.now().day));
+
+      expect(scheduler.asked, 0);
+      await askReminderPermissionOnce(scheduler, book);
+      await askReminderPermissionOnce(scheduler, book);
+      expect(scheduler.asked, 1);
 
       await book.setCheckInSettings(remind: false);
       await syncCheckInReminders(scheduler, book);
