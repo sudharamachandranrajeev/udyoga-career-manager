@@ -393,6 +393,7 @@ Future<Posting?> readPosting(
     final advisor = await requireAdvisor(ref);
     final a = await advisor.readAdvert(url: url, text: text);
     if (str(a['title']).isEmpty) return null;
+    final (low, high) = salaryIn(str(a['salaryText']).isNotEmpty ? str(a['salaryText']) : text);
     return Posting(
       source: 'manual',
       sourceId: sourceId,
@@ -402,12 +403,17 @@ Future<Posting?> readPosting(
       country: str(a['country']).toUpperCase(),
       remote: a['remote'] == true,
       salaryText: str(a['salaryText']),
+      salaryMin: low,
+      salaryMax: high,
+      currency: low == null ? '' : 'GBP',
       url: url,
       description: str(a['description']).isNotEmpty ? str(a['description']) : text,
       posted: str(a['posted']).length == 10 ? str(a['posted']) : null,
-      closing: str(a['closing']).length == 10 ? str(a['closing']) : null,
+      // The page's own words when the AI missed the date.
+      closing: str(a['closing']).length == 10 ? str(a['closing']) : closingIn(text),
     );
   }
+  final (low, high) = salaryIn(text);
   return Posting(
     source: 'manual',
     sourceId: sourceId,
@@ -415,8 +421,12 @@ Future<Posting?> readPosting(
     company: company,
     location: location,
     country: p.country,
+    salaryMin: low,
+    salaryMax: high,
+    currency: low == null ? '' : 'GBP',
     url: url,
     description: text,
+    closing: closingIn(text),
   );
 }
 

@@ -447,3 +447,36 @@ List<JobFeed> allFeeds(http.Client client, FeedKeys keys) => [
   JobicyFeed(client),
   ArbeitnowFeed(client),
 ];
+
+const _months = {
+  'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6, //
+  'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+};
+
+/// The closing date an advert's text states ("Closing date: 17 November
+/// 2026", "Closes 17/11/2026"), as yyyy-MM-dd, or null.
+String? closingIn(String text) {
+  final m = RegExp(
+    r'clos(?:ing date|es|ing)\s*:?\s*(?:on\s+)?(?:[A-Za-z]+day\s+)?'
+    r'(?:(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})|(\d{1,2})/(\d{1,2})/(\d{4}))',
+    caseSensitive: false,
+  ).firstMatch(text);
+  if (m == null) return null;
+  final (day, month, year) = m[1] != null
+      ? (int.parse(m[1]!), _months[m[2]!.substring(0, 3).toLowerCase()], int.parse(m[3]!))
+      : (int.parse(m[4]!), int.parse(m[5]!), int.parse(m[6]!));
+  if (month == null || month > 12 || day < 1 || day > 31) return null;
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '$year-${two(month)}-${two(day)}';
+}
+
+/// The yearly salary range an advert's text states ("£28,392 to £31,157 a
+/// year", "£28,392 - £31,157"), or nulls.
+(int?, int?) salaryIn(String text) {
+  final m = RegExp(r'£\s?([\d,]{5,})(?:\.\d+)?(?:\s*(?:to|-|–)\s*£\s?([\d,]{5,}))?').firstMatch(text);
+  if (m == null) return (null, null);
+  int? n(String? x) => x == null ? null : int.tryParse(x.replaceAll(',', ''));
+  final low = n(m[1]);
+  if (low == null || low < 1000) return (null, null);
+  return (low, n(m[2]) ?? low);
+}
