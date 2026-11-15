@@ -2,10 +2,12 @@ import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, che
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../domain/ai.dart';
 import '../domain/json.dart';
+import 'kit/kit.dart';
 
 /// "2026-10-24T11:00" as "24 Oct 2026, 11:00".
 String niceDateTime(String at) =>
@@ -112,6 +114,20 @@ Future<T?> runAi<T>(
   } finally {
     notifier.dispose();
   }
+}
+
+/// [AsyncView] for a list of cards: while the list first loads it shows
+/// skeleton cards in the list's shape rather than a spinner.
+class AsyncList<T> extends StatelessWidget {
+  const AsyncList(this.value, {super.key, required this.builder, this.onRetry});
+  final AsyncValue<T> value;
+  final Widget Function(T data) builder;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) => value.isLoading && !value.hasValue && !value.hasError
+      ? const SkeletonCards()
+      : AsyncView(value, builder: builder, onRetry: onRetry);
 }
 
 /// A plain text field with a label.

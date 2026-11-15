@@ -46,3 +46,49 @@ class ShimmerSkeleton extends StatelessWidget {
         );
   }
 }
+
+/// Cards standing in for a list while it loads: a mark, a title and two
+/// lines each, the shape of the job and application cards.
+class SkeletonCards extends StatelessWidget {
+  const SkeletonCards({super.key, this.count = 3});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = palette(Theme.of(context).brightness);
+    return Semantics(
+      label: 'Loading',
+      child: Column(
+        children: [
+          for (var i = 0; i < count; i++)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: p.card,
+                borderRadius: BorderRadius.circular(Radii.lg),
+                border: Border.all(color: p.hairline),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const ShimmerSkeleton(width: 44, height: 44),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const FractionallySizedBox(widthFactor: 0.7, child: ShimmerSkeleton(height: 16)),
+                        const SizedBox(height: 10),
+                        ShimmerSkeleton.lines(2),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
