@@ -11,9 +11,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:udyoga/app/app.dart';
 import 'package:udyoga/app/providers.dart';
+import 'package:udyoga/domain/bluesky.dart';
 import 'package:udyoga/domain/book.dart';
+import 'package:udyoga/ui/bluesky_search.dart';
+import 'package:udyoga/ui/post_planner.dart';
 
 import 'app_harness.dart';
+import 'fake_bluesky.dart';
 
 import 'package:udyoga/ui/hints.dart';
 
@@ -236,4 +240,103 @@ void main() {
       ['Today', 'Contacts', 'Find people', 'LinkedIn'],
     ),
   );
+
+  // Conversations (the list, a thread and the Screener), Connected
+  // accounts, the post plan and Bluesky search, light and dark, on a phone
+  // and a desktop, over seedSocial and a fake Bluesky.
+  testWidgets('social screenshots', skip: out == null, (tester) async {
+    await tester.runAsync(loadFonts);
+    debugDisableShadows = false;
+    final key = GlobalKey();
+
+    Future<void> shot(String name) async {
+      // Let fades and toasts finish.
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      final boundary = key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      final bytes = await tester.runAsync(() async {
+        final image = await boundary.toImage(pixelRatio: tester.view.devicePixelRatio);
+        return image.toByteData(format: ui.ImageByteFormat.png);
+      });
+      File('$out/social/$name.png')
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(bytes!.buffer.asUint8List());
+    }
+
+    for (final (width, height) in [(390.0, 844.0), (1400.0, 900.0)]) {
+      final phone = width < 840;
+      for (final dark in [false, true]) {
+        tester.platformDispatcher.platformBrightnessTestValue = dark ? Brightness.dark : Brightness.light;
+        tester.view.physicalSize = Size(width * 2, height * 2);
+        tester.view.devicePixelRatio = 2;
+        final server = FakeBluesky()
+          ..actors.addAll([
+            {
+              'did': 'did:plc:jordan',
+              'handle': 'jordan.example.com',
+              'displayName': 'Jordan Example',
+              'description': 'Health informatics in Yorkshire. EPR, clinical safety and the odd ward round.',
+            },
+            {
+              'did': 'did:plc:priya',
+              'handle': 'priya-digital-nurse.example.org',
+              'displayName': 'Priya Example',
+              'description':
+                  'Digital nurse specialist. Writes about e-observations and nursing documentation.',
+            },
+            {
+              'did': 'did:plc:sam',
+              'handle': 'sam.example.net',
+              'displayName': 'Sam Sample',
+              'description': '',
+            },
+          ]);
+        final app = AppHarness(tester);
+        await app.open(seed: seedSocial);
+        await settledLook(app);
+        final bluesky = Bluesky(app.session.book, server.client, app.session.keys.store);
+        await tester.runAsync(() => bluesky.signIn(identifier: myHandle, appPassword: appPassword));
+        await tester.pumpWidget(
+          RepaintBoundary(
+            key: key,
+            child: ProviderScope(
+              overrides: [...shotOverrides(app), blueskyProvider.overrideWithValue(bluesky)],
+              retry: (_, _) => null,
+              child: const UdyogaApp(),
+            ),
+          ),
+        );
+        await app.settle();
+        final tag = '${width.round()}-${dark ? 'dark' : 'light'}';
+
+        await app.go('Conversations');
+        await shot('conversations-$tag');
+        await app.tap(find.text('Jordan Example').first);
+        await shot('thread-$tag');
+        if (phone) await app.tap(find.byTooltip('All conversations'));
+        await app.tap(find.text('Screener (1)'));
+        await app.tap(find.text('someone@example.org').first);
+        await shot('screener-$tag');
+        if (phone) await app.tap(find.byTooltip('All conversations'));
+        await app.tap(find.byTooltip('Connected accounts'));
+        await shot('accounts-$tag');
+        await tester.pageBack();
+        await app.settle();
+
+        await app.go('LinkedIn');
+        await tester.ensureVisible(find.byType(PostPlanner));
+        await shot('post-plan-$tag');
+        await app.go('Find people');
+        await tester.ensureVisible(find.byType(BlueskySearch));
+        await app.tap(find.text(blueskyTopics.first));
+        await tester.ensureVisible(find.byType(BlueskySearch));
+        await shot('bluesky-search-$tag');
+        await app.close();
+      }
+    }
+    tester.platformDispatcher.clearPlatformBrightnessTestValue();
+    tester.view.reset();
+    debugDisableShadows = true;
+  });
 }
