@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:udyoga/app/app.dart';
 import 'package:udyoga/app/providers.dart';
+import 'package:udyoga/domain/book.dart';
 
 import 'app_harness.dart';
 
@@ -150,10 +151,16 @@ void main() {
     debugDisableShadows = true;
   });
 
-  // The worst a real book could hold (see seedWorstCase), drawn with the
-  // real fonts on a tall view so each page shows whole: long names, huge
-  // counts and pay, a one-letter employer, non-Latin text.
-  testWidgets('worst-case screenshots', skip: out == null, (tester) async {
+  /// Each of [pages] (Today first) at each of [sizes], light and dark, over
+  /// [seed], drawn on a tall view so each page shows whole, into
+  /// [folder]. Contacts is shown with every contact, not only those due.
+  Future<void> pageShots(
+    WidgetTester tester,
+    String folder,
+    Future<void> Function(CareerBook book) seed,
+    List<(double, double)> sizes,
+    List<String> pages,
+  ) async {
     await tester.runAsync(loadFonts);
     debugDisableShadows = false;
     final key = GlobalKey();
@@ -164,18 +171,18 @@ void main() {
         final image = await boundary.toImage(pixelRatio: tester.view.devicePixelRatio);
         return image.toByteData(format: ui.ImageByteFormat.png);
       });
-      File('$out/worst/$name.png')
+      File('$out/$folder/$name.png')
         ..createSync(recursive: true)
         ..writeAsBytesSync(bytes!.buffer.asUint8List());
     }
 
-    for (final (width, height) in [(320.0, 2600.0), (360.0, 2600.0), (1400.0, 2200.0)]) {
+    for (final (width, height) in sizes) {
       for (final dark in [false, true]) {
         tester.platformDispatcher.platformBrightnessTestValue = dark ? Brightness.dark : Brightness.light;
         tester.view.physicalSize = Size(width * 2, height * 2);
         tester.view.devicePixelRatio = 2;
         final app = AppHarness(tester);
-        await app.open(seed: seedWorstCase);
+        await app.open(seed: seed);
         await settledLook(app);
         await tester.pumpWidget(
           RepaintBoundary(
@@ -189,14 +196,44 @@ void main() {
         );
         await app.settle();
         final tag = '${width.round()}-${dark ? 'dark' : 'light'}';
-        await shot('today-$tag');
-        await app.go('Jobs');
-        await shot('jobs-$tag');
+        for (final page in pages) {
+          if (page != 'Today') await app.go(page);
+          if (page == 'Contacts') await app.tap(find.widgetWithText(ChoiceChip, 'All'));
+          await shot('${page.toLowerCase().replaceAll(' ', '-')}-$tag');
+        }
         await app.close();
       }
     }
     tester.platformDispatcher.clearPlatformBrightnessTestValue();
     tester.view.reset();
     debugDisableShadows = true;
-  });
+  }
+
+  // The worst a real book could hold (see seedWorstCase): long names, huge
+  // counts and pay, a one-letter employer, non-Latin text.
+  testWidgets(
+    'worst-case screenshots',
+    skip: out == null,
+    (tester) => pageShots(
+      tester,
+      'worst',
+      seedWorstCase,
+      [(320, 2600), (360, 2600), (1400, 2200)],
+      ['Today', 'Jobs', 'Contacts', 'Find people', 'LinkedIn'],
+    ),
+  );
+
+  // The people pages and Today with replies waiting and someone to keep in
+  // touch with.
+  testWidgets(
+    'people screenshots',
+    skip: out == null,
+    (tester) => pageShots(
+      tester,
+      'people',
+      seedPeople,
+      [(390, 1700), (1400, 1300)],
+      ['Today', 'Contacts', 'Find people', 'LinkedIn'],
+    ),
+  );
 }

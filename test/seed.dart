@@ -311,6 +311,66 @@ Future<void> seedConversations(CareerBook book) async {
   );
 }
 
+/// [seedBook] and [seedConversations] together, with a LinkedIn
+/// connection at an employer a job is saved at, someone to keep in touch
+/// with, and a LinkedIn draft: the people pages with something in every
+/// section. Every person is made up.
+Future<void> seedPeople(CareerBook book) async {
+  await seedBook(book);
+  await seedConversations(book);
+  final today = isoDate(DateTime.now());
+  await book.importLeads(
+    const [
+      LeadSuggestion({
+        'name': 'Kim Peer',
+        'title': 'Records Officer',
+        'company': 'Example Health Trust',
+        'kind': 'peer',
+        'linkedin': 'https://www.linkedin.com/in/kim-peer',
+        'source': 'LinkedIn connection',
+        'why': '',
+        'approach': '',
+      }),
+    ],
+    today: today,
+    chase: false,
+    sourceKind: 'archive',
+  );
+  final old = addDays(today, -30);
+  await book.importLeads(
+    const [
+      LeadSuggestion({
+        'name': 'Riley Mentor',
+        'title': 'Chief Nursing Information Officer',
+        'company': 'Northwind Health',
+        'kind': 'mentor',
+        'linkedin': '',
+        'email': '',
+        'source': 'Digital Health Networks meet-up',
+        'why': 'Mentored me through the e-observations pilot',
+        'approach': '',
+      }),
+    ],
+    today: old,
+    chase: false,
+    sourceKind: 'met',
+  );
+  final riley = (await book.db.select(book.db.careerContacts).get()).firstWhere(
+    (c) => c.name == 'Riley Mentor',
+  );
+  await book.setKeepInTouch(riley.id, 4, today: old);
+  await book.saveReport(
+    'linkedin.post',
+    {
+      'headline': 'What an e-observations pilot taught me about change on a ward',
+      'score': 82,
+      'sections': const [],
+    },
+    const [],
+    at: '${today}T09:00',
+  );
+}
+
 /// The worst a real book could look: very long job titles and employer
 /// names, a one-letter employer, Welsh and non-Latin names, no pay, very
 /// high pay in rupees, jobs closing today and tomorrow, fit scores at both
@@ -339,6 +399,7 @@ Future<void> seedWorstCase(CareerBook book) async {
     String currency = 'GBP',
     String? closing,
     String location = 'Exampletown',
+    String description = 'Support EPR systems and patient safety training across wards.',
   }) => Posting(
     source: 'reed',
     sourceId: id,
@@ -349,7 +410,7 @@ Future<void> seedWorstCase(CareerBook book) async {
     salaryMin: min,
     salaryMax: max,
     currency: currency,
-    description: 'Support EPR systems and patient safety training across wards.',
+    description: description,
     posted: today,
     closing: closing,
   );
@@ -364,6 +425,11 @@ Future<void> seedWorstCase(CareerBook book) async {
         max: 62682,
         closing: today,
         location: 'Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch, Ynys Môn',
+        description:
+            'Lead advanced practice in the emergency department.\n\nFor informal enquiries please contact '
+            'Dr Maximilian Featherstonehaugh-Wolstenholme, Associate Director of Nursing Informatics and Digital '
+            'Transformation, on maximilian.featherstonehaugh-wolstenholme@betsicadwaladr-university.wales.nhs.uk '
+            'or 01745 000000.',
       ),
       job('w2', 'Nurse', 'X', closing: addDays(today, 1)),
       job(
@@ -403,5 +469,114 @@ Future<void> seedWorstCase(CareerBook book) async {
   for (final id in ids.skip(5).take(32)) {
     final a = await book.applyFor(await book.job(id), today: addDays(today, -20), sent: true);
     await book.setFollowUp(a, today);
+  }
+
+  // People: long names and titles, a one-letter name, one marked do not
+  // contact, connections at the long-named board, and a crowd to chase.
+  const board = 'Betsi Cadwaladr University Health Board – Ysbyty Ysgol Glan Clwyd, Bodelwyddan';
+  LeadSuggestion person(
+    String name, {
+    String company = board,
+    String kind = 'recruiter',
+    String linkedin = '',
+  }) => LeadSuggestion({
+    'name': name,
+    'title': 'Associate Director of Nursing Informatics, Clinical Safety and Digital Transformation',
+    'company': company,
+    'kind': kind,
+    'linkedin': linkedin,
+    'email': '',
+    'source': 'NHS Jobs advert for an Advanced Clinical Practitioner in the Emergency Department',
+    'why': 'Hires for digital nursing roles',
+    'approach': '',
+  });
+  await book.importLeads(
+    [
+      for (var i = 0; i < 3; i++)
+        person(
+          'Gwenllian Angharad Llewelyn-Featherstonehaugh ${i + 1}',
+          kind: 'peer',
+          linkedin: 'https://www.linkedin.com/in/gwenllian-example-$i',
+        ),
+    ],
+    today: today,
+    chase: false,
+    sourceKind: 'archive',
+  );
+  await book.importLeads(
+    [
+      person('Dr Maximiliana Alexandra Featherstonehaugh-Wolstenholme-Cholmondeley'),
+      person('Q', company: 'X'),
+      person('Siân Ní Mhaoláin', company: 'Example Health Trust'),
+      for (var i = 0; i < 20; i++) person('Recruiter ${i + 1}', company: 'Example Health Trust'),
+    ],
+    today: today,
+    sourceKind: 'advert',
+  );
+  final people = {for (final c in await book.db.select(book.db.careerContacts).get()) c.name: c};
+  await book.setDoNotContact(people['Q']!.id, true, today: today);
+
+  // Seven threads waiting on a reply, on three channels, each newest message
+  // long and over several lines.
+  final now = DateTime.now();
+  String at(int minutesAgo) => now.subtract(Duration(minutes: minutesAgo)).toIso8601String().substring(0, 16);
+  for (var i = 0; i < 7; i++) {
+    final who = people['Recruiter ${i + 1}']!;
+    final t = await book.startConversation(
+      contactId: who.id,
+      channel: ['email', 'linkedin', 'bluesky'][i % 3],
+      account: 'oluwaseun.featherstonehaugh@example.com',
+      at: at(600),
+    );
+    await book.logSent(
+      t,
+      'Hello, I saw the advanced practitioner role and wondered about the rota.',
+      at: at(500),
+    );
+    await book.logReply(
+      t,
+      'Thanks for getting in touch!\nThe rota is a four-on four-off pattern with one long day and one night '
+      'in each block, and we can talk through flexible working at interview. Could you send your CV by Friday?',
+      at: at(400 - i),
+    );
+  }
+  // Keep in touch every 2 weeks, last heard from a month ago: due now.
+  final old = addDays(today, -30);
+  await book.importLeads(
+    [person('Professor Bartholomew Montgomery-Fitzwilliam', kind: 'mentor')],
+    today: old,
+    chase: false,
+  );
+  final mentor = (await book.db.select(book.db.careerContacts).get()).firstWhere(
+    (c) => c.name.startsWith('Professor'),
+  );
+  await book.setKeepInTouch(mentor.id, 2, today: old);
+
+  // Eleven LinkedIn invitations today: a busy pace.
+  final li = await book.startConversation(
+    contactId: people['Siân Ní Mhaoláin']!.id,
+    channel: 'linkedin',
+    at: at(300),
+  );
+  for (var i = 0; i < 11; i++) {
+    await book.logSent(li, 'Hello, I would like to connect.', at: at(200 - i), invite: true);
+  }
+
+  // LinkedIn drafts with long headlines, one posted.
+  for (var i = 0; i < 3; i++) {
+    await book.saveReport(
+      'linkedin.post',
+      {
+        'headline':
+            'What three years of leading an electronic observations roll-out across twenty-eight wards taught me '
+            'about clinical safety, change fatigue and the unglamorous work of training night staff (${i + 1})',
+        'score': [0, 100, 55][i],
+        'scoreAfter': 100,
+        if (i == 1) 'posted': today,
+        'sections': const [],
+      },
+      const [],
+      at: at(100 + i),
+    );
   }
 }
