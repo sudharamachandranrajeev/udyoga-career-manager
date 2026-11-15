@@ -14,5 +14,6 @@ export 'rolling_number.dart';
 export 'sheet.dart';
 export 'shimmer_skeleton.dart';
 export 'spotlight_card.dart';
+export 'stat_grid.dart';
 export 'status_pill.dart';
 export 'toast.dart';

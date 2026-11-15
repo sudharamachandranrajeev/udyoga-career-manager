@@ -6,6 +6,7 @@ import 'package:udyoga/domain/book.dart';
 import 'package:udyoga/domain/companion.dart';
 import 'package:udyoga/domain/companion_book.dart';
 import 'package:udyoga/domain/conversations.dart';
+import 'package:udyoga/domain/feeds.dart';
 import 'package:udyoga/domain/insights.dart';
 import 'package:udyoga/domain/pay.dart';
 import 'package:udyoga/domain/pipeline.dart';
@@ -308,4 +309,99 @@ Future<void> seedConversations(CareerBook book) async {
     at: '2026-11-14T08:00',
     source: 'api',
   );
+}
+
+/// The worst a real book could look: very long job titles and employer
+/// names, a one-letter employer, Welsh and non-Latin names, no pay, very
+/// high pay in rupees, jobs closing today and tomorrow, fit scores at both
+/// ends and none, and enough applications that every count runs into the
+/// dozens. For checking that nothing spills, clips or reads badly.
+Future<void> seedWorstCase(CareerBook book) async {
+  final today = isoDate(DateTime.now());
+  await book.saveProfile(
+    sampleProfile.copyWith(
+      name: 'Oluwaseun Siobhán Ní Mhaoláin-Kowalczyk-Fitzgerald',
+      targets: sampleProfile.targets.copyWith(
+        roles: [
+          'Advanced Clinical Practitioner in Emergency and Urgent Care Medicine',
+          'Chief Nursing Information Officer',
+          'Digital Nurse Specialist',
+        ],
+      ),
+    ),
+  );
+  Posting job(
+    String id,
+    String title,
+    String company, {
+    int? min,
+    int? max,
+    String currency = 'GBP',
+    String? closing,
+    String location = 'Exampletown',
+  }) => Posting(
+    source: 'reed',
+    sourceId: id,
+    title: title,
+    company: company,
+    location: location,
+    country: 'GB',
+    salaryMin: min,
+    salaryMax: max,
+    currency: currency,
+    description: 'Support EPR systems and patient safety training across wards.',
+    posted: today,
+    closing: closing,
+  );
+  final ids = await book.importPostings(
+    [
+      job(
+        'w1',
+        'Band 8a Advanced Clinical Practitioner – Emergency Department and Same Day Emergency Care '
+            '(Fixed Term / Secondment Opportunity, 12 Months, Flexible Working Considered)',
+        'Betsi Cadwaladr University Health Board – Ysbyty Ysgol Glan Clwyd, Bodelwyddan',
+        min: 55690,
+        max: 62682,
+        closing: today,
+        location: 'Llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch, Ynys Môn',
+      ),
+      job('w2', 'Nurse', 'X', closing: addDays(today, 1)),
+      job(
+        'w3',
+        'मुख्य नर्सिंग सूचना अधिकारी (Chief Nursing Information Officer)',
+        'अखिल भारतीय आयुर्विज्ञान संस्थान',
+        min: 2500000,
+        max: 4800000,
+        currency: 'INR',
+        location: 'नई दिल्ली',
+      ),
+      job('w4', '看護情報スペシャリスト', '東京大学医学部附属病院', min: 1250000, max: 1250000),
+      job(
+        'w5',
+        'Chief Executive',
+        'Example Health Trust',
+        min: 1250000,
+        max: 2400000,
+        closing: addDays(today, 6),
+      ),
+      for (var i = 0; i < 40; i++)
+        job('n$i', 'Clinical Informatics Nurse ${i + 1}', 'Example Health Trust', min: 38000, max: 45000),
+    ],
+    sampleProfile,
+    today: today,
+  );
+  await book.saveTriage({
+    ids[0]: (fit: 100, why: 'Every requirement met.'),
+    ids[1]: (fit: 0, why: 'Nothing in common.'),
+    ids[3]: (fit: 7, why: 'Language barrier.'),
+  });
+  for (final id in ids.take(2)) {
+    await book.setJobStatus(id, 'saved');
+  }
+  await book.setJobStatus(ids[4], 'saved');
+  // Thirty-two applications, all due a chase today.
+  for (final id in ids.skip(5).take(32)) {
+    final a = await book.applyFor(await book.job(id), today: addDays(today, -20), sent: true);
+    await book.setFollowUp(a, today);
+  }
 }

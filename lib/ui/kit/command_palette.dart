@@ -70,14 +70,21 @@ List<PaletteEntry> filterEntries(String query, List<PaletteEntry> entries) {
 
 /// Opens the palette over the current page. It appears and goes at once, with
 /// no animation: it is opened from the keyboard, many times a day.
-Future<void> showCommandPalette(BuildContext context, List<PaletteEntry> entries) async {
+///
+/// [more] adds entries for a typed query after the ones that match it, such
+/// as answers from the help.
+Future<void> showCommandPalette(
+  BuildContext context,
+  List<PaletteEntry> entries, {
+  List<PaletteEntry> Function(String query)? more,
+}) async {
   final chosen = await showGeneralDialog<PaletteEntry>(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Close',
     barrierColor: Colors.black.withValues(alpha: 0.35),
     transitionDuration: Duration.zero,
-    pageBuilder: (context, _, _) => CommandPalette(entries: entries),
+    pageBuilder: (context, _, _) => CommandPalette(entries: entries, more: more),
   );
   chosen?.onSelect();
 }
@@ -85,8 +92,11 @@ Future<void> showCommandPalette(BuildContext context, List<PaletteEntry> entries
 /// The palette: a search field over a list of pages and actions. Arrows move
 /// the highlight, Enter opens it, Escape closes; typing filters as you go.
 class CommandPalette extends StatefulWidget {
-  const CommandPalette({super.key, required this.entries});
+  const CommandPalette({super.key, required this.entries, this.more});
   final List<PaletteEntry> entries;
+
+  /// Entries for a typed query, listed after the matching [entries].
+  final List<PaletteEntry> Function(String query)? more;
 
   static const rowHeight = 44.0;
 
@@ -109,7 +119,7 @@ class _CommandPaletteState extends State<CommandPalette> {
   }
 
   void _filter(String q) => setState(() {
-    _shown = filterEntries(q, widget.entries);
+    _shown = [...filterEntries(q, widget.entries), if (q.trim().isNotEmpty) ...?widget.more?.call(q)];
     _at = 0;
     if (_scroll.hasClients) _scroll.jumpTo(0);
   });
@@ -180,7 +190,11 @@ class _CommandPaletteState extends State<CommandPalette> {
                     child: ShadInput(
                       controller: _query,
                       autofocus: true,
-                      placeholder: const Text('Go to a page or run an action'),
+                      placeholder: Text(
+                        widget.more == null
+                            ? 'Go to a page or run an action'
+                            : 'Go to a page, run an action or ask',
+                      ),
                       leading: Icon(Icons.search, size: 18, color: p.muted),
                       onChanged: _filter,
                       onSubmitted: (_) => _choose(),
@@ -274,12 +288,18 @@ class _Row extends StatelessWidget {
 }
 
 /// Opens the command palette on Ctrl+K (Cmd+K on a Mac) anywhere inside
-/// [child]. [entries] is asked for the list each time it opens, so it is
-/// always current.
+/// [child], or from a [PaletteButton]. [entries] is asked for the list each
+/// time it opens, so it is always current.
 class CommandPaletteScope extends StatefulWidget {
-  const CommandPaletteScope({super.key, required this.entries, required this.child});
+  const CommandPaletteScope({super.key, required this.entries, required this.child, this.more});
   final List<PaletteEntry> Function(BuildContext context) entries;
+  final List<PaletteEntry> Function(String query)? more;
   final Widget child;
+
+  /// Opens the palette of the scope around [context]; false when there is
+  /// none.
+  static bool open(BuildContext context) =>
+      context.findAncestorStateOfType<_CommandPaletteScopeState>()?._show() ?? false;
 
   @override
   State<CommandPaletteScope> createState() => _CommandPaletteScopeState();
@@ -308,11 +328,33 @@ class _CommandPaletteScopeState extends State<CommandPaletteScope> {
     }
     // Only from the screen on top, and never twice.
     if (_open || !mounted || !(ModalRoute.of(context)?.isCurrent ?? true)) return _open;
+    return _show();
+  }
+
+  bool _show() {
+    if (_open || !mounted) return false;
     _open = true;
-    showCommandPalette(context, widget.entries(context)).whenComplete(() => _open = false);
+    showCommandPalette(context, widget.entries(context), more: widget.more).whenComplete(() => _open = false);
     return true;
   }
 
   @override
   Widget build(BuildContext context) => widget.child;
+}
+
+/// The palette for touch screens and anyone who does not know Ctrl+K: a
+/// search button that opens it. Nothing shows outside a palette scope.
+class PaletteButton extends StatelessWidget {
+  const PaletteButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (context.findAncestorStateOfType<_CommandPaletteScopeState>() == null) return const SizedBox.shrink();
+    final mac = Theme.of(context).platform == TargetPlatform.macOS;
+    return IconButton(
+      icon: const Icon(Icons.search),
+      tooltip: 'Search pages, actions and help (${mac ? '⌘' : 'Ctrl+'}K)',
+      onPressed: () => CommandPaletteScope.open(context),
+    );
+  }
 }

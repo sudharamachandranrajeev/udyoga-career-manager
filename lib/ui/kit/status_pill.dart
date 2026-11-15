@@ -2,9 +2,9 @@ import 'package:brahma_core/brahma_core.dart' show Status;
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadBadge;
 
-/// A small rounded label with a coloured dot: "Shortlisted", "Closes in 3
-/// days". The dot and an optional icon mean the state never rests on colour
-/// alone.
+/// A small rounded label: "Remote", "Shortlisted", "Closes in 3 days". One
+/// with a status has a dot (or its icon), so the state never rests on colour
+/// alone; a plain one is just the label.
 class StatusPill extends StatelessWidget {
   const StatusPill(this.label, {super.key, this.status, this.icon, this.dot = true});
   final String label;
@@ -37,7 +37,7 @@ class StatusPill extends StatelessWidget {
               padding: const EdgeInsets.only(right: 4),
               child: Icon(icon, size: 13, color: fg),
             )
-          else if (dot)
+          else if (dot && status != null)
             Container(
               width: 6,
               height: 6,

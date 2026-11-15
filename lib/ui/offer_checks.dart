@@ -7,6 +7,7 @@ import '../db/database.dart';
 import '../domain/book.dart';
 import '../domain/pipeline.dart';
 import 'common.dart';
+import 'look.dart';
 
 /// How a check's due date reads today: late, due today, or fine. Done and
 /// not-needed checks are never late.
@@ -75,7 +76,20 @@ class ChecksSection extends ConsumerWidget {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('$settled of ${list.length} done'),
+                Row(
+                  children: [
+                    Text('$settled of ${list.length} done', style: figures),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: LinearProgressIndicator(
+                        value: settled / list.length,
+                        minHeight: 6,
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                        semanticsLabel: 'Checks done',
+                      ),
+                    ),
+                  ],
+                ),
                 for (final c in list)
                   ListTile(
                     contentPadding: EdgeInsets.zero,

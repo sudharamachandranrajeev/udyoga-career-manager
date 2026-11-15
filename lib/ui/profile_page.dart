@@ -12,6 +12,7 @@ import '../domain/countries.dart';
 import '../domain/profile.dart';
 import '../domain/resume.dart';
 import 'common.dart';
+import 'kit/kit.dart';
 import 'resume_page.dart';
 
 /// The most CV versions read together.
@@ -193,11 +194,7 @@ class ProfilePage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (p.skills.isNotEmpty)
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [for (final s in p.skills) Chip(label: Text(s))],
-                      ),
+                      Wrap(spacing: 6, runSpacing: 6, children: [for (final s in p.skills) StatusPill(s)]),
                     if (p.certifications.isNotEmpty) ...[
                       const Subhead('Certifications'),
                       Bullets(p.certifications, icon: Icons.verified_outlined),

@@ -19,6 +19,7 @@ import 'contacts_page.dart';
 import 'employer_cards.dart';
 import 'interview_page.dart';
 import 'jobs_page.dart';
+import 'kit/kit.dart';
 import 'look.dart';
 import 'resume_page.dart';
 import 'site_page.dart';
@@ -52,8 +53,8 @@ class JobPage extends ConsumerWidget {
       return Scaffold(
         appBar: AppBar(),
         body: all.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : const EmptyState(icon: Icons.work_outline, title: 'This job was removed'),
+            ? const Padding(padding: EdgeInsets.all(16), child: SkeletonCards(count: 2))
+            : Gone(icon: Icons.work_outline, title: 'This job was removed'),
       );
     }
     final hasAi = ref.watch(advisorProvider).value != null;
@@ -424,19 +425,19 @@ class _Header extends StatelessWidget {
             runSpacing: 6,
             children: [
               if (j.salaryText.isNotEmpty || shortSalary(j).isNotEmpty)
-                Pill(j.salaryText.ifEmpty(shortSalary(j)), icon: Icons.payments_outlined),
-              if (j.remote) const Pill('Remote', icon: Icons.public),
-              if (j.country.isNotEmpty) Pill(Country.nameOf(j.country), icon: Icons.place_outlined),
-              if (j.posted != null) Pill('Posted ${niceDate(j.posted!)}'),
+                StatusPill(j.salaryText.ifEmpty(shortSalary(j)), icon: Icons.payments_outlined),
+              if (j.remote) const StatusPill('Remote', icon: Icons.public),
+              if (j.country.isNotEmpty) StatusPill(Country.nameOf(j.country), icon: Icons.place_outlined),
+              if (j.posted != null) StatusPill('Posted ${niceDate(j.posted!)}'),
               if (checkListing(j, today: now).official)
-                const Pill('Official site', status: Status.good, icon: Icons.verified_outlined),
+                const StatusPill('Official site', status: Status.good, icon: Icons.verified_outlined),
               if (j.closing != null)
-                Pill(
+                StatusPill(
                   'Closes ${niceDate(j.closing!)} (${relativeDay(j.closing!, now)})',
                   status: j.closing!.compareTo(addDays(now, 7)) <= 0 ? Status.serious : null,
                   icon: Icons.event_outlined,
                 ),
-              Pill('Found ${niceDate(j.found)} via ${sourceName(j.source)}'),
+              StatusPill('Found ${niceDate(j.found)} via ${sourceName(j.source)}'),
             ],
           ),
         ],
@@ -501,7 +502,7 @@ class FitView extends StatelessWidget {
         if (fit.employer.isNotEmpty) ...[const Subhead('The employer'), SelectableText(fit.employer)],
         if (fit.keywords.isNotEmpty) ...[
           const Subhead('Keywords your CV needs'),
-          Wrap(spacing: 6, runSpacing: 6, children: [for (final k in fit.keywords) Chip(label: Text(k))]),
+          Wrap(spacing: 6, runSpacing: 6, children: [for (final k in fit.keywords) StatusPill(k)]),
         ],
         if (fit.tips.isNotEmpty) ...[
           const Subhead('How to apply'),

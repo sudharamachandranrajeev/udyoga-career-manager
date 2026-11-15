@@ -72,14 +72,22 @@ class _GroupPageState extends ConsumerState<GroupPage> {
         SafeArea(
           bottom: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
-            child: Center(
-              child: PillNav<String>(
-                key: ValueKey('pills.${g.id}'),
-                items: [for (final p in g.pages) PillNavItem(p.id, p.label, icon: p.icon)],
-                selected: g.pages[index].id,
-                onChanged: (id) => ref.read(groupTabProvider.notifier).show(g.id, id),
-              ),
+            padding: const EdgeInsets.fromLTRB(16, 10, 8, 2),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: PillNav<String>(
+                      key: ValueKey('pills.${g.id}'),
+                      items: [for (final p in g.pages) PillNavItem(p.id, p.label, icon: p.icon)],
+                      selected: g.pages[index].id,
+                      onChanged: (id) => ref.read(groupTabProvider.notifier).show(g.id, id),
+                    ),
+                  ),
+                ),
+                // The palette, for touch: every page, the actions and the help.
+                const PaletteButton(),
+              ],
             ),
           ),
         ),
@@ -168,8 +176,24 @@ class UdyogaPalette extends ConsumerWidget {
     'settings': ['AI', 'keys', 'sync', 'updates', 'security'],
   };
 
+  /// Help answers for [query] that belong to a page, each opening its page:
+  /// the help's "go to" for pages inside a group, which brahma_core's own
+  /// Help dialog cannot reach (it knows only the navigation entries).
+  static List<PaletteEntry> helpFor(WidgetRef ref, String query) => [
+    for (final h in searchHelp(query, ref.read(hintTextsProvider), allPages, limit: 6))
+      if (h.screen case final page?)
+        PaletteEntry(
+          id: 'help.${h.id}',
+          label: h.text,
+          icon: Icons.help_outline,
+          section: 'Help · ${page.label}',
+          onSelect: () => goToPage(ref, page.id),
+        ),
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) => CommandPaletteScope(
+    more: (q) => helpFor(ref, q),
     entries: (context) => [
       for (final p in allPages)
         PaletteEntry(

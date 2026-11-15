@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/navigation.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/insights.dart';
@@ -13,7 +14,7 @@ import '../domain/json.dart';
 import '../domain/linkedin_export.dart';
 import '../domain/pipeline.dart';
 import 'common.dart';
-import 'look.dart';
+import 'kit/kit.dart';
 
 const _kindIcons = {
   'certification': Icons.verified_outlined,
@@ -79,7 +80,7 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
           ),
         ),
         const SizedBox(height: 12),
-        AsyncView(
+        AsyncList(
           ref.watch(growthProvider),
           builder: (items) {
             final all = items.where((g) => !noteKinds.containsKey(g.kind)).toList();
@@ -97,12 +98,19 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
 
   Widget _plan(List<GrowthItem> all) {
     if (all.isEmpty) {
-      return const EmptyState(
+      return EmptyState(
         icon: Icons.school_outlined,
         title: 'Nothing planned yet',
         message:
             'Run the assessment on the Career page for certifications and courses that move you on, '
             'or pick a career path to turn its steps into goals.',
+        actions: [
+          FilledButton.tonalIcon(
+            onPressed: () => goToPage(ref, 'career'),
+            icon: const Icon(Icons.insights),
+            label: const Text('Open the Career page'),
+          ),
+        ],
       );
     }
     const order = ['doing', 'planned', 'suggested', 'done', 'dropped'];
@@ -112,14 +120,13 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TiltGrid(
-          minWidth: 150,
+        StatGrid(
           children: [
-            KpiTile(label: 'Under way', value: '$active', icon: Icons.trending_up),
-            KpiTile(label: 'Done', value: '$done', icon: Icons.emoji_events_outlined),
-            KpiTile(
+            StatTile(label: 'Under way', value: active, icon: Icons.trending_up),
+            StatTile(label: 'Done', value: done, icon: Icons.emoji_events_outlined),
+            StatTile(
               label: 'Suggested',
-              value: '${all.where((g) => g.status == 'suggested').length}',
+              value: all.where((g) => g.status == 'suggested').length,
               icon: Icons.lightbulb_outline,
             ),
           ],
@@ -230,9 +237,9 @@ class _GrowthTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final now = today();
     final late = g.target != null && g.status != 'done' && g.target!.compareTo(now) < 0;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: SpotlightCard(
         padding: const EdgeInsets.fromLTRB(16, 8, 8, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -10,6 +10,7 @@ import '../domain/insights.dart';
 import '../domain/json.dart';
 import '../domain/resume.dart';
 import 'common.dart';
+import 'kit/kit.dart';
 import 'linkedin_page.dart';
 
 const _docxMime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -27,8 +28,8 @@ class ResumePage extends ConsumerWidget {
       return Scaffold(
         appBar: AppBar(),
         body: all.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : const EmptyState(icon: Icons.description_outlined, title: 'This CV was removed'),
+            ? const Padding(padding: EdgeInsets.all(16), child: SkeletonCards(count: 2))
+            : Gone(icon: Icons.description_outlined, title: 'This CV was removed'),
       );
     }
     final doc = ResumeDoc.fromJson(decodeObject(r.content));
@@ -86,7 +87,7 @@ class ResumePage extends ConsumerWidget {
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: [for (final k in notes.missing) Chip(label: Text(k))],
+                    children: [for (final k in notes.missing) StatusPill(k, status: Status.warning)],
                   ),
                 ],
                 if (notes.covered.isNotEmpty) ...[
@@ -95,11 +96,7 @@ class ResumePage extends ConsumerWidget {
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      for (final k in notes.covered)
-                        Chip(
-                          avatar: Icon(Icons.check, size: 16, color: Status.good.color),
-                          label: Text(k),
-                        ),
+                      for (final k in notes.covered) StatusPill(k, status: Status.good, icon: Icons.check),
                     ],
                   ),
                 ],

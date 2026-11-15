@@ -6,11 +6,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/navigation.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/calendar.dart';
 import '../domain/pipeline.dart';
 import 'common.dart';
+import 'kit/kit.dart';
 import 'look.dart';
 import 'offer_checks.dart';
 import 'job_page.dart';
@@ -95,7 +97,7 @@ class _ApplicationsPageState extends ConsumerState<ApplicationsPage> {
         ],
       ),
       const SizedBox(height: 12),
-      AsyncView(
+      AsyncList(
         ref.watch(applicationsProvider),
         builder: (all) {
           final mine = all.where((a) => Stage.of(a.stage).open == open).toList();
@@ -104,20 +106,35 @@ class _ApplicationsPageState extends ConsumerState<ApplicationsPage> {
             return EmptyState(
               icon: Icons.send_outlined,
               title: open ? 'No active applications' : 'Nothing closed yet',
-              message: open ? 'Apply from a job on the Jobs page, or add one you made elsewhere.' : null,
+              message: open
+                  ? 'Apply from a job on the Jobs page, or add one you made elsewhere.'
+                  : 'Applications move here when they end: accepted, rejected, withdrawn or no reply.',
+              actions: [
+                if (open)
+                  FilledButton.icon(
+                    onPressed: () => goToPage(ref, 'jobs'),
+                    icon: const Icon(Icons.work_outline),
+                    label: const Text('Find a job to apply for'),
+                  )
+                else
+                  TextButton(
+                    onPressed: () => setState(() => open = true),
+                    child: const Text('See active applications'),
+                  ),
+              ],
             );
           }
           final stages = open ? Stage.openStages : Stage.values.where((s) => !s.open).toList();
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TiltGrid(
+              StatGrid(
                 minWidth: 140,
                 children: [
                   for (final s in stages)
-                    KpiTile(
+                    StatTile(
                       label: s.label,
-                      value: '${mine.where((a) => a.stage == s.id).length}',
+                      value: mine.where((a) => a.stage == s.id).length,
                       icon: s.open ? Icons.pending_outlined : Icons.check_circle_outline,
                     ),
                 ],
@@ -195,62 +212,79 @@ class ApplicationTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Tilt(
-        child: Card(
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ApplicationPage(a.id))),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      OrgLogo(a.company.ifEmpty(a.title)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+        child: SpotlightCard(
+          padding: EdgeInsets.zero,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: () =>
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => ApplicationPage(a.id))),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        OrgLogo(a.company.ifEmpty(a.title)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                a.title,
+                                style: t.titleMedium,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                [a.company, a.location].where((s) => s.isNotEmpty).join(' · '),
+                                style: t.bodyMedium?.copyWith(color: muted),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        StatusPill(stage.label, status: stageStatus(stage)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // On a narrow card the follow-up drops below the dates
+                    // rather than shrinking to "Follow u…".
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 6,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(a.title, style: t.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
-                            Text(
-                              [a.company, a.location].where((s) => s.isNotEmpty).join(' · '),
-                              style: t.bodyMedium?.copyWith(color: muted),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            Icon(Icons.schedule, size: 15, color: muted),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                [
+                                  if (a.applied != null) 'Applied ${niceDate(a.applied!)}',
+                                  'updated ${relativeDay(a.updated, now)}',
+                                ].join(' · '),
+                                style: t.bodySmall?.copyWith(color: muted),
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                      Pill(stage.label, status: stageStatus(stage)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(Icons.schedule, size: 15, color: muted),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          [
-                            if (a.applied != null) 'Applied ${niceDate(a.applied!)}',
-                            'updated ${relativeDay(a.updated, now)}',
-                          ].join(' · '),
-                          style: t.bodySmall?.copyWith(color: muted),
-                        ),
-                      ),
-                      if (a.followUp != null)
-                        // Shrinks (the label ellipsizes) on narrow cards.
-                        Flexible(
-                          child: Pill(
+                        if (a.followUp != null)
+                          StatusPill(
                             'Follow up ${relativeDay(a.followUp!, now)}',
                             status: followUpStatus(a.followUp!, now),
                             icon: Icons.notifications_none,
                           ),
-                        ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -331,7 +365,7 @@ class _BoardColumn extends ConsumerWidget {
               child: Row(
                 children: [
                   Expanded(child: Text(stage.label, style: t.titleSmall)),
-                  Pill('${apps.length}', status: stageStatus(stage)),
+                  StatusPill('${apps.length}', status: stageStatus(stage)),
                 ],
               ),
             ),
@@ -406,7 +440,7 @@ class _BoardCard extends ConsumerWidget {
                 children: [
                   Text('Updated ${relativeDay(a.updated, now)}', style: t.bodySmall?.copyWith(color: muted)),
                   if (a.followUp != null)
-                    Pill(
+                    StatusPill(
                       'Follow up ${relativeDay(a.followUp!, now)}',
                       status: followUpStatus(a.followUp!, now),
                       icon: Icons.notifications_none,
@@ -510,8 +544,8 @@ class ApplicationPage extends ConsumerWidget {
       return Scaffold(
         appBar: AppBar(),
         body: all.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : const EmptyState(icon: Icons.send_outlined, title: 'This application was removed'),
+            ? const Padding(padding: EdgeInsets.all(16), child: SkeletonCards(count: 2))
+            : Gone(icon: Icons.send_outlined, title: 'This application was removed'),
       );
     }
     final now = today();

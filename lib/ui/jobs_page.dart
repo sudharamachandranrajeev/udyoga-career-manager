@@ -13,6 +13,7 @@ import '../domain/pipeline.dart';
 import '../domain/profile.dart';
 import 'common.dart';
 import 'job_page.dart';
+import 'kit/kit.dart';
 import 'look.dart';
 import 'site_page.dart';
 
@@ -122,7 +123,7 @@ class _JobsPageState extends ConsumerState<JobsPage> {
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 12),
-        AsyncView(
+        AsyncList(
           ref.watch(jobsProvider),
           builder: (all) {
             final q = search.text.trim().toLowerCase();
@@ -132,13 +133,38 @@ class _JobsPageState extends ConsumerState<JobsPage> {
                 .toList();
             if (byFit) jobs.sort((a, b) => (b.fit ?? -1).compareTo(a.fit ?? -1));
             if (jobs.isEmpty) {
+              // One next step that fits the list on show.
+              if (q.isNotEmpty) {
+                return EmptyState(
+                  icon: Icons.search_off,
+                  title: 'No jobs match "${search.text.trim()}"',
+                  actions: [
+                    TextButton(
+                      onPressed: () => setState(search.clear),
+                      child: const Text('Clear the filter'),
+                    ),
+                  ],
+                );
+              }
               return EmptyState(
                 icon: Icons.work_outline,
-                title: status == 'new' ? 'No new jobs' : 'Nothing here',
+                title: status == 'new' ? 'No new jobs' : 'No ${jobStatuses[status]?.toLowerCase()} jobs',
                 message: status == 'new'
-                    ? 'Refresh to check the job sites for your target roles, run the AI search, or add a job '
-                          'you found yourself.'
-                    : null,
+                    ? 'Udyoga checks the job sites for your target roles every few hours.'
+                    : 'Jobs you mark ${jobStatuses[status]?.toLowerCase()} show here.',
+                actions: [
+                  if (status == 'new')
+                    FilledButton.icon(
+                      onPressed: refresh.running ? null : () => _run(),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Check the job sites now'),
+                    )
+                  else
+                    TextButton(
+                      onPressed: () => setState(() => status = 'new'),
+                      child: const Text('See new jobs'),
+                    ),
+                ],
               );
             }
             return Column(children: [for (final j in jobs) JobTile(j)]);
@@ -180,102 +206,117 @@ class JobTile extends StatelessWidget {
     final closingSoon =
         j.closing != null && j.closing!.compareTo(addDays(now, 7)) <= 0 && j.closing!.compareTo(now) >= 0;
     final check = checkListing(j, today: now);
+    final closes = j.closing;
+    final closed = closes != null && closes.compareTo(now) < 0;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Tilt(
-        child: Card(
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () =>
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => JobPage(j.id, heroTag: tag))),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Hero(tag: tag, child: OrgLogo(j.company.ifEmpty(j.title))),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(j.title, style: t.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 2),
-                            Text(
-                              [j.company, j.location].where((s) => s.isNotEmpty).join(' · '),
-                              style: t.bodyMedium?.copyWith(color: muted),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (pay.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 130),
-                          child: Text(
-                            pay,
-                            textAlign: TextAlign.end,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: t.titleMedium?.copyWith(
-                              fontFamily: headingFont,
-                              fontWeight: FontWeight.w800,
-                            ),
+        child: SpotlightCard(
+          padding: EdgeInsets.zero,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: () =>
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => JobPage(j.id, heroTag: tag))),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Hero(tag: tag, child: OrgLogo(j.company.ifEmpty(j.title))),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                j.title,
+                                style: t.titleMedium,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                [j.company, j.location].where((s) => s.isNotEmpty).join(' · '),
+                                style: t.bodyMedium?.copyWith(color: muted),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        Hint('jobs.fit', child: FitBadge(j.fit, ai: j.assessment.isNotEmpty)),
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      if (j.remote) const Pill('Remote', icon: Icons.public),
-                      if (j.country.isNotEmpty) Pill(Country.nameOf(j.country)),
-                      Pill('via ${sourceName(j.source)}'),
-                      if (check.official)
-                        const Pill('Official site', status: Status.good, icon: Icons.verified_outlined),
-                      if (check.problems.isNotEmpty)
-                        const Pill('Closed', status: Status.serious, icon: Icons.event_busy)
-                      else if (check.cautions.isNotEmpty)
-                        const Pill(
-                          'Check it first',
-                          status: Status.warning,
-                          icon: Icons.warning_amber_rounded,
-                        ),
-                      if (j.status == 'applied') const Pill('Applied', status: Status.good, icon: Icons.send),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(Icons.schedule, size: 15, color: muted),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          'Found ${relativeDay(j.found, now)}',
-                          style: t.bodySmall?.copyWith(color: muted),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        if (j.remote) const StatusPill('Remote', icon: Icons.public),
+                        if (j.country.isNotEmpty) StatusPill(Country.nameOf(j.country)),
+                        StatusPill('via ${sourceName(j.source)}'),
+                        if (check.official)
+                          const StatusPill(
+                            'Official site',
+                            status: Status.good,
+                            icon: Icons.verified_outlined,
+                          ),
+                        if (check.problems.isNotEmpty)
+                          const StatusPill('Closed', status: Status.serious, icon: Icons.event_busy)
+                        else if (check.cautions.isNotEmpty)
+                          const StatusPill(
+                            'Check it first',
+                            status: Status.warning,
+                            icon: Icons.warning_amber_rounded,
+                          ),
+                        if (j.status == 'applied')
+                          const StatusPill('Applied', status: Status.good, icon: Icons.send),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Pay, the closing date and when it was found: what to weigh
+                    // before opening it.
+                    // On a narrow card the closing date drops below the pay
+                    // rather than cutting either short.
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        Text(
+                          pay.isEmpty ? 'Pay not given' : pay,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          style: pay.isEmpty
+                              ? t.bodyMedium?.copyWith(color: muted)
+                              : t.titleMedium?.copyWith(fontFamily: headingFont, fontWeight: FontWeight.w800),
                         ),
-                      ),
-                      if (closingSoon)
-                        Flexible(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: Pill('Closes ${relativeDay(j.closing!, now)}', status: Status.serious),
+                        if (closes == null || closed)
+                          Text(
+                            'Found ${relativeDay(j.found, now)}',
+                            style: t.bodySmall?.copyWith(color: muted),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          )
+                        else
+                          Tooltip(
+                            message: 'Closes ${niceDate(closes)}',
+                            child: StatusPill(
+                              'Closes ${relativeDay(closes, now)}',
+                              status: closingSoon ? Status.serious : null,
+                              icon: Icons.event_outlined,
+                            ),
                           ),
-                        ),
-                      Hint('jobs.fit', child: FitBadge(j.fit, ai: j.assessment.isNotEmpty)),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -287,8 +328,12 @@ class JobTile extends StatelessWidget {
 
 /// Pay in a few characters ("£32k–38k"), else the advert's own short wording.
 String shortSalary(Job j) {
-  String k(int v) =>
-      v >= 1000 ? '${(v / 1000).toStringAsFixed(v % 1000 == 0 || v >= 100000 ? 0 : 1)}k' : '$v';
+  // 1.3m, 45k, 38.5k: short enough for a card at any size of pay.
+  String k(int v) => switch (v) {
+    >= 1000000 => '${(v / 1000000).toStringAsFixed(v % 1000000 == 0 ? 0 : 1)}m',
+    >= 1000 => '${(v / 1000).toStringAsFixed(v % 1000 == 0 || v >= 100000 ? 0 : 1)}k',
+    _ => '$v',
+  };
   final sym = switch (j.currency.toUpperCase()) {
     'GBP' => '£',
     'EUR' => '€',

@@ -12,6 +12,7 @@ import 'package:udyoga/domain/pipeline.dart';
 import 'package:udyoga/ui/applications_page.dart';
 import 'package:udyoga/ui/coach_page.dart';
 import 'package:udyoga/ui/growth_page.dart';
+import 'package:udyoga/ui/interview_page.dart';
 import 'package:udyoga/ui/kit/kit.dart';
 import 'package:udyoga/ui/linkedin_page.dart';
 import 'package:udyoga/ui/today_hero.dart';
@@ -117,18 +118,36 @@ void main() {
     expect(find.text('Follow up today'), findsOneWidget);
     expect(find.text('Upcoming interviews'), findsOneWidget);
     expect(find.text('Closing this week'), findsOneWidget);
-    // The hero strip: the counts have rolled to their values, and the next
-    // deadline (a saved job closing this week) has the beam round it.
-    for (final label in ['Applied', 'Interviews', 'Follow-ups due', 'Next deadline']) {
+    // The hero strip: six counts, rolled to their values, laid out with no
+    // lone tile, and the next deadline (a saved job closing this week) with
+    // the beam round it.
+    for (final label in [
+      'Applied',
+      'Interviews',
+      'Follow-ups due',
+      'In progress',
+      'New matches',
+      'Response rate',
+      'Next deadline',
+    ]) {
       expect(find.descendant(of: find.byType(TodayHero), matching: find.text(label)), findsOneWidget);
     }
     final counts = tester.widgetList<RollingNumber>(find.byType(RollingNumber)).toList();
-    expect(counts, hasLength(3));
+    expect(counts, hasLength(6));
     for (final n in counts) {
-      expect(find.descendant(of: find.byWidget(n), matching: find.text('${n.value}')), findsOneWidget);
+      final shown = RollingNumber.format(n.value, suffix: n.suffix);
+      expect(find.descendant(of: find.byWidget(n), matching: find.text(shown)), findsOneWidget);
     }
-    expect(counts.last.value, greaterThan(0), reason: 'the seed has follow-ups due');
+    expect(counts[2].value, greaterThan(0), reason: 'the seed has follow-ups due');
+    expect(counts.last.suffix, '%', reason: 'the response rate');
     expect(find.ancestor(of: find.text('Next deadline'), matching: find.byType(BorderBeam)), findsOneWidget);
+    // The seed's due items sit under "Needs you", each group arriving in turn.
+    expect(find.text('Needs you'), findsOneWidget);
+    expect(
+      find.ancestor(of: find.text('Follow up today'), matching: find.byType(BlurFadeIn)),
+      findsOneWidget,
+    );
+    expect(find.text('Nothing needs you today.'), findsNothing);
     await app.close();
   });
 
@@ -137,8 +156,13 @@ void main() {
     await app.open();
     await app.run();
     expect(find.descendant(of: find.byType(TodayHero), matching: find.text('Applied')), findsOneWidget);
-    expect(find.descendant(of: find.byType(TodayHero), matching: find.text('0')), findsNWidgets(3));
+    // Five zero counts, and a dash for the response rate: nothing was sent.
+    expect(find.descendant(of: find.byType(TodayHero), matching: find.text('0')), findsNWidgets(5));
+    expect(find.descendant(of: find.byType(TodayHero), matching: find.text('–')), findsOneWidget);
     expect(find.text('Next deadline'), findsNothing);
+    // Nothing is due, and it says so with one next step.
+    expect(find.text('Nothing needs you today.'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Open Jobs'), findsOneWidget);
     expect(find.byType(BorderBeam), findsNothing);
     expect(tester.takeException(), isNull);
     await app.close();
@@ -282,6 +306,32 @@ void main() {
     expect(find.byType(CommandPalette), findsNothing);
     expect(find.byType(GrowthPage), findsOneWidget);
     expect(find.byType(TodayPage), findsNothing);
+    await app.close();
+  });
+
+  testWidgets('on a phone the search button opens the palette, whose help answers open grouped pages', (
+    tester,
+  ) async {
+    final app = AppHarness(tester)..phone();
+    await app.open(seed: seedBook);
+    await app.run();
+    await app.tap(find.byTooltip('Search pages, actions and help (Ctrl+K)'));
+    expect(find.byType(CommandPalette), findsOneWidget);
+    // A question no page name answers: the help knows it is about Interview,
+    // which lives inside Prepare.
+    await tester.enterText(
+      find.descendant(of: find.byType(CommandPalette), matching: find.byType(EditableText)),
+      'speaking time fillers',
+    );
+    await tester.pump();
+    final answer = find.text('Help · Interview');
+    expect(answer, findsWidgets);
+    await app.tap(answer.first);
+    expect(find.byType(CommandPalette), findsNothing);
+    expect(find.byType(InterviewPage), findsOneWidget);
+    expect(find.byType(TodayPage), findsNothing);
+    // Every grouped page has the button too, beside its switch.
+    expect(find.descendant(of: find.byType(GroupPage), matching: find.byType(PaletteButton)), findsOneWidget);
     await app.close();
   });
 }
