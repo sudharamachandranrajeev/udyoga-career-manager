@@ -287,6 +287,8 @@ scripts/make-icons.sh                                               # app icons 
 - [http](https://pub.dev/packages/http), [file_picker](https://pub.dev/packages/file_picker),
   [archive](https://pub.dev/packages/archive), [url_launcher](https://pub.dev/packages/url_launcher),
   [intl](https://pub.dev/packages/intl)
+- [enough_mail](https://pub.dev/packages/enough_mail) for IMAP and SMTP, under the Mozilla Public
+  License 2.0; used as published, with none of its files changed (its source is at the link)
 - Job data from free public job-site feeds
 - Fonts [Inter](https://rsms.me/inter/) and [Plus Jakarta Sans](https://github.com/tokotype/PlusJakartaSans),
   bundled under the SIL Open Font License
