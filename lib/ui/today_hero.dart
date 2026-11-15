@@ -160,7 +160,11 @@ class _DeadlineCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(d.detail, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodySmall),
           const SizedBox(height: 6),
-          StatusPill('${d.date}, ${d.when}', status: Status.warning, icon: Icons.schedule),
+          // "in 3 days" fits a phone's half-width card; the date is on hover.
+          Tooltip(
+            message: d.date,
+            child: StatusPill(d.when, status: Status.warning, icon: Icons.schedule),
+          ),
         ],
       ),
     );
