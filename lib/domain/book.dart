@@ -816,9 +816,12 @@ class CareerBook {
           title: Value(l.title),
           company: Value(l.company),
           email: Value(l.email),
+          phone: Value(l.phone),
           linkedin: Value(l.linkedin),
           source: Value(l.source),
-          sourceUrl: Value(l.source.startsWith('http') ? l.source : ''),
+          sourceUrl: Value(
+            l.sourceUrl.isNotEmpty ? l.sourceUrl : (l.source.startsWith('http') ? l.source : ''),
+          ),
           sourceKind: Value(sourceKind),
           foundOn: Value(today),
           jobId: Value(jobId),

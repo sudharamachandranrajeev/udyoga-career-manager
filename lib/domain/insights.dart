@@ -302,6 +302,10 @@ class LeadSuggestion {
   String get why => str(j['why']);
   String get approach => str(j['approach']);
 
+  // Set by the lead finder, not asked of the AI.
+  String get phone => str(j['phone']);
+  String get sourceUrl => str(j['sourceUrl']);
+
   static final schema = object({
     'leads': array(
       object({
