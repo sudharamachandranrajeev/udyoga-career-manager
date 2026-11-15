@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 (2026-11-15)
+
+- Find and apply inside the app: the official NHS Jobs feed, an in-app browser for the job site (you sign in and submit yourself), an answer pack for the form, and a copy of each advert and application kept with it. Offer-to-start stages with a checklist; warnings for stale or suspicious listings.
+- Coach (new page): add the folders that hold your CVs, references and notes on this device. Udyoga reads each document once, fills an empty profile from your CVs and asks you to confirm wherever your documents disagree or leave a gap.
+- Daily check-in at a time you choose: one question about your day (a reminder on Android, a Today card everywhere). Your answers become draft interview stories, wins and skills; a story bank shows how ready you are for each competency.
+- Job page: the pay change against your current pay, gross and after tax, NI and pension, with the rent difference when you move (Agenda for Change points for England 2026/27 and NI 2025/26 built in). Employer research: the systems staff use, staff survey and inspection evidence with sources, risks and questions to ask the panel.
+- Vidya: save a study plan for Vidya from what you still need, with your stories as review cards; paste Vidya's portfolio back to mark finished learning done.
+- Jobs added by link keep their closing date and salary.
+- Linux needs WebKitGTK 4.1 (webkit2gtk-4.1) and libsoup 3 for the in-app browser.
+
 ## 0.4.7 (2026-11-10)
 
 - Windows: the installer always uses its own folder. Other Brahma apps used to share its installer id, so an older install could sit in another app's folder; install this version to put it back in its own. Your data is not touched.
