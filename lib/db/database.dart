@@ -150,6 +150,10 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
         }
       }
     },
+    // The background refresh opens the same file from another process (or
+    // isolate) while the app may be open: wait for the other's write to end
+    // instead of failing with "database is locked".
+    beforeOpen: (_) => customStatement('PRAGMA busy_timeout = 10000'),
   );
 
   static const _indexes = [

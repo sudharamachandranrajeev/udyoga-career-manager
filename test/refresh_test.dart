@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
@@ -10,6 +11,7 @@ import 'package:udyoga/domain/book.dart';
 import 'package:udyoga/domain/feeds.dart';
 import 'package:udyoga/domain/json.dart';
 import 'package:udyoga/domain/refresh.dart';
+import 'package:udyoga/domain/route_refresh.dart';
 
 import 'support.dart';
 
@@ -191,6 +193,60 @@ void main() {
       expect(job.fitBy, 'triage');
     });
 
+    group('a background run (leaseOnly)', () {
+      test('does not take a free lease', () async {
+        await weekly();
+        final ai = _JobFinder();
+        final r = await Refresher(
+          book,
+          quietClient(),
+          advisor: Advisor(ai, today: today),
+          leaseOnly: true,
+        ).run(today: today);
+        expect(ai.calls, 0);
+        expect(r.aiElsewhere, isTrue);
+        expect((await lease()).device, isEmpty);
+      });
+
+      test('does not take over a lapsed lease', () async {
+        await weekly();
+        await book.setPref(
+          PrefKeys.aiLease,
+          AiLease(device: 'other-device', until: DateTime.now().subtract(const Duration(hours: 1))).toJson(),
+        );
+        final ai = _JobFinder();
+        await Refresher(
+          book,
+          quietClient(),
+          advisor: Advisor(ai, today: today),
+          leaseOnly: true,
+        ).run(today: today);
+        expect(ai.calls, 0);
+        expect((await lease()).device, 'other-device');
+      });
+
+      test('runs the routine when this device holds the lease', () async {
+        await weekly();
+        await book.setPref(
+          PrefKeys.aiLease,
+          AiLease(
+            device: book.store.deviceId,
+            until: DateTime.now().add(const Duration(days: 3)),
+            ran: DateTime.now().subtract(const Duration(days: 8)),
+          ).toJson(),
+        );
+        final ai = _JobFinder();
+        final r = await Refresher(
+          book,
+          quietClient(),
+          advisor: Advisor(ai, today: today),
+          leaseOnly: true,
+        ).run(today: today);
+        expect(ai.calls, greaterThan(0));
+        expect(r.aiSearched, isTrue);
+      });
+    });
+
     test('the lease round-trips through JSON', () {
       final at = DateTime.utc(2026, 11, 19, 10);
       final l = AiLease.fromJson(AiLease(device: 'd', until: at, ran: at).toJson());
@@ -198,6 +254,54 @@ void main() {
       expect(l.heldElsewhere('d', at.subtract(const Duration(hours: 1))), isFalse);
       expect(l.heldElsewhere('e', at.subtract(const Duration(hours: 1))), isTrue);
       expect(l.heldElsewhere('e', at.add(const Duration(hours: 1))), isFalse);
+    });
+  });
+
+  group('route tables', () {
+    test('a refresh reads them once a week and reports it', () async {
+      final r1 = await Refresher(
+        book,
+        quietClient(),
+        routes: RouteRefresh(quietClient(), book.db),
+      ).run(today: today);
+      // '{}' is no appendix and no rounds: both are problems, nothing cached.
+      expect(r1.routesRead, isFalse);
+      expect(r1.problems.where((p) => p.startsWith('GOV.UK route table')), isNotEmpty);
+      expect(r1.problems.where((p) => p.startsWith('Express Entry rounds')), isNotEmpty);
+    });
+
+    test('a fresh read is reported, and not repeated within the week', () async {
+      final aso = File('test/fixtures/skilled_occupations.json').readAsStringSync();
+      const rounds =
+          '{"rounds":[{"drawNumber":"452","drawDate":"2026-10-20","drawName":"General",'
+          '"drawSize":"3,000","drawCRS":"520"}]}';
+      var calls = 0;
+      final sources = MockClient((req) async {
+        calls++;
+        return http.Response.bytes(utf8.encode(req.url.host == 'www.gov.uk' ? aso : rounds), 200);
+      });
+      final r = await Refresher(
+        book,
+        quietClient(),
+        routes: RouteRefresh(sources, book.db),
+      ).run(today: today);
+      expect(r.routesRead, isTrue, reason: '${r.problems}');
+      expect(r.summary, contains('route tables updated'));
+      expect(calls, 2);
+      final again = await Refresher(
+        book,
+        quietClient(),
+        routes: RouteRefresh(sources, book.db),
+      ).run(today: today);
+      expect(again.routesRead, isFalse);
+      expect(calls, 2);
+    });
+
+    test('an unreachable source keeps the problem apart from the feeds', () async {
+      final down = MockClient((_) async => throw const SocketException('offline'));
+      final r = await Refresher(book, quietClient(), routes: RouteRefresh(down, book.db)).run(today: today);
+      expect(r.problems.where((p) => p.startsWith('GOV.UK route table: could not reach')), hasLength(1));
+      expect(r.feedsChecked, isTrue);
     });
   });
 }

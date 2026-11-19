@@ -11,6 +11,7 @@ import 'feeds.dart';
 import 'insights.dart';
 import 'json.dart';
 import 'profile.dart';
+import 'route_refresh.dart';
 import 'sponsors.dart';
 
 /// What a refresh did.
@@ -20,6 +21,9 @@ class RefreshReport {
   int ghosted = 0;
   bool aiSearched = false;
   bool mapRefreshed = false;
+
+  /// The live route tables (GOV.UK, IRCC) were read this run.
+  bool routesRead = false;
 
   /// The feeds were due and at least one answered (or none applied).
   bool feedsChecked = false;
@@ -32,6 +36,7 @@ class RefreshReport {
     if (added > 0) '$added new ${added == 1 ? 'job' : 'jobs'}' else 'No new jobs',
     if (aiSearched) 'AI search done',
     if (mapRefreshed) 'career map updated',
+    if (routesRead) 'route tables updated',
     if (ghosted > 0) '$ghosted marked no reply',
     if (problems.isNotEmpty) 'problems: ${problems.join('; ')}',
   ].join(' · ');
@@ -74,7 +79,16 @@ const mapAgeDays = 30;
 /// user turned the AI routine on and it is due) an AI web search, quick AI
 /// scores for the new jobs and a fresh career map.
 class Refresher {
-  Refresher(this.book, this.client, {this.advisor, this.sponsors, this.secrets, this.watch});
+  Refresher(
+    this.book,
+    this.client, {
+    this.advisor,
+    this.sponsors,
+    this.secrets,
+    this.watch,
+    this.routes,
+    this.leaseOnly = false,
+  });
   final CareerBook book;
   final http.Client client;
   final Advisor? advisor;
@@ -88,6 +102,14 @@ class Refresher {
   /// The UK sponsor register, refreshed when the UK is a target; null
   /// leaves it alone.
   final SponsorStore? sponsors;
+
+  /// The live route tables, re-read when a week old; null leaves them.
+  final RouteRefresh? routes;
+
+  /// A background run: the AI routine runs only when this device already
+  /// holds the lease. It never takes the lease over, so a phone in a
+  /// drawer does not start spending while the laptop is the one in use.
+  final bool leaseOnly;
 
   /// Runs what is due; [force] runs the feeds (and, with [ai], the AI
   /// search) now regardless. A check that failed everywhere is not counted
@@ -148,11 +170,13 @@ class Refresher {
       }
     }
 
+    if (routes != null) await _routes(report, now);
+
     final routine = await _routine();
     if (advisor != null && (ai || routine != 'off')) {
       final me = book.store.deviceId;
       final lease = AiLease.fromJson(await book.pref<Map<String, Object?>>(PrefKeys.aiLease, const {}));
-      if (!ai && lease.heldElsewhere(me, now)) {
+      if (!ai && (lease.heldElsewhere(me, now) || (leaseOnly && lease.device != me))) {
         report.aiElsewhere = true;
         return report;
       }
@@ -179,6 +203,28 @@ class Refresher {
       }
     }
     return report;
+  }
+
+  /// The UK appendix and Canada's rounds; each is read at most weekly, and
+  /// a failure keeps the last good copy.
+  Future<void> _routes(RefreshReport report, DateTime now) async {
+    Future<List<String?>> cached() async => [
+      await book.db.localSetting(RouteRefresh.ukKey),
+      await book.db.localSetting(RouteRefresh.roundsKey),
+    ];
+    final before = await cached();
+    for (final (name, read) in [
+      ('GOV.UK route table', () => routes!.refreshUk(now: now)),
+      ('Express Entry rounds', () => routes!.refreshRounds(now: now)),
+    ]) {
+      try {
+        await read();
+      } on Object catch (e) {
+        report.problems.add('$name: ${feedProblem(e)}');
+      }
+    }
+    final after = await cached();
+    report.routesRead = before[0] != after[0] || before[1] != after[1];
   }
 
   Future<String> _routine() => book.pref<String>(PrefKeys.aiRoutine, 'off');

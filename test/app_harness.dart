@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:udyoga/app/app.dart';
+import 'package:udyoga/app/background.dart';
 import 'package:udyoga/app/modules.dart';
 import 'package:udyoga/app/providers.dart';
 import 'package:udyoga/app/session.dart';
+import 'package:udyoga/domain/background.dart';
 import 'package:udyoga/domain/book.dart';
 import 'package:udyoga/ui/site_browser.dart';
 
@@ -20,6 +22,10 @@ class AppHarness {
 
   /// Stands in for the in-app web view, which needs a real platform.
   final browser = FakeSiteBrowser();
+
+  /// Stands in for WorkManager, systemd and Task Scheduler, so no test
+  /// touches the machine's own timers.
+  final scheduler = FakeScheduler();
 
   CareerBook get book => session.book;
 
@@ -42,6 +48,7 @@ class AppHarness {
         overrides: [
           ...udyogaOverrides(session, client: quietClient()),
           siteBrowserProvider.overrideWithValue(() => browser),
+          backgroundSchedulerProvider.overrideWithValue(scheduler),
           ...overrides,
         ],
         retry: (_, _) => null,
@@ -138,4 +145,24 @@ class FakeSiteBrowser implements SiteBrowser {
 
   @override
   Future<void> close() async {}
+}
+
+/// A background scheduler that only remembers what it was asked.
+class FakeScheduler implements BackgroundScheduler {
+  final applied = <BackgroundSettings>[];
+
+  @override
+  bool get supported => true;
+
+  @override
+  String get description => 'Adds a test timer.';
+
+  @override
+  Future<bool> installed() async => applied.lastOrNull?.on ?? false;
+
+  @override
+  Future<void> apply(BackgroundSettings s) async => applied.add(s);
+
+  @override
+  Future<DateTime?> nextRun() async => null;
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../ui/look.dart';
+import 'background.dart';
 import 'check_in_reminder.dart';
 import 'modules.dart';
 import 'navigation.dart';
@@ -89,6 +90,8 @@ class _RootState extends ConsumerState<_Root> {
           Future.microtask(() => ref.read(refreshTickerProvider)).ignore();
           ref.syncReminders().ignore();
           ref.syncPostPlanReminders().ignore();
+          // Android: the periodic refresh that runs while the app is closed.
+          ref.syncBackground().ignore();
         },
       ),
     ),

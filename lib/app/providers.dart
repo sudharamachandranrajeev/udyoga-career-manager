@@ -14,6 +14,7 @@ import '../domain/bluesky.dart';
 import '../domain/book.dart';
 import '../domain/ai.dart';
 import '../domain/ats.dart';
+import '../domain/background.dart';
 import '../domain/claude.dart';
 import '../domain/claude_code.dart';
 import '../domain/codex.dart';
@@ -30,6 +31,7 @@ import '../domain/mail_transport.dart';
 import '../domain/pay.dart';
 import '../domain/profile.dart';
 import '../domain/refresh.dart';
+import '../domain/route_refresh.dart';
 import '../domain/sponsors.dart';
 import '../domain/n8n.dart';
 import '../domain/subscription.dart';
@@ -406,21 +408,25 @@ final n8nLinkProvider = FutureProvider<N8nLink>((ref) {
 /// The adviser with the user's model and its key, or null until a key is set.
 final advisorProvider = FutureProvider<Advisor?>((ref) async {
   ref.watch(revisionProvider);
-  final s = ref.watch(sessionProvider);
-  final keys = await s.book.aiKeys();
-  final model = effectiveModel(await s.book.pref<String>(PrefKeys.aiModel, ''), keys);
+  return advisorFor(ref.watch(sessionProvider).book, ref.watch(httpClientProvider));
+});
+
+/// The adviser for [book]'s chosen model, or null without a key. Shared by
+/// the app and the background refresh, which has no providers.
+Future<Advisor?> advisorFor(CareerBook book, http.Client client) async {
+  final keys = await book.aiKeys();
+  final model = effectiveModel(await book.pref<String>(PrefKeys.aiModel, ''), keys);
   if (model == null) return null;
   final provider = AiProvider.of(model);
   final key = keys[provider]!;
-  final client = ref.watch(httpClientProvider);
-  void onUsage(AiUsage u) => s.book.addSpend(u, month: today().substring(0, 7)).ignore();
+  void onUsage(AiUsage u) => book.addSpend(u, month: today().substring(0, 7)).ignore();
   return Advisor(switch (provider) {
-    AiProvider.claudeCode => ClaudeCode(grant: (await s.book.grant(provider))!, model: model),
-    AiProvider.codex => Codex(grant: (await s.book.grant(provider))!, model: model),
+    AiProvider.claudeCode => ClaudeCode(grant: (await book.grant(provider))!, model: model),
+    AiProvider.codex => Codex(grant: (await book.grant(provider))!, model: model),
     AiProvider.claude => Claude(apiKey: key, model: model, client: client, onUsage: onUsage),
     AiProvider.gemini => Gemini(apiKey: key, model: model, client: client, onUsage: onUsage),
   }, today: today());
-});
+}
 
 /// The adviser, or an error telling the user to add a key.
 Future<Advisor> requireAdvisor(WidgetRef ref) async {
@@ -445,21 +451,35 @@ class RefreshController extends Notifier<RefreshState> {
   Future<RefreshReport?> run({bool force = false, bool ai = false}) async {
     if (state.running) return null;
     state = RefreshState(running: true, status: 'Starting…', last: state.last);
+    // The background refresh may be running in another process.
+    final lock = await ref.read(refreshLockProvider.future);
+    if (lock != null && !await lock.acquire('app')) {
+      state = RefreshState(
+        status: 'A background refresh is running; the jobs it finds appear when it ends.',
+        last: state.last,
+      );
+      return null;
+    }
     try {
       final s = ref.read(sessionProvider);
+      final client = ref.read(httpClientProvider);
       final report =
           await Refresher(
             s.book,
-            ref.read(httpClientProvider),
+            client,
             advisor: await ref.read(advisorProvider.future),
             sponsors: await ref.read(sponsorStoreProvider.future),
             secrets: s.keys.store,
-            watch: EmployerWatch(s.book, ref.read(httpClientProvider)),
+            watch: EmployerWatch(s.book, client),
+            routes: RouteRefresh(client, s.db),
           ).run(
             today: today(),
             force: force,
             ai: ai,
-            onProgress: (m) => state = RefreshState(running: true, status: m, last: state.last),
+            onProgress: (m) {
+              lock?.renew().ignore();
+              state = RefreshState(running: true, status: m, last: state.last);
+            },
           );
       state = RefreshState(last: report);
       ref.read(revisionProvider.notifier).bump();
@@ -467,11 +487,23 @@ class RefreshController extends Notifier<RefreshState> {
     } catch (e) {
       state = RefreshState(status: describeError(e), last: state.last);
       rethrow;
+    } finally {
+      await lock?.release();
     }
   }
 }
 
 final refreshProvider = NotifierProvider<RefreshController, RefreshState>(RefreshController.new);
+
+/// The lock shared with the background refresh, or null where there is no
+/// app folder (tests).
+final refreshLockProvider = FutureProvider<RefreshLock?>((ref) async {
+  try {
+    return RefreshLock.inFolder((await getApplicationSupportDirectory()).path);
+  } on Object {
+    return null;
+  }
+});
 
 /// The UK sponsor register's store on this device, or null where there is
 /// no app folder (tests).

@@ -52,3 +52,7 @@ Name: "{autodesktop}\Udyoga"; Filename: "{app}\udyoga.exe"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\udyoga.exe"; Description: "{cm:LaunchProgram,Udyoga}"; Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+; The background refresh entry Settings may have added (WindowsTask.name).
+Filename: "schtasks.exe"; Parameters: "/Delete /F /TN ""Udyoga\Background refresh"""; Flags: runhidden; RunOnceId: "RemoveBackgroundRefresh"
