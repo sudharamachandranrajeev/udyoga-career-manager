@@ -143,7 +143,7 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
     final mm = await ref.read(modelManagerProvider.future);
     setState(() => _opening = true);
     try {
-      final cam = await FaceCamera.open(mm.path(speechModel('blazeface-short-range')));
+      final cam = await FaceCamera.open(mm.path(speechModel(faceModelId)));
       if (mounted) {
         setState(() => _camera = cam);
       } else {

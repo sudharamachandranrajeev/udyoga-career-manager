@@ -159,6 +159,7 @@ const retiredModelIds = ['whisper-base-en', 'whisper-small-en'];
 const defaultTranscriber = 'moonshine-base-en';
 const voiceModelId = 'kokoro-en-gb-int8';
 const vadModelId = 'silero-vad';
+const faceModelId = 'blazeface-short-range';
 
 /// A download that failed; [message] is for the user.
 class ModelException implements Exception {

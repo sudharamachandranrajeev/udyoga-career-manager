@@ -10,6 +10,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 
 import 'blazeface.dart';
+import 'setup_check.dart';
 
 /// [img] as a [Frame], without copying the pixels.
 Frame frameOf(CameraImage img) {
@@ -36,13 +37,17 @@ class FaceCamera {
   /// The faces in the latest frame looked at.
   final boxes = ValueNotifier<List<FaceBox>>(const []);
 
+  /// The latest frame as numbers only: the face box and how bright the
+  /// face and the rest of the picture are (see setup_check.dart).
+  final measure = ValueNotifier<FrameMeasure?>(null);
+
   /// Frames run through the face finder per second, over the last second.
   final fps = ValueNotifier<double>(0);
 
   /// Average time the face finder took per frame, in milliseconds.
   final detectMs = ValueNotifier<double>(0);
 
-  bool _busy = false;
+  bool _busy = false, _closed = false;
   int _frames = 0;
   double _msTotal = 0;
   final _window = Stopwatch();
@@ -71,11 +76,14 @@ class FaceCamera {
 
   void _onFrame(CameraImage img) {
     // One frame at a time; frames that arrive meanwhile are dropped.
-    if (_busy) return;
+    if (_busy || _closed) return;
     _busy = true;
     try {
       final t = Stopwatch()..start();
-      boxes.value = _detector.detect(frameOf(img));
+      final frame = frameOf(img);
+      final found = _detector.detect(frame);
+      boxes.value = found;
+      measure.value = measureFrame(frame, found);
       _msTotal += t.elapsedMicroseconds / 1000;
       _frames++;
       if (_window.elapsedMilliseconds >= 1000) {
@@ -91,10 +99,13 @@ class FaceCamera {
   }
 
   Future<void> close() async {
+    if (_closed) return;
+    _closed = true;
     if (controller.value.isStreamingImages) await controller.stopImageStream();
     await controller.dispose();
     _detector.close();
     boxes.dispose();
+    measure.dispose();
     fps.dispose();
     detectMs.dispose();
   }
