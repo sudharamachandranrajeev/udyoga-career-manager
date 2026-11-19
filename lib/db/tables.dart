@@ -387,6 +387,55 @@ class CareerPractice extends Table with SyncedRow {
 
   /// Mean of the scored answers, 0 to 10.
   RealColumn get score => real().nullable()();
+
+  /// The role profile (career_role_profiles) the round's questions came
+  /// from, if any.
+  TextColumn get profileId => text().nullable()();
+
+  /// The panel scoring of the round (interview plan I3) as JSON: the
+  /// framework and each answer's scores with the quotes they rest on, ''
+  /// until scored. Text only, like the transcripts.
+  TextColumn get debrief => text().withDefault(const Constant(''))();
+}
+
+/// A role to practise for (interview plan I3): the criteria from its advert
+/// and person specification, and the framework its panel scores with.
+@DataClassName('RoleProfileRow')
+class CareerRoleProfiles extends Table with SyncedRow {
+  TextColumn get title => text()();
+  TextColumn get employer => text().withDefault(const Constant(''))();
+  TextColumn get jobId => text().nullable()();
+
+  /// A framework id (domain/interview_scoring.dart).
+  TextColumn get framework => text().withDefault(const Constant('private'))();
+
+  /// Criterion list as JSON.
+  TextColumn get criteria => text().withDefault(const Constant('[]'))();
+
+  /// ai | manual
+  TextColumn get source => text().withDefault(const Constant('manual'))();
+  TextColumn get added => text()();
+  TextColumn get updated => text()();
+}
+
+/// A whole interview process being rehearsed (interview plan I2): its
+/// stages as edited, and how far it has got, so it can be picked up later.
+@DataClassName('ProcessRow')
+class CareerProcesses extends Table with SyncedRow {
+  TextColumn get name => text()();
+
+  /// The template it started from.
+  TextColumn get template => text().withDefault(const Constant(''))();
+  TextColumn get profileId => text().nullable()();
+
+  /// InterviewProcess as JSON.
+  TextColumn get process => text()();
+
+  /// ProcessProgress as JSON: each stage's round, what it covered and what
+  /// it carries forward. Text only.
+  TextColumn get progress => text().withDefault(const Constant('{}'))();
+  TextColumn get started => text()();
+  TextColumn get updated => text()();
 }
 
 /// One answer in a practice round and its evaluation.
@@ -487,6 +536,9 @@ class CareerStories extends Table with SyncedRow {
   /// checkin | document | practice | manual
   TextColumn get source => text().withDefault(const Constant('manual'))();
   TextColumn get sourceId => text().nullable()();
+
+  /// The role criteria a practice answer evidenced, JSON list of text.
+  TextColumn get criteria => text().withDefault(const Constant('[]'))();
 
   /// False until the candidate has checked it is true as written.
   BoolColumn get confirmed => boolean().withDefault(const Constant(false))();

@@ -10,6 +10,7 @@ import 'countries.dart';
 import 'explore.dart';
 import 'insights.dart';
 import 'interview_plan.dart';
+import 'interview_scoring.dart';
 import 'json.dart';
 import 'occupations.dart';
 import 'page_reader.dart';
@@ -521,6 +522,81 @@ For each question, in order, give:
       maxTokens: 6000,
     );
     return [for (final q in objs(r.data['questions'])) QuestionPlan.fromJson(q)];
+  }
+
+  /// Reads an advert and person specification into the criteria a panel
+  /// agrees in advance (interview plan I3). Only the advert goes: no
+  /// profile. The reply is checked and parsed by [parseCriteria]; the user
+  /// edits it before it is used.
+  Future<Json> readCriteria({required String advert, String title = ''}) async {
+    final r = await ai.ask(
+      system:
+          'You read job adverts and person specifications the way a UK or Irish recruiting panel does before '
+          'shortlisting. List only criteria the text states; never add your own. Keep each criterion in the '
+          "document's own words, shortened. Use plain UK English.",
+      content: [
+        _text('<advert title="${_attr(title)}">\n$advert\n</advert>'),
+        _text(
+          '''
+List every essential and desirable criterion in the person specification (and any the advert states as required), one per item:
+- text: the criterion, short, in the document's words.
+- essential: true when the document calls it essential or required; false when desirable.
+- kind: experience, skill, knowledge, value, behaviour or qualification.
+- assessBy: how it is assessed when the document says (A application, I interview, T test, P presentation); [] when it does not say.
+- question: one open, neutral interview question that tests it. Values: "What does … mean to you, and when have you shown it?". Experience and behaviours: "Tell us about a time…".
+Also give the job title, the employer, and the framework this employer most likely scores with (nhs_values for NHS England, Scotland and Wales; hsc_ni for Health and Social Care Northern Ireland; civil_service for the UK Civil Service; hse_ie for the HSE in Ireland; private otherwise).''',
+        ),
+      ],
+      schema: criteriaSchema,
+      effort: 'low',
+      maxTokens: 8000,
+    );
+    return r.data;
+  }
+
+  /// Scores a whole round against the agreed criteria (interview plan I3):
+  /// only the transcripts and the criteria go, no profile. Every score must
+  /// quote the transcript; the caller checks each quote with
+  /// [verifyScores] and drops any that is not there.
+  Future<List<AnswerScore>> scoreRound({
+    required String role,
+    required Framework framework,
+    required List<Criterion> criteria,
+    required List<({int index, String question, List<String> criteria, String answer})> answers,
+  }) async {
+    final scale = framework.scale;
+    final r = await ai.ask(
+      system:
+          'You are a trained interview panel member scoring a practice interview. You score only what the '
+          'candidate said, against criteria agreed in advance, on the panel\'s own scale. Never guess: if the '
+          'transcript has no evidence for a criterion, give the "no evidence" level. Every other level must quote '
+          'the candidate\'s exact words that it rests on. Feedback is about the task, never the person: no '
+          'judgements of confidence or personality, no percentages.',
+      content: [
+        _text(
+          '<scale name="${_attr(scale.name)}">\n'
+          '${[for (final l in scale.levels) '<level code="${l.code}" label="${_attr(l.label)}">${l.anchor}</level>'].join('\n')}\n'
+          '</scale>\n'
+          '<criteria role="${_attr(role)}">\n'
+          '${[for (final c in criteria) '<criterion id="${c.id}" essential="${c.essential}">${c.text}</criterion>'].join('\n')}\n'
+          '</criteria>',
+        ),
+        _text(
+          '<round>\n'
+          '${[for (final a in answers) '<answer question="${a.index + 1}" tests="${a.criteria.join(',')}">\n<asked>${a.question}</asked>\n<said>\n${a.answer}\n</said>\n</answer>'].join('\n')}\n'
+          '</round>',
+        ),
+        _text('''
+For each answer, score each criterion it tests (its "tests" ids) on the scale:
+- level: a code from the scale. "${scale.noEvidence.code}" when the answer has no evidence for it, or only a bare claim.
+- quote: the candidate's exact words (one sentence or part of one, copied character for character) that the level rests on; "" for "${scale.noEvidence.code}".
+Then one strength of the answer and one fix: a concrete thing to do differently next time.'''),
+      ],
+      schema: scoringSchema(scale, [for (final c in criteria) c.id]),
+      effort: 'medium',
+      maxTokens: 12000,
+    );
+    return parseScoring(r.data);
   }
 
   /// Scores an answer on every dimension, with a better version.

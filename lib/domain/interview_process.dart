@@ -656,6 +656,18 @@ const reasoningItems = [
 class QuestionOutcome {
   const QuestionOutcome({required this.expected, required this.heard, this.interrupted = false});
 
+  Json toJson() => {
+    'expected': [for (final e in expected) e.name],
+    'heard': [for (final e in heard) e.name],
+    'interrupted': interrupted,
+  };
+
+  factory QuestionOutcome.fromJson(Json j) => QuestionOutcome(
+    expected: [for (final n in strs(j['expected'])) ?AnswerElement.byName(n)],
+    heard: {for (final n in strs(j['heard'])) ?AnswerElement.byName(n)},
+    interrupted: j['interrupted'] == true,
+  );
+
   /// The elements the question called for.
   final List<AnswerElement> expected;
 
@@ -708,6 +720,18 @@ class CarryForward {
 
   static const none = CarryForward();
 
+  Json toJson() => {
+    'focus': [for (final e in focus) e.name],
+    'fixes': fixes,
+    'keep': keep,
+  };
+
+  factory CarryForward.fromJson(Json j) => CarryForward(
+    focus: [for (final n in strs(j['focus'])) ?AnswerElement.byName(n)],
+    fixes: strs(j['fixes']),
+    keep: strs(j['keep']),
+  );
+
   /// From the outcomes of the earlier stages, oldest first. The latest
   /// stage counts double: it is the freshest evidence.
   factory CarryForward.from(List<List<QuestionOutcome>> stages) {
@@ -744,4 +768,67 @@ class CarryForward {
     ].take(2).toList();
     return CarryForward(focus: focus, fixes: fixes, keep: keep);
   }
+}
+
+// ---- progress, saved so a process can be picked up later ----
+
+/// How far one stage has got.
+class StageProgress {
+  const StageProgress({required this.roundId, this.finished = false, this.outcomes = const [], this.carry});
+
+  /// The practice round that holds the stage's transcripts.
+  final String roundId;
+  final bool finished;
+
+  /// What each answered question covered.
+  final List<QuestionOutcome> outcomes;
+
+  /// What the stages up to and including this one carry to the next, as
+  /// it stood when this stage finished.
+  final CarryForward? carry;
+
+  Json toJson() => {
+    'roundId': roundId,
+    'finished': finished,
+    'outcomes': [for (final o in outcomes) o.toJson()],
+    if (carry case final c?) 'carry': c.toJson(),
+  };
+
+  factory StageProgress.fromJson(Json j) => StageProgress(
+    roundId: str(j['roundId']),
+    finished: j['finished'] == true,
+    outcomes: [for (final o in objs(j['outcomes'])) QuestionOutcome.fromJson(o)],
+    carry: j['carry'] is Map ? CarryForward.fromJson(obj(j['carry'])) : null,
+  );
+}
+
+/// Every stage's progress, by stage index.
+class ProcessProgress {
+  const ProcessProgress([this.stages = const {}]);
+  final Map<int, StageProgress> stages;
+
+  bool finished(int i) => stages[i]?.finished ?? false;
+
+  ProcessProgress withStage(int i, StageProgress p) => ProcessProgress({...stages, i: p});
+
+  /// What the finished stages before [i] (that [process] runs) carry to it.
+  CarryForward carryFor(InterviewProcess process, int i) => CarryForward.from([
+    for (var j = 0; j < i && j < process.stages.length; j++)
+      if (process.stages[j].included && finished(j)) stages[j]!.outcomes,
+  ]);
+
+  /// The first stage to run next, or null when every included one is done.
+  int? next(InterviewProcess process) => [
+    for (final (i, s) in process.stages.indexed)
+      if (s.included && !finished(i)) i,
+  ].firstOrNull;
+
+  Json toJson() => {
+    'stages': {for (final e in stages.entries) '${e.key}': e.value.toJson()},
+  };
+
+  factory ProcessProgress.fromJson(Json j) => ProcessProgress({
+    for (final e in obj(j['stages']).entries)
+      ?int.tryParse(e.key): StageProgress.fromJson(obj(e.value)),
+  });
 }

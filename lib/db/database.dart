@@ -29,6 +29,8 @@ part 'database.g.dart';
     Messages,
     CareerPosts,
     CareerTracks,
+    CareerRoleProfiles,
+    CareerProcesses,
     BridgeStudyPlans,
     BridgeStudyProgress,
     Prefs,
@@ -65,13 +67,15 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     'career_messages',
     'career_posts',
     'career_tracks',
+    'career_role_profiles',
+    'career_processes',
     'bridge_study_plans',
     'bridge_study_progress',
     'prefs',
   ];
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -148,6 +152,24 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
         for (final sql in _v8Indexes) {
           await customStatement(sql);
         }
+      }
+      if (from < 9) {
+        // Interview I3: role profiles, saved processes, the debrief and the
+        // criteria a practice story evidenced. Only what is not there yet,
+        // so it can run again.
+        await m.createTable(careerRoleProfiles);
+        await m.createTable(careerProcesses);
+        Future<void> add(TableInfo t, String table, List<GeneratedColumn> cols) async {
+          final have = await customSelect('PRAGMA table_info($table)')
+              .map((r) => r.read<String>('name'))
+              .get();
+          for (final c in cols) {
+            if (!have.contains(c.name)) await m.addColumn(t, c);
+          }
+        }
+
+        await add(careerPractice, 'career_practice', [careerPractice.profileId, careerPractice.debrief]);
+        await add(careerStories, 'career_stories', [careerStories.criteria]);
       }
     },
     // The background refresh opens the same file from another process (or
