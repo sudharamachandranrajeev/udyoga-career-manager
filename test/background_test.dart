@@ -202,8 +202,8 @@ void main() {
   });
 
   group('settings and status', () {
-    test('on by default on Android only; the interval is 6 h and never under 15 min', () {
-      expect(BackgroundSettings.defaultFor('android').on, isTrue);
+    test('off by default everywhere; the interval is 6 h and never under 15 min', () {
+      expect(BackgroundSettings.defaultFor('android').on, isFalse);
       expect(BackgroundSettings.defaultFor('linux').on, isFalse);
       expect(BackgroundSettings.defaultFor('windows').minutes, 360);
       expect(BackgroundSettings.fromJson({'minutes': 5}, os: 'linux').minutes, 15);
@@ -220,6 +220,20 @@ void main() {
       await book.setBackgroundSettings(const BackgroundSettings(on: true, minutes: 180));
       expect((await book.backgroundSettings(os: 'linux')).minutes, 180);
       expect(await book.lastBackgroundRun(), isNull);
+    });
+
+    test('offered once, only after the profile is set up and never once chosen', () async {
+      final book = CareerBook(await Store.open(memoryDatabase()));
+      expect(await book.shouldOfferBackground(), isFalse);
+      await book.saveProfile(sampleProfile);
+      expect(await book.shouldOfferBackground(), isTrue);
+      await book.markBackgroundOffered();
+      expect(await book.shouldOfferBackground(), isFalse);
+
+      final chose = CareerBook(await Store.open(memoryDatabase()));
+      await chose.saveProfile(sampleProfile);
+      await chose.setBackgroundSettings(const BackgroundSettings(on: false));
+      expect(await chose.shouldOfferBackground(), isFalse);
     });
 
     test('the next run: the scheduler, else an interval after the last run', () {

@@ -247,8 +247,9 @@ Yes. Open **Settings → Background refresh** and turn on **Refresh while Udyoga
 pick how often (every 6 hours unless you change it). A notification tells you about new jobs and
 to-dos that are due.
 
-- **Android:** on by default. The phone runs it when there is a network and the battery is not
-  low, so it can be late.
+- **Android:** off until you turn it on. Udyoga offers it once, after you have set up your
+  profile. The phone runs it when there is a network and the battery is not low, so it can be
+  late.
 - **Linux:** Udyoga adds two small files, `udyoga-refresh.timer` and `udyoga-refresh.service`, to
   `~/.config/systemd/user`. Turning the option off removes them. The refresh runs
   `udyoga --refresh-once`, which opens no window. It needs your desktop session (for the

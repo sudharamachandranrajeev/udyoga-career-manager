@@ -30,6 +30,10 @@ abstract final class BackgroundKeys {
   /// The day (yyyy-MM-dd) the due to-dos were last announced, so they are
   /// announced once a day rather than on every run.
   static const todoAlert = 'udyoga.background.todo_alert';
+
+  /// Set once the user has been offered the background refresh (Android
+  /// asks once, after the profile is set up).
+  static const offered = 'udyoga.background.offered';
 }
 
 /// How often the background refresh may run. Android's WorkManager will
@@ -50,10 +54,10 @@ const minimumBackgroundMinutes = 15;
 class BackgroundSettings {
   const BackgroundSettings({required this.on, this.minutes = defaultBackgroundMinutes});
 
-  /// The default for [os]: on for Android, where WorkManager waits for a
-  /// network and a battery that is not low; off on a desktop, where it
-  /// means adding a timer the user should choose to add.
-  factory BackgroundSettings.defaultFor(String os) => BackgroundSettings(on: os == 'android');
+  /// The default for [os]: off everywhere. Running while the app is closed
+  /// is something the user chooses (Android offers it once, after the
+  /// profile is set up; a desktop adds a timer only from Settings).
+  factory BackgroundSettings.defaultFor(String os) => const BackgroundSettings(on: false);
 
   factory BackgroundSettings.fromJson(Json j, {required String os}) => BackgroundSettings(
     on: j['on'] is bool ? j['on'] as bool : BackgroundSettings.defaultFor(os).on,
@@ -115,6 +119,17 @@ extension BackgroundBook on CareerBook {
     final j = decodeObject(await db.localSetting(BackgroundKeys.last) ?? '');
     return j.isEmpty ? null : BackgroundRun.fromJson(j);
   }
+
+  /// True once, when the user has search terms (the profile is set up),
+  /// has never chosen a background setting on this device and has not been
+  /// offered it before.
+  Future<bool> shouldOfferBackground() async {
+    if (await db.localSetting(BackgroundKeys.offered) != null) return false;
+    if (await db.localSetting(BackgroundKeys.settings) != null) return false;
+    return (await profile()).searchTerms.isNotEmpty;
+  }
+
+  Future<void> markBackgroundOffered() => db.setLocalSetting(BackgroundKeys.offered, 'yes');
 
   Future<void> recordBackgroundRun(BackgroundRun r) =>
       db.setLocalSetting(BackgroundKeys.last, jsonEncode(r.toJson()));

@@ -283,8 +283,8 @@ extension BackgroundControl on WidgetRef {
     }
   }
 
-  /// At start on Android: registers the periodic work (on by default) so it
-  /// survives an update. Desktop entries change only from Settings.
+  /// At start on Android: registers the periodic work (when the user turned
+  /// it on) so it survives an update, or cancels it. Desktop entries change only from Settings.
   Future<void> syncBackground() async {
     final scheduler = read(backgroundSchedulerProvider);
     if (scheduler is! AndroidScheduler) return;
