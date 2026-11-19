@@ -8,8 +8,10 @@ import '../db/database.dart';
 import '../domain/answer_metrics.dart';
 import '../domain/common_questions.dart';
 import '../domain/insights.dart';
+import '../domain/interview_process.dart';
 import '../domain/json.dart';
 import 'common.dart';
+import 'interview_process_page.dart';
 import 'kit/kit.dart';
 import 'look.dart';
 import 'spoken_round_page.dart';
@@ -151,6 +153,27 @@ class InterviewPage extends ConsumerWidget {
                     ),
                 ],
               ),
+            ],
+          ),
+        ),
+        SectionCard(
+          title: 'Rehearse a whole process',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Stage by stage: a screening call, a test or exercise, the panel, a presentation, a final '
+                'interview. Each stage has its own clock and opens with what the last one left to fix. Every '
+                'template can be edited to match your invitation.',
+              ),
+              for (final p in processTemplates)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(p.name),
+                  subtitle: Text(p.stages.map((s) => s.title).join(' → ')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => openProcess(context, p),
+                ),
             ],
           ),
         ),
