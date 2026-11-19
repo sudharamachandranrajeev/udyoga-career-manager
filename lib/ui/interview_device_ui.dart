@@ -1,5 +1,5 @@
-/// The interview's device-only settings on screen (plan I6): the local
-/// model (Ollama).
+/// The interview's device-only settings on screen (plan I6): live captions
+/// and the local model (Ollama).
 library;
 
 import 'dart:async';
@@ -56,6 +56,29 @@ class _InterviewDeviceCardState extends ConsumerState<InterviewDeviceCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Live captions'),
+            subtitle: const Text(
+              'Your words appear as you speak, and the panel\'s words as they are said. Made on this device.',
+            ),
+            value: dev.captions,
+            onChanged: (v) => unawaited(_save(dev.copyWith(captions: v))),
+          ),
+          if (dev.captions) ...[
+            Text('Caption text size: ${(dev.captionScale * 100).round()}%'),
+            Slider(
+              value: dev.captionScale,
+              min: InterviewDevice.minScale,
+              max: InterviewDevice.maxScale,
+              divisions: 8,
+              label: '${(dev.captionScale * 100).round()}%',
+              semanticFormatterCallback: (v) => 'Caption text size ${(v * 100).round()} percent',
+              onChanged: (v) => unawaited(_save(dev.copyWith(captionScale: v))),
+            ),
+            LiveCaption(speaker: 'Example', text: 'This is how captions look.', scale: dev.captionScale),
+            const SizedBox(height: 8),
+          ],
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Use a local model (Ollama) for the interview AI'),
@@ -168,6 +191,55 @@ class InterviewNoAi extends ConsumerWidget {
         dev.localAi && status != null && !status.ready
             ? '${status.message} Until then the built-in follow-ups and checks on this device are used.'
             : 'Offline interview practice: the built-in follow-ups and checks on this device are used.',
+      ),
+    );
+  }
+}
+
+/// A live caption: who is speaking and the words so far, in the user's
+/// caption size, newest words kept in view. Screen readers hear it as a
+/// live region.
+class LiveCaption extends StatelessWidget {
+  const LiveCaption({super.key, required this.speaker, required this.text, this.scale = 1.25});
+  final String speaker;
+  final String text;
+  final double scale;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final base = theme.textTheme.bodyLarge ?? const TextStyle(fontSize: 16);
+    final size = (base.fontSize ?? 16) * scale;
+    return Semantics(
+      liveRegion: true,
+      label: '$speaker: $text',
+      excludeSemantics: true,
+      child: Container(
+        key: ValueKey('caption-$speaker'),
+        width: double.infinity,
+        margin: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(speaker, style: theme.textTheme.labelMedium),
+            const SizedBox(height: 4),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: size * 1.4 * 4),
+              child: SingleChildScrollView(
+                reverse: true,
+                child: Text(
+                  text,
+                  style: base.copyWith(fontSize: size, height: 1.4, color: theme.colorScheme.onSurface),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -52,7 +52,19 @@ class ListenStatus {
     this.level = -160,
     this.heardSpeech = false,
     this.silence = Duration.zero,
+    this.heard = const [],
+    this.partial = '',
   });
+
+  /// The stretches of speech written down so far, in order.
+  final List<String> heard;
+
+  /// The words so far of the stretch still being spoken: a draft that the
+  /// written-down stretch replaces.
+  final String partial;
+
+  /// The live caption: everything written down, then the draft.
+  String get caption => [...heard, partial].map((t) => t.trim()).where((t) => t.isNotEmpty).join(' ');
 
   final Duration elapsed;
 

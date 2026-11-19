@@ -5,13 +5,16 @@
 ///   question made while the candidate answers.
 /// - [LiveListener]: the microphone through `record`, Silero VAD live (end
 ///   of answer, pauses) and Moonshine writing each stretch down as soon as
-///   it ends, so the transcript is ready moments after the answer.
+///   it ends, so the transcript is ready moments after the answer. The
+///   stretch still being spoken is read again about every second for the
+///   live caption.
 /// - [FileTakeStore]: recordings as WAV files in the app's own data folder,
 ///   never synced, deleted when the round screen closes.
 library;
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
@@ -187,8 +190,24 @@ bool answerEnded({
     lastSpeechMs - firstSpeechMs >= 1500 &&
     heardMs - lastSpeechMs >= endSilence.inMilliseconds;
 
-/// What the listening isolate reports after each piece of audio.
-typedef _Heard = (int totalMs, int firstVoiceMs, int lastVoiceMs, List<(int, int, String)> segments);
+/// What the listening isolate reports after each piece of audio: the
+/// times, the stretches written down since the last report, and the words
+/// so far of the stretch still being spoken (the live caption).
+typedef _Heard = (
+  int totalMs,
+  int firstVoiceMs,
+  int lastVoiceMs,
+  List<(int, int, String)> segments,
+  String partial,
+);
+
+/// How much new speech (in samples at 16 kHz) comes between two readings
+/// of the stretch still being spoken: about every 1.2 s.
+const partialEvery = 19200;
+
+/// The longest tail of an open stretch read for the caption (the speech
+/// detector cuts a stretch at 20 s anyway).
+const partialMax = 16000 * 20;
 
 /// The speech detector and the transcriber, on their own isolate. Requests:
 /// 'reset' starts a new answer, a Float32List is more audio, 'finish' ends
@@ -217,14 +236,46 @@ EngineHandler _openEars(String vadModel, String transcriberFolder) {
   const window = 512;
   int ms(int samples) => samples ~/ 16;
 
-  _Heard drain() {
+  // The stretch still being spoken, for the live caption: the windows
+  // since speech was detected (with a short lead-in), read again every
+  // [partialEvery] samples. A closed stretch replaces it.
+  final lead = <Float32List>[];
+  final open = <Float32List>[];
+  var openSamples = 0, sinceRead = 0;
+  var partial = '';
+  void clearOpen() {
+    open.clear();
+    openSamples = 0;
+    sinceRead = 0;
+    partial = '';
+  }
+
+  List<(int, int, String)> drain() {
     final found = <(int, int, String)>[];
     while (!vad.isEmpty()) {
       final s = vad.front();
       found.add((ms(s.start), ms(s.start + s.samples.length), recognise(rec, s.samples)));
       vad.pop();
     }
-    return (ms(done), first < 0 ? -1 : ms(first), last < 0 ? -1 : ms(last), found);
+    if (found.isNotEmpty) clearOpen();
+    return found;
+  }
+
+  _Heard report(List<(int, int, String)> found) =>
+      (ms(done), first < 0 ? -1 : ms(first), last < 0 ? -1 : ms(last), found, partial);
+
+  void readOpen() {
+    if (sinceRead < partialEvery || openSamples == 0) return;
+    sinceRead = 0;
+    var take = math.min(openSamples, partialMax);
+    final tail = Float32List(take);
+    for (var i = open.length - 1; i >= 0 && take > 0; i--) {
+      final w = open[i];
+      final n = math.min(w.length, take);
+      tail.setRange(take - n, take, w, w.length - n);
+      take -= n;
+    }
+    partial = recognise(rec, tail).trim();
   }
 
   return (request) {
@@ -239,6 +290,8 @@ EngineHandler _openEars(String vadModel, String transcriberFolder) {
         pending = Float32List(0);
         done = 0;
         first = last = -1;
+        lead.clear();
+        clearOpen();
         return null;
       case 'finish':
         if (pending.isNotEmpty) {
@@ -247,7 +300,9 @@ EngineHandler _openEars(String vadModel, String transcriberFolder) {
           pending = Float32List(0);
         }
         vad.flush();
-        return drain();
+        final found = drain();
+        clearOpen();
+        return report(found);
       case final Float32List audio:
         final all = Float32List(pending.length + audio.length)
           ..setRange(0, pending.length, pending)
@@ -255,16 +310,29 @@ EngineHandler _openEars(String vadModel, String transcriberFolder) {
         var at = 0;
         final found = <(int, int, String)>[];
         for (; at + window <= all.length; at += window) {
-          vad.acceptWaveform(Float32List.sublistView(all, at, at + window));
+          final w = Float32List.fromList(Float32List.sublistView(all, at, at + window));
+          vad.acceptWaveform(w);
           done += window;
           if (vad.isDetected()) {
             if (first < 0) first = done - window;
             last = done;
+            if (open.isEmpty) {
+              open.addAll(lead);
+              openSamples = lead.length * window;
+            }
+            open.add(w);
+            openSamples += window;
+            sinceRead += window;
+          } else {
+            lead.add(w);
+            // About 0.25 s of lead-in, so the first word is not clipped.
+            if (lead.length > 8) lead.removeAt(0);
           }
-          found.addAll(drain().$4);
+          found.addAll(drain());
         }
         pending = Float32List.fromList(Float32List.sublistView(all, at));
-        return (ms(done), first < 0 ? -1 : ms(first), last < 0 ? -1 : ms(last), found);
+        readOpen();
+        return report(found);
     }
     throw ArgumentError('Unknown request');
   };
@@ -338,7 +406,7 @@ class _LiveCapture implements AnswerCapture {
   late final StreamSubscription<Amplitude> _levels;
   Future<void> _feeding = Future.value();
   double _level = -160;
-  _Heard _heard = (0, -1, -1, const []);
+  _Heard _heard = (0, -1, -1, const [], '');
   var _stopped = false;
   int? _odd;
 
@@ -374,7 +442,7 @@ class _LiveCapture implements AnswerCapture {
       _segments.add(SpokenSegment(Duration(milliseconds: start), Duration(milliseconds: end), text));
     }
     _emit();
-    final (total, first, last, _) = h;
+    final (total, first, last, _, _) = h;
     if (!_end.isCompleted &&
         (answerEnded(heardMs: total, firstSpeechMs: first, lastSpeechMs: last, endSilence: _endSilence) ||
             _watch.elapsed >= _maxLength)) {
@@ -384,13 +452,15 @@ class _LiveCapture implements AnswerCapture {
 
   void _emit() {
     if (_status.isClosed) return;
-    final (total, first, last, _) = _heard;
+    final (total, first, last, _, partial) = _heard;
     _status.add(
       ListenStatus(
         elapsed: _watch.elapsed,
         level: _level,
         heardSpeech: first >= 0,
         silence: last < 0 ? Duration.zero : Duration(milliseconds: total - last),
+        heard: [for (final s in _segments) s.text],
+        partial: partial,
       ),
     );
   }

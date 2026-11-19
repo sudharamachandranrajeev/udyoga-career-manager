@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:udyoga/domain/common_questions.dart';
@@ -141,6 +144,70 @@ void main() {
       () => (app.book.db.select(app.book.db.careerPractice)..where((r) => r.id.equals(id))).getSingle(),
     );
     expect((round!.nervesBefore, round.nervesAfter), (4, 2));
+    await app.close();
+  });
+
+  testWidgets('live captions show the panel line and the answer as it grows; one tap turns them off', (
+    tester,
+  ) async {
+    final app = AppHarness(tester)..desktop();
+    late String id;
+    await app.open(
+      seed: (b) async {
+        await b.setInterviewDevice(const InterviewDevice(captionScale: 1.5));
+        id = await b.startPractice(
+          role: 'Common questions',
+          mode: 'standard',
+          questions: commonQuestions.take(1).toList(),
+          at: '2026-11-19T10:00',
+        );
+      },
+    );
+    final engines = FakeEngines();
+    await app.run(
+      home: SpokenRoundPage(id),
+      overrides: [spokenEnginesProvider.overrideWith((ref) async => engines)],
+    );
+    await app.tapText('Start the round');
+    engines.voice.hold = Completer<void>();
+    await app.tapText('Ask me');
+    final panel = find.byKey(const ValueKey('caption-Interviewer'));
+    expect(panel, findsOneWidget);
+    expect(
+      find.descendant(of: panel, matching: find.textContaining(commonQuestions.first.question)),
+      findsOneWidget,
+    );
+    engines.voice.hold!.complete();
+    engines.voice.hold = null;
+    await app.settle();
+
+    final capture = engines.listener.captures.single;
+    final mine = find.byKey(const ValueKey('caption-You'));
+    expect(mine, findsOneWidget);
+    capture.statuses.add(
+      const ListenStatus(elapsed: Duration(seconds: 2), heardSpeech: true, partial: 'I ran the'),
+    );
+    await app.settle();
+    expect(find.descendant(of: mine, matching: find.text('I ran the')), findsOneWidget);
+    capture.statuses.add(
+      const ListenStatus(
+        elapsed: Duration(seconds: 4),
+        heardSpeech: true,
+        heard: ['I ran the weekend rota.'],
+        partial: 'I rang',
+      ),
+    );
+    await app.settle();
+    final grown = find.descendant(of: mine, matching: find.text('I ran the weekend rota. I rang'));
+    expect(grown, findsOneWidget);
+    final body = Theme.of(tester.element(grown)).textTheme.bodyLarge!.fontSize!;
+    expect(tester.widget<Text>(grown).style!.fontSize, body * 1.5, reason: 'the chosen caption size');
+    expect(tester.getSemantics(mine).label, contains('You: I ran the weekend rota. I rang'));
+
+    await app.tap(find.byTooltip('Turn live captions off'));
+    expect(mine, findsNothing);
+    final saved = await tester.runAsync(() => app.book.interviewDevice());
+    expect(saved!.captions, isFalse, reason: 'remembered on this device');
     await app.close();
   });
 }

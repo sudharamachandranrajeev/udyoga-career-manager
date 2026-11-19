@@ -34,6 +34,7 @@ import '../voice/spoken_engines.dart';
 import 'common.dart';
 import 'interview_confidence_ui.dart' show NervesRating;
 import 'interview_debrief_page.dart' show openDebrief;
+import 'interview_device_ui.dart' show LiveCaption;
 import 'interview_lab_page.dart' show modelManagerProvider;
 import 'camera_coach_ui.dart';
 import 'kit/kit.dart';
@@ -389,6 +390,12 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
       banner: 'page.spoken',
       actions: [
         IconButton(
+          icon: Icon(_device.captions ? Icons.closed_caption : Icons.closed_caption_disabled_outlined),
+          tooltip: _device.captions ? 'Turn live captions off' : 'Turn live captions on',
+          onPressed: () =>
+              ref.read(interviewDeviceProvider.notifier).save(_device.copyWith(captions: !_device.captions)),
+        ),
+        IconButton(
           icon: const Icon(Icons.delete_sweep_outlined),
           tooltip: 'Delete all recordings',
           onPressed: _deleteAll,
@@ -596,6 +603,8 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
     );
   }
 
+  InterviewDevice get _device => ref.watch(interviewDeviceProvider).value ?? const InterviewDevice();
+
   static double _levelShare(double dbfs) => ((dbfs + 60) / 60).clamp(0.0, 1.0);
 
   List<Widget> _during(SpokenRound r, PracticeSession session) {
@@ -689,6 +698,7 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
         ];
       case RoundPhase.asking:
         final said = r.saying;
+        final captions = _device.captions && said != null;
         return [
           Row(
             children: [
@@ -696,13 +706,14 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  said != null && said != r.question.text
+                  said != null && said != r.question.text && !captions
                       ? '"$said"'
                       : 'The interviewer is asking… the microphone opens when the question ends.',
                 ),
               ),
             ],
           ),
+          if (captions) LiveCaption(speaker: 'Interviewer', text: said, scale: _device.captionScale),
           const SizedBox(height: 8),
           row([typeInstead, if (r.followingUp) moveOn, skip]),
         ];
@@ -753,6 +764,15 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
           ),
           if (budget != null && elapsed > budget)
             Text('Over the time: sum up and finish.', style: TextStyle(color: Status.warning.color)),
+          if (_device.captions)
+            LiveCaption(
+              speaker: 'You',
+              text: switch (live?.caption ?? '') {
+                '' => '…',
+                final c => c,
+              },
+              scale: _device.captionScale,
+            ),
           const SizedBox(height: 8),
           row([
             FilledButton.icon(onPressed: r.done, icon: const Icon(Icons.stop), label: const Text('Done')),

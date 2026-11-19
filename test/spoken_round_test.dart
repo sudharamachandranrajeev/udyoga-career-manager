@@ -294,6 +294,53 @@ void main() {
       )..start();
     }
 
+    test('live captions: the caption grows as stretches are written down, the draft last', () async {
+      make([spoken('I rang the bank staff and covered every shift.')]);
+      final heard = <String>[];
+      round.changes.listen((_) {
+        final c = round.live?.caption;
+        if (c != null && (heard.isEmpty || heard.last != c)) heard.add(c);
+      });
+      voice.hold = Completer<void>();
+      final asking = round.ask();
+      await pumpEventQueue();
+      expect(
+        (round.phase, round.saying),
+        (RoundPhase.asking, questions[0].text),
+        reason: 'the panel line to caption',
+      );
+      voice.hold!.complete();
+      voice.hold = null;
+      await asking;
+      expect(round.phase, RoundPhase.answering);
+      final c = listener.captures.single;
+      for (final st in const [
+        ListenStatus(elapsed: Duration(seconds: 1)),
+        ListenStatus(elapsed: Duration(seconds: 2), heardSpeech: true, partial: 'I rang'),
+        ListenStatus(elapsed: Duration(seconds: 3), heardSpeech: true, partial: 'I rang the bank'),
+        ListenStatus(elapsed: Duration(seconds: 4), heardSpeech: true, heard: ['I rang the bank staff.']),
+        ListenStatus(
+          elapsed: Duration(seconds: 5),
+          heardSpeech: true,
+          heard: ['I rang the bank staff.'],
+          partial: 'and covered',
+        ),
+      ]) {
+        c.statuses.add(st);
+        await pumpEventQueue();
+      }
+      expect(heard, [
+        '',
+        'I rang',
+        'I rang the bank',
+        'I rang the bank staff.',
+        'I rang the bank staff. and covered',
+      ]);
+      await round.done();
+      expect(round.live, isNull, reason: 'the caption goes when the answer is written down');
+      expect(round.state.latest!.transcript, 'I rang the bank staff and covered every shift.');
+    });
+
     test('asks aloud, listens, writes down, measures and saves the text', () async {
       make([spoken('I rang the bank staff and, um, covered every shift.')]);
       expect(round.phase, RoundPhase.ready);
