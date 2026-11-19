@@ -19,13 +19,16 @@ import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/delivery.dart';
 import '../domain/insights.dart';
+import '../domain/interview_book.dart';
 import '../domain/interview_plan.dart';
 import '../domain/interview_process.dart';
+import '../domain/interview_scoring.dart';
 import '../domain/json.dart';
 import '../voice/models.dart';
 import '../voice/round.dart';
 import '../voice/spoken_engines.dart';
 import 'common.dart';
+import 'interview_debrief_page.dart' show openDebrief;
 import 'interview_lab_page.dart' show modelManagerProvider;
 import 'kit/kit.dart';
 
@@ -250,12 +253,16 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
     });
     try {
       final e = _engines!;
-      final (plans, source) = await planRound(
+      final (planned, source) = await planRound(
         ref,
         role: session.role,
         questions: questions,
         useAi: hasAi && settings.aiPlan,
       );
+      // A round from a role profile tests the profile's criteria, whatever
+      // the plan called them.
+      final profile = await ref.read(sessionProvider).book.roleProfile(session.profileId);
+      final plans = withCriteria(questions, planned, profile);
       if (mounted) setState(() => _openingStep = 'Loading the voice…');
       final persona = Persona.of(settings.persona);
       final level = Ladder.of(settings.level);
@@ -846,6 +853,17 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
             ],
           ),
         ),
+      // A spoken follow-up keeps its own delivery, as the main answer does.
+      for (final (i, f) in s.followUps.indexed)
+        if (f.take.delivery case final d?)
+          DeliveryPanel(
+            d,
+            title: f.kind == FollowUpKind.wrapUp
+                ? 'How you said the wrap-up'
+                : s.followUps.length > 1
+                ? 'How you said follow-up ${i + 1}'
+                : 'How you said the follow-up',
+          ),
       if (r.coverage(r.index) case final c? when c.expected.isNotEmpty)
         SectionCard(
           title: 'What your answer covered',
@@ -933,12 +951,20 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
             if (next.fixes.isNotEmpty) Bullets(next.fixes, icon: Icons.arrow_upward),
           ],
           const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FilledButton(
-              onPressed: () => Navigator.of(context).pop(outcomes),
-              child: Text(stage == null ? 'Back to the round' : 'Back to the process'),
-            ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(outcomes),
+                child: Text(stage == null ? 'Back to the round' : 'Back to the process'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => openDebrief(context, widget.roundId),
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('See the debrief'),
+              ),
+            ],
           ),
         ],
       ),
@@ -949,8 +975,9 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
 /// Delivery, apart from content: each measure beside its usual range,
 /// never a score (plan rules 5 and 6).
 class DeliveryPanel extends StatelessWidget {
-  const DeliveryPanel(this.d, {super.key, this.before});
+  const DeliveryPanel(this.d, {super.key, this.before, this.title = 'How you said it'});
   final DeliveryMetrics d;
+  final String title;
 
   /// Take 1's measures, when this is a later take.
   final DeliveryMetrics? before;
@@ -961,7 +988,7 @@ class DeliveryPanel extends StatelessWidget {
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     final earlier = before?.readings;
     return SectionCard(
-      title: 'How you said it',
+      title: title,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

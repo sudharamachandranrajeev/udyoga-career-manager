@@ -169,6 +169,16 @@ final practiceProvider = _rows<$CareerPracticeTable, PracticeSession>(
   orderBy: [(p) => OrderingTerm.desc(p.started)],
 );
 
+final roleProfilesProvider = _rows<$CareerRoleProfilesTable, RoleProfileRow>(
+  (db) => db.careerRoleProfiles,
+  orderBy: [(p) => OrderingTerm.desc(p.updated)],
+);
+
+final processesProvider = _rows<$CareerProcessesTable, ProcessRow>(
+  (db) => db.careerProcesses,
+  orderBy: [(p) => OrderingTerm.desc(p.updated)],
+);
+
 final answersProvider = _rows<$CareerAnswersTable, PracticeAnswer>(
   (db) => db.careerAnswers,
   orderBy: [(a) => OrderingTerm(expression: a.question)],

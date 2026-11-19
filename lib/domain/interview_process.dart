@@ -828,7 +828,6 @@ class ProcessProgress {
   };
 
   factory ProcessProgress.fromJson(Json j) => ProcessProgress({
-    for (final e in obj(j['stages']).entries)
-      ?int.tryParse(e.key): StageProgress.fromJson(obj(e.value)),
+    for (final e in obj(j['stages']).entries) ?int.tryParse(e.key): StageProgress.fromJson(obj(e.value)),
   });
 }

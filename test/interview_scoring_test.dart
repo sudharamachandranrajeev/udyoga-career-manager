@@ -76,10 +76,18 @@ void main() {
       expect(suggestedFramework({'framework': 'made_up'}), 'private');
     });
 
-    test('criteria become questions: essentials at interview first, test-only left out', () {
+    test('criteria become questions: essentials first, application- and test-only left out', () {
       final qs = questionsFromProfile(profile);
       expect(qs.first.category, 'Settler');
       expect([for (final q in qs.skip(1)) criteriaOf(q).single], ['c1', 'c2', 'c4']);
+      // A criterion assessed only by the application is not asked aloud either.
+      final appOnly = profile.copyWith(
+        criteria: [
+          ...profile.criteria,
+          const Criterion(id: 'c5', text: 'A typing certificate', assessBy: ['A']),
+        ],
+      );
+      expect(askedCriteria(appOnly).map((c) => c.id), ['c1', 'c2', 'c4']);
       expect(qs[2].question, startsWith('One of our values is working together.'));
       expect(qs[1].why, contains('(essential)'));
       expect(qs[3].why, contains('(desirable)'));
@@ -217,9 +225,11 @@ void main() {
       expect(byId['c1']!.status, Coverage.evidenced);
       expect(byId['c1']!.best!.level.label, 'Very good');
       expect(byId['c2']!.status, Coverage.missing);
-      // Typing is left to the test: not asked, so missing too.
+      // Typing is left to the test: not asked, and not held against you.
       expect(byId['c3']!.asked, isFalse);
-      expect(d.missingEssentials.map((c) => c.criterion.id), containsAll(['c2', 'c3']));
+      expect(byId['c3']!.note, 'Assessed by the test, not at interview.');
+      expect(byId['c3']!.unappointable, isFalse);
+      expect(d.missingEssentials.map((c) => c.criterion.id), ['c2']);
       expect(d.recoveryLines, contains(Recovery.addLater('Working together')));
       final scores = {for (final s in d.scoreLines()) s.criterion.id: s};
       expect(scores['c1']!.level.anchor, nhsScale.levels[3].anchor);
@@ -237,7 +247,11 @@ void main() {
     });
 
     test('without an AI, coverage comes from the matcher alone', () {
-      final r = round({1: fullAnswer, 2: bareClaim, 3: 'I set up the records system and I updated it every day.'});
+      final r = round({
+        1: fullAnswer,
+        2: bareClaim,
+        3: 'I set up the records system and I updated it every day.',
+      });
       final d = Debrief.build(framework: Framework.of('nhs_values'), round: r);
       expect(d.aiScored, isFalse);
       expect(d.scoreLines(), isEmpty);

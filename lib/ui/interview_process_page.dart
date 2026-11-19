@@ -13,18 +13,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/providers.dart';
 import '../domain/delivery.dart';
 import '../domain/insights.dart';
+import '../domain/interview_book.dart';
 import '../domain/interview_plan.dart';
 import '../domain/interview_process.dart';
+import '../domain/interview_scoring.dart';
 import 'common.dart';
+import 'interview_debrief_page.dart' show openDebrief, openRoleProfile;
 import 'kit/kit.dart';
 import 'spoken_round_page.dart';
 
-Future<void> openProcess(BuildContext context, InterviewProcess template) =>
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProcessPage(template)));
+Future<void> openProcess(BuildContext context, InterviewProcess template, {String? savedId}) =>
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProcessPage(template, savedId: savedId)));
 
 class ProcessPage extends ConsumerStatefulWidget {
-  const ProcessPage(this.template, {super.key});
+  const ProcessPage(this.template, {super.key, this.savedId});
   final InterviewProcess template;
+
+  /// A process saved earlier, to pick up where it was left.
+  final String? savedId;
 
   @override
   ConsumerState<ProcessPage> createState() => _ProcessPageState();
@@ -33,14 +39,49 @@ class ProcessPage extends ConsumerStatefulWidget {
 class _ProcessPageState extends ConsumerState<ProcessPage> {
   late InterviewProcess _process = widget.template;
 
-  /// What each finished stage covered, by stage index.
-  final _outcomes = <int, List<QuestionOutcome>>{};
+  /// Empty until the process is first saved: when a stage starts.
+  late String _id = widget.savedId ?? '';
+  ProcessProgress _progress = const ProcessProgress();
+  String? _profileId;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final id = widget.savedId;
+    final saved = id == null ? null : await ref.read(sessionProvider).book.savedProcess(id);
+    if (!mounted) return;
+    setState(() {
+      if (saved != null) {
+        _process = saved.process;
+        _progress = saved.progress;
+        _profileId = saved.profileId;
+      }
+      _loading = false;
+    });
+  }
+
+  /// Saves the process with its progress (text only, synced like rounds).
+  Future<void> _save({bool force = false}) async {
+    if (_id.isEmpty && !force) return;
+    final process = _process, progress = _progress, profileId = _profileId;
+    final id = await ref.mutate(
+      (s) => s.book.saveProcess(_id, process, progress, profileId: profileId, at: nowLocal()),
+    );
+    _id = id;
+  }
+
+  void _change(VoidCallback f) {
+    setState(f);
+    unawaited(_save());
+  }
 
   /// What the earlier finished stages leave for stage [i].
-  CarryForward _carryFor(int i) => CarryForward.from([
-    for (var j = 0; j < i; j++)
-      if (_process.stages[j].included) ?_outcomes[j],
-  ]);
+  CarryForward _carryFor(int i) => _progress.carryFor(_process, i);
 
   Future<void> _run(int i) async {
     final stage = _process.stages[i];
@@ -55,17 +96,40 @@ class _ProcessPageState extends ConsumerState<ProcessPage> {
       if (ready == null || !mounted) return;
       notes = ready;
     }
-    final id = await ref.mutate(
-      (s) => s.book.startPractice(
-        role: '${_process.name}: ${stage.title}',
-        mode: 'standard',
-        questions: stage.roundQuestions(),
-        at: nowLocal(),
-      ),
-    );
+    final book = ref.read(sessionProvider).book;
+    // The panel asks the role profile's criteria when one is chosen.
+    final profile = stage.kind == StageKind.panel ? await book.roleProfile(_profileId) : null;
+    // A stage started and left unfinished goes on in the same round.
+    final was = _progress.stages[i];
+    final reuse = was != null && !was.finished && (await book.roundRecord(was.roundId)) != null;
+    final String id;
+    if (reuse) {
+      id = was.roundId;
+    } else {
+      id = await ref.mutate(
+        (s) => s.book.startPractice(
+          role: '${_process.name}: ${stage.title}',
+          mode: 'standard',
+          questions: profile != null && profile.criteria.isNotEmpty
+              ? questionsFromProfile(profile)
+              : stage.roundQuestions(),
+          at: nowLocal(),
+        ),
+      );
+      if (profile != null) await ref.mutate((s) => s.book.setRoundProfile(id, profile.id));
+    }
+    _progress = _progress.withStage(i, StageProgress(roundId: id));
+    await _save(force: true);
     if (!mounted) return;
     final out = await openSpokenRound(context, id, stage: stage, carry: _carryFor(i), notes: notes);
-    if (out != null && mounted) setState(() => _outcomes[i] = out);
+    if (out == null || !mounted) return;
+    final done = _progress.withStage(i, StageProgress(roundId: id, finished: true, outcomes: out));
+    _change(
+      () => _progress = done.withStage(
+        i,
+        StageProgress(roundId: id, finished: true, outcomes: out, carry: done.carryFor(_process, i + 1)),
+      ),
+    );
   }
 
   Future<void> _edit(int i) async {
@@ -155,7 +219,7 @@ class _ProcessPageState extends ConsumerState<ProcessPage> {
                 }),
         ];
         final settlerText = settler.text.trim();
-        setState(
+        _change(
           () => _process = _process.withStage(
             i,
             st.copyWith(
@@ -193,23 +257,56 @@ class _ProcessPageState extends ConsumerState<ProcessPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) return Scaffold(appBar: AppBar(), body: const SkeletonCards(count: 3));
     final stages = _process.stages;
-    final nextIndex = [
+    final nextIndex = _progress.next(_process);
+    final finished = [
       for (final (i, s) in stages.indexed)
-        if (s.included && !_outcomes.containsKey(i)) i,
-    ].firstOrNull;
+        if (s.included && _progress.finished(i)) _progress.stages[i]!.outcomes,
+    ];
+    final profiles = ref.watch(roleProfilesProvider).value ?? const [];
+    final hasPanel = stages.any((s) => s.kind == StageKind.panel && s.included);
     return PageScaffold(
       title: _process.name,
       children: [
         Text(_process.about),
         const SizedBox(height: 4),
         Text(
-          'Practice only. Employers run their own processes: edit any stage to match your invitation.',
+          'Practice only. Employers run their own processes: edit any stage to match your invitation. Your '
+          'progress is saved, so you can stop and come back.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 12),
+        if (hasPanel)
+          SectionCard(
+            title: 'Role profile',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'With a role profile, the panel asks about its criteria and the debrief scores them on its '
+                  'framework.',
+                ),
+                if (profiles.isNotEmpty)
+                  Choice<String>(
+                    label: 'Profile for the panel',
+                    value: profiles.any((p) => p.id == _profileId) ? _profileId! : '',
+                    options: {'': 'None: the template questions', for (final p in profiles) p.id: p.title},
+                    onChanged: (v) => _change(() => _profileId = v.isEmpty ? null : v),
+                  ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => openRoleProfile(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('New role profile'),
+                  ),
+                ),
+              ],
+            ),
+          ),
         for (final (i, st) in stages.indexed) _stageCard(i, st, i == nextIndex),
-        if (nextIndex == null && _outcomes.isNotEmpty)
+        if (nextIndex == null && finished.isNotEmpty)
           SectionCard(
             title: 'Process finished',
             child: Column(
@@ -218,8 +315,7 @@ class _ProcessPageState extends ConsumerState<ProcessPage> {
                 const Text(
                   'Every stage is done. The transcripts are saved as practice rounds on the Interview page.',
                 ),
-                if (CarryForward.from([for (final o in _outcomes.values) o]) case final c
-                    when !c.isEmpty) ...[
+                if (CarryForward.from(finished) case final c when !c.isEmpty) ...[
                   if (c.keep.isNotEmpty) Bullets(c.keep, icon: Icons.check, color: Status.good.color),
                   if (c.fixes.isNotEmpty) Bullets(c.fixes, icon: Icons.arrow_upward),
                 ],
@@ -231,7 +327,9 @@ class _ProcessPageState extends ConsumerState<ProcessPage> {
   }
 
   Widget _stageCard(int i, InterviewStage st, bool isNext) {
-    final done = _outcomes.containsKey(i);
+    final done = _progress.finished(i);
+    final started = !done && _progress.stages[i] != null;
+    final roundId = _progress.stages[i]?.roundId;
     final muted = Theme.of(context).textTheme.bodySmall;
     final persona = Persona.of(st.persona);
     final carry = isNext ? _carryFor(i) : CarryForward.none;
@@ -248,10 +346,12 @@ class _ProcessPageState extends ConsumerState<ProcessPage> {
       title: '${i + 1}. ${st.title}',
       trailing: done
           ? const StatusPill('Done', status: Status.good)
+          : started
+          ? const StatusPill('Started', status: Status.info)
           : st.optional
           ? Switch(
               value: st.included,
-              onChanged: (v) => setState(() => _process = _process.withStage(i, st.copyWith(included: v))),
+              onChanged: (v) => _change(() => _process = _process.withStage(i, st.copyWith(included: v))),
             )
           : null,
       child: Column(
@@ -276,7 +376,19 @@ class _ProcessPageState extends ConsumerState<ProcessPage> {
                 (isNext ? FilledButton.icon : OutlinedButton.icon)(
                   onPressed: () => _run(i),
                   icon: Icon(done ? Icons.replay : Icons.play_arrow),
-                  label: Text(done ? 'Run ${st.title} again' : 'Start ${st.title}'),
+                  label: Text(
+                    done
+                        ? 'Run ${st.title} again'
+                        : started
+                        ? 'Carry on with ${st.title}'
+                        : 'Start ${st.title}',
+                  ),
+                ),
+              if (roundId != null && (done || started))
+                OutlinedButton.icon(
+                  onPressed: () => openDebrief(context, roundId),
+                  icon: const Icon(Icons.fact_check_outlined),
+                  label: const Text('Debrief'),
                 ),
               TextButton.icon(
                 onPressed: () => _edit(i),

@@ -9,8 +9,10 @@ import '../domain/answer_metrics.dart';
 import '../domain/common_questions.dart';
 import '../domain/insights.dart';
 import '../domain/interview_process.dart';
+import '../domain/interview_scoring.dart' show Framework;
 import '../domain/json.dart';
 import 'common.dart';
+import 'interview_debrief_page.dart';
 import 'interview_process_page.dart';
 import 'kit/kit.dart';
 import 'look.dart';
@@ -166,6 +168,19 @@ class InterviewPage extends ConsumerWidget {
                 'interview. Each stage has its own clock and opens with what the last one left to fix. Every '
                 'template can be edited to match your invitation.',
               ),
+              for (final row in ref.watch(processesProvider).value ?? const <ProcessRow>[])
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.play_circle_outline),
+                  title: Text('Carry on: ${row.name}'),
+                  subtitle: Text(_processProgress(row)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => openProcess(
+                    context,
+                    processTemplates.where((t) => t.id == row.template).firstOrNull ?? processTemplates.first,
+                    savedId: row.id,
+                  ),
+                ),
               for (final p in processTemplates)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -174,6 +189,40 @@ class InterviewPage extends ConsumerWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => openProcess(context, p),
                 ),
+            ],
+          ),
+        ),
+        SectionCard(
+          title: 'Role profiles',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Paste an advert and person specification, or type the criteria. Each becomes a question, and '
+                'the debrief scores only what you said against them, essentials first.',
+              ),
+              for (final p in ref.watch(roleProfilesProvider).value ?? const <RoleProfileRow>[])
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(p.title),
+                  subtitle: Text(
+                    [
+                      if (p.employer.isNotEmpty) p.employer,
+                      Framework.of(p.framework).name,
+                      '${decodeList(p.criteria).length} criteria',
+                    ].join(' · '),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => openRoleProfile(context, id: p.id),
+                ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => openRoleProfile(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('New role profile'),
+                ),
+              ),
             ],
           ),
         ),
@@ -243,6 +292,23 @@ class InterviewPage extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// How far a saved process has got, in a line.
+String _processProgress(ProcessRow row) {
+  final process = InterviewProcess.fromJson(decodeObject(row.process));
+  final progress = ProcessProgress.fromJson(decodeObject(row.progress));
+  final included = [
+    for (final (i, s) in process.stages.indexed)
+      if (s.included) i,
+  ];
+  final done = included.where(progress.finished).length;
+  final next = progress.next(process);
+  return [
+    '$done of ${included.length} stages done',
+    if (next != null) 'next: ${process.stages[next].title}',
+    'saved ${niceDateTime(row.updated)}',
+  ].join(' · ');
 }
 
 class _RoundTile extends StatelessWidget {
@@ -356,6 +422,11 @@ class _PracticePageState extends ConsumerState<PracticePage> {
           icon: const Icon(Icons.mic_none),
           tooltip: 'Answer aloud',
           onPressed: () => openSpokenRound(context, round.id),
+        ),
+        IconButton(
+          icon: const Icon(Icons.fact_check_outlined),
+          tooltip: 'Debrief',
+          onPressed: () => openDebrief(context, round.id),
         ),
         IconButton(
           icon: const Icon(Icons.delete_outline),

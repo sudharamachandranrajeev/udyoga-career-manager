@@ -337,6 +337,9 @@ class _StoryBank extends ConsumerWidget {
                   subtitle: Text(
                     [
                       CompanionBook.competenciesOf(s).map((c) => competencyNames[c]).join(', '),
+                      if (s.source == 'practice') 'From practice',
+                      if (decodeList(s.criteria).isNotEmpty)
+                        'Evidenced: ${strs(decodeList(s.criteria)).join('; ')}',
                       if (!s.confirmed) 'Draft: check it is true as written',
                     ].where((t) => t.isNotEmpty).join(' · '),
                   ),

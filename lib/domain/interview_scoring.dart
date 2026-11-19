@@ -418,6 +418,10 @@ class Framework {
   final List<String> examples;
   final String examplesNote;
 
+  /// [dimension] in the plural.
+  String get dimensions =>
+      dimension.endsWith('y') ? '${dimension.substring(0, dimension.length - 1)}ies' : '${dimension}s';
+
   /// The kind of criterion the examples become.
   CriterionKind get exampleKind => dimension == 'value' ? CriterionKind.value : CriterionKind.behaviour;
 
@@ -532,18 +536,15 @@ const profileSettler = PracticeQuestion({
   'why': 'Nothing is scored here: it is to help you settle in.',
 });
 
-/// The criteria a round of at most [max] questions asks about: essentials
-/// assessed at interview first, then other essentials, then desirables;
-/// test-only criteria are left to the test.
-List<Criterion> askedCriteria(RoleProfile p, {int max = 8}) {
-  final pool = [
-    for (final c in p.criteria)
-      if (!c.testOnly) c,
-  ];
-  int order(Criterion c) => c.essential ? (c.atInterview ? 0 : 1) : 2;
-  final sorted = [...pool]..sort((a, b) => order(a).compareTo(order(b)));
-  return sorted.take(max).toList();
-}
+/// The criteria a round of at most [max] questions asks about: those
+/// assessed at interview (or not said), essentials first. Criteria assessed
+/// only by the application or a test are left to those.
+List<Criterion> askedCriteria(RoleProfile p, {int max = 8}) => [
+  for (final c in p.criteria)
+    if (c.atInterview && c.essential) c,
+  for (final c in p.criteria)
+    if (c.atInterview && !c.essential) c,
+].take(max).toList();
 
 /// The round's questions for [p]: the settler, then one question per asked
 /// criterion, each tagged with its criterion id and showing what it tests
@@ -801,6 +802,10 @@ class CriterionCoverage {
 
   /// The best verified score, when the AI scored the round.
   final VerifiedScore? best;
+
+  /// An essential criterion assessed at interview with no evidence: a panel
+  /// could not appoint (plan rule 3).
+  bool get unappointable => criterion.essential && criterion.atInterview && status == Coverage.missing;
 }
 
 /// One strength and one task-level fix for an answer (plan rule 6), and a
@@ -904,7 +909,7 @@ class Debrief {
 
   List<CriterionCoverage> get missingEssentials => [
     for (final c in coverage)
-      if (c.criterion.essential && c.status == Coverage.missing) c,
+      if (c.unappointable) c,
   ];
 
   /// Lines to practise for the weak moments, without repeats.
@@ -945,11 +950,15 @@ class Debrief {
             criterion: c,
             status: Coverage.missing,
             asked: false,
-            note: 'Not asked in this round, so no evidence yet. A panel will look for it: practise it.',
+            note: c.atInterview
+                ? 'Not asked in this round, so no evidence yet. A panel will look for it: practise it.'
+                : 'Assessed by the ${c.assessBy.map((a) => assessByLabels[a]!.toLowerCase()).join(' and ')}, '
+                      'not at interview.',
           ),
         );
         continue;
       }
+      final answered = asking.any((q) => q.heard.trim().isNotEmpty);
       if (verified != null) {
         final mine = [
           for (final s in verified.scores)
@@ -965,7 +974,7 @@ class Debrief {
             note: switch (status) {
               Coverage.evidenced => 'Scored ${best!.level.code} (${best.level.label}) on what you said.',
               Coverage.thin => 'Touched on, but thin: ${best!.level.label.toLowerCase()} evidence.',
-              Coverage.missing => 'No evidence heard: ${scale.noEvidence.code}.',
+              Coverage.missing => answered ? 'No evidence heard: ${scale.noEvidence.code}.' : 'Not answered.',
             },
           ),
         );
@@ -977,7 +986,6 @@ class Debrief {
           : statuses.contains(Coverage.thin)
           ? Coverage.thin
           : Coverage.missing;
-      final answered = asking.any((q) => q.heard.trim().isNotEmpty);
       coverage.add(
         CriterionCoverage(
           criterion: c,
@@ -991,9 +999,12 @@ class Debrief {
         ),
       );
     }
+    // Essentials first, gaps first within them; criteria assessed away
+    // from the interview last.
+    int group(CriterionCoverage c) => !c.criterion.atInterview ? 2 : (c.criterion.essential ? 0 : 1);
     coverage.sort((a, b) {
-      final e = (a.criterion.essential ? 0 : 1).compareTo(b.criterion.essential ? 0 : 1);
-      return e != 0 ? e : a.status.index.compareTo(b.status.index) * -1;
+      final g = group(a).compareTo(group(b));
+      return g != 0 ? g : b.status.index.compareTo(a.status.index);
     });
 
     final notes = <AnswerNote>[];

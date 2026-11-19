@@ -120,14 +120,15 @@ void main() {
     // An example question with no own action in it: the panel follows up, in writing too.
     expect(find.text('Follow-up'), findsOneWidget);
     expect(engines.voice.said.last, 'What did you yourself do?');
-    await app.enter('Your answer', 'I rang the supplier and I moved the deadline with my manager.');
-    await app.tapText('Save answer');
-    expect(find.text('Follow-up'), findsOneWidget);
-    await app.tapText('Move on');
+    // This follow-up is answered aloud: it keeps its own delivery.
+    await app.tapText('Answer by voice instead');
+    await app.tapText('Done');
+    if (find.text('Move on').evaluate().isNotEmpty) await app.tapText('Move on');
     expect(find.text('Your answer (typed)'), findsOneWidget);
     expect(find.text('Follow-ups'), findsOneWidget);
     expect(find.text('What your answer covered'), findsOneWidget);
     expect(find.text('How you said it'), findsNothing);
+    expect(find.text('How you said the follow-up'), findsOneWidget);
     await app.tapText('Finish');
     expect(find.textContaining('You answered 2 of 2'), findsOneWidget);
     expect(find.text('For next time'), findsOneWidget);
