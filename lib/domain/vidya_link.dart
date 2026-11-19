@@ -102,6 +102,7 @@ Json vidyaPlan({
     for (final s in stories)
       if (s.action.isNotEmpty)
         {
+          'id': storyCardId(s.id),
           'deck': 'Interview stories',
           'front': [
             'Tell your story: ${s.title}',
@@ -219,6 +220,10 @@ VidyaDone vidyaDoneFrom(StudyProgress p) => (
 
 /// The one study plan Udyoga sends; sending again replaces it.
 const studyPlanId = 'udyoga.study-plan';
+
+/// A story's card id in Vidya: stable, so an edited story updates its card
+/// in place instead of adding a second one.
+String storyCardId(String storyId) => 'udyoga.story.$storyId';
 
 /// The live link through sync: the plan as last sent, whether Vidya has
 /// added it, and what Vidya reports finished.

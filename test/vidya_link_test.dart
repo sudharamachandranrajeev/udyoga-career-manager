@@ -84,6 +84,9 @@ void main() {
     expect((courses.first['topics'] as List).length, competencyNames.length);
     expect(((courses[1]['topics'] as List).single as Map)['details'], 'Severity: major. Do the e-learning.');
     final card = (plan['cards'] as List).single as Map;
+    // A stable id, so an edited story updates its Vidya card in place.
+    final story = (await book.stories()).single;
+    expect(card['id'], 'udyoga.story.${story.id}');
     expect(card['deck'], 'Interview stories');
     expect(card['front'], 'Tell your story: E-obs training (${competencyNames['supporting']})');
     expect(card['back'], 'Action: I trained 40 staff.\nResult: Live on time.');
@@ -167,7 +170,11 @@ void main() {
       source: 'manual',
       today: '2026-11-15',
     );
-    final plan = const JsonEncoder.withIndent('  ').convert(await book.vidyaPlanNow());
+    // Story ids are random: the fixture has a fixed one.
+    final id = (await book.stories()).single.id;
+    final plan = const JsonEncoder.withIndent(
+      '  ',
+    ).convert(await book.vidyaPlanNow()).replaceAll(id, 'fixture-story');
     final fixture = File('test/fixtures/udyoga-plan.json');
     if (!fixture.existsSync() || Platform.environment['UPDATE_FIXTURES'] == '1') {
       await fixture.parent.create(recursive: true);
