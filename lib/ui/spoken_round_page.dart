@@ -25,6 +25,7 @@ import '../domain/interview_plan.dart';
 import '../domain/interview_process.dart';
 import '../domain/interview_scoring.dart';
 import '../domain/json.dart';
+import '../vision/camera_coach.dart';
 import '../voice/models.dart';
 import '../voice/round.dart';
 import '../voice/spoken_engines.dart';
@@ -32,6 +33,7 @@ import 'common.dart';
 import 'interview_confidence_ui.dart' show NervesRating;
 import 'interview_debrief_page.dart' show openDebrief;
 import 'interview_lab_page.dart' show modelManagerProvider;
+import 'camera_coach_ui.dart';
 import 'kit/kit.dart';
 
 /// The device's speech engines; tests override it with fakes.
@@ -163,6 +165,9 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
   final _typed = TextEditingController();
   String? _playing;
 
+  /// The camera coach: off at the start of every round, kept in memory only.
+  final _coach = CameraCoach();
+
   @override
   void initState() {
     super.initState();
@@ -185,6 +190,7 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
   void dispose() {
     _sub?.cancel();
     _typed.dispose();
+    _coach.dispose();
     final round = _round, engines = _engines;
     // Recordings go when the round screen closes.
     unawaited(() async {
@@ -310,8 +316,11 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
         return;
       }
       _sub = round.changes.listen((_) {
+        // The camera goes off with the round's end; the setup notes stay.
+        if (round.phase == RoundPhase.finished && _coach.on) unawaited(_coach.turnOff());
         if (mounted) setState(() {});
       });
+      _coach.roundStarted();
       setState(() => _round = round);
       round.start();
     } on Object catch (e) {
@@ -390,9 +399,12 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
         if (round == null) ...[
           if (widget.stage case final st?) _stageNote(st),
           _settingsCard(),
+          CameraSetupCard(_coach),
           _before(session, questions),
-        ] else
+        ] else ...[
+          CameraRoundBar(_coach),
           ..._during(round, session),
+        ],
       ],
     );
   }
@@ -967,6 +979,14 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
             const Subhead('For next time'),
             if (next.keep.isNotEmpty) Bullets(next.keep, icon: Icons.check, color: Status.good.color),
             if (next.fixes.isNotEmpty) Bullets(next.fixes, icon: Icons.arrow_upward),
+          ],
+          if (_coach.setupNotes.isNotEmpty) ...[
+            const Subhead('Setup notes'),
+            Text(
+              'From the camera check before the round. Information only: not part of any score, and not saved.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            Bullets(_coach.setupNotes, icon: Icons.videocam_outlined),
           ],
           const SizedBox(height: 12),
           Wrap(

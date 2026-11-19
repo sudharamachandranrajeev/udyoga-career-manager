@@ -12,6 +12,7 @@ import '../domain/interview_confidence.dart';
 import '../domain/interview_process.dart';
 import '../domain/interview_scoring.dart' show Framework;
 import '../domain/json.dart';
+import 'camera_coach_ui.dart';
 import 'common.dart';
 import 'interview_confidence_ui.dart';
 import 'interview_debrief_page.dart';
@@ -157,6 +158,13 @@ class InterviewPage extends ConsumerWidget {
                       onPressed: () => startPractice(context, ref),
                       child: const Text('Or prepare questions for a role first'),
                     ),
+                  TextButton.icon(
+                    onPressed: () =>
+                        Navigator.of(context)
+                            .push(MaterialPageRoute<void>(builder: (_) => const CameraSetupPage())),
+                    icon: const Icon(Icons.videocam_outlined),
+                    label: const Text('Check my video setup'),
+                  ),
                 ],
               ),
             ],
