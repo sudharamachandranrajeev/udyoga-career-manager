@@ -92,7 +92,20 @@ String _norm(String s) => s
     .replaceAll(RegExp(r'\s+'), ' ')
     .trim();
 
-const _stop = {'and', 'of', 'the', 'in', 'for', 'a', 'senior', 'junior', 'lead', 'principal', 'trainee', 'assistant'};
+const _stop = {
+  'and',
+  'of',
+  'the',
+  'in',
+  'for',
+  'a',
+  'senior',
+  'junior',
+  'lead',
+  'principal',
+  'trainee',
+  'assistant',
+};
 
 Set<String> _words(String s) => _norm(s).split(' ').where((w) => w.isNotEmpty && !_stop.contains(w)).toSet();
 
@@ -127,7 +140,10 @@ List<OccupationMatch> socMatches(String title, {int limit = 3}) {
   scored.sort((x, y) => y.$1.compareTo(x.$1));
   final out = <String, OccupationMatch>{};
   for (final (_, e) in scored) {
-    out.putIfAbsent(e.$2, () => OccupationMatch(title: title, soc: e.$2, socTitle: socTitle(e.$2), isco: e.$3));
+    out.putIfAbsent(
+      e.$2,
+      () => OccupationMatch(title: title, soc: e.$2, socTitle: socTitle(e.$2), isco: e.$3),
+    );
     if (out.length >= limit) break;
   }
   return out.values.toList();
@@ -135,7 +151,11 @@ List<OccupationMatch> socMatches(String title, {int limit = 3}) {
 
 /// The job titles worth coding for a person: the target roles, then the
 /// current role and recent job titles, without repeats.
-List<String> titlesToCode({required List<String> targets, String current = '', List<String> past = const []}) {
+List<String> titlesToCode({
+  required List<String> targets,
+  String current = '',
+  List<String> past = const [],
+}) {
   final seen = <String>{};
   return [
     for (final t in [...targets, current, ...past.take(3)])
@@ -177,15 +197,16 @@ class EscoLookup {
   Future<Map<String, Object?>> _cache() async => decodeObject(await db.localSetting(cacheKey) ?? '');
 
   /// The ISCO-08 codes ESCO gives [title], best first; cached, so it works
-  /// offline once asked. Throws FeedException when ESCO cannot be reached
-  /// and nothing is cached.
-  Future<List<(String, String)>> isco(String title) async {
+  /// offline once asked. With [offline], only the cache is read. Throws
+  /// FeedException when ESCO cannot be reached and nothing is cached.
+  Future<List<(String, String)>> isco(String title, {bool offline = false}) async {
     final key = _norm(title);
     if (key.isEmpty) return const [];
     final cache = await _cache();
     if (cache[key] is List) {
       return [for (final e in objs(cache[key])) (str(e['title']), str(e['isco']))];
     }
+    if (offline) return const [];
     final uri = Uri.parse(escoSearchApi)
         .replace(queryParameters: {'text': title, 'type': 'occupation', 'language': 'en', 'limit': '5'});
     final http.Response r;
@@ -209,7 +230,11 @@ class EscoLookup {
   /// [matches] with an ISCO code filled from ESCO where the index gave
   /// none; a title the index does not know gets an ESCO-only match.
   /// Lookups that fail are skipped.
-  Future<List<OccupationMatch>> complete(List<String> titles, List<OccupationMatch> matches) async {
+  Future<List<OccupationMatch>> complete(
+    List<String> titles,
+    List<OccupationMatch> matches, {
+    bool offline = false,
+  }) async {
     final out = <OccupationMatch>[];
     for (final t in titles) {
       final mine = matches.where((m) => m.title == t).toList();
@@ -219,7 +244,7 @@ class EscoLookup {
       }
       List<(String, String)> esco;
       try {
-        esco = await isco(t);
+        esco = await isco(t, offline: offline);
       } on FeedException {
         esco = const [];
       }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/navigation.dart';
+import '../app/explore_providers.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/conversations.dart';
@@ -21,6 +22,7 @@ import 'look.dart' hide Pace;
 import 'offer_checks.dart';
 import 'today_hero.dart';
 import 'todos.dart';
+import '../domain/tracks.dart';
 
 /// Next steps, from setting up to the day's chasing.
 List<({IconData icon, String text})> nextSteps({
@@ -79,6 +81,7 @@ class TodayPage extends ConsumerWidget {
       for (final c in visaClocks(profile.rights, today: now))
         if (c.current case final m?) (clock: c, milestone: m),
     ];
+    final milestones = trackDeadlines(ref.watch(tracksProvider).value ?? const <RouteTrack>[]);
     final apps = ref.watch(applicationsProvider).value ?? const <JobApplication>[];
     final leads = ref.watch(leadsProvider).value ?? const <Lead>[];
     final events = ref.watch(eventsProvider).value ?? const <JobEvent>[];
@@ -167,6 +170,17 @@ class TodayPage extends ConsumerWidget {
             date: t.target!,
             when: relativeDay(t.target!, now),
             open: () => goToPage(ref, 'growth'),
+          ),
+      // Route-track milestones in the next two weeks (or overdue) that are
+      // not already on the to-do list.
+      for (final d in milestones)
+        if (d.milestone.todo == null && d.milestone.due!.compareTo(addDays(now, 14)) <= 0)
+          (
+            title: d.milestone.title,
+            detail: d.track.title,
+            date: d.milestone.due!,
+            when: relativeDay(d.milestone.due!, now),
+            open: () => goToPage(ref, 'explore'),
           ),
       for (final v in visas)
         (
