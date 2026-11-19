@@ -212,6 +212,16 @@ class $JobListingsTable extends JobListings with TableInfo<$JobListingsTable, Jo
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _fitByMeta = const VerificationMeta('fitBy');
+  @override
+  late final GeneratedColumn<String> fitBy = GeneratedColumn<String>(
+    'fit_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('local'),
+  );
   static const VerificationMeta _assessmentMeta = const VerificationMeta('assessment');
   @override
   late final GeneratedColumn<String> assessment = GeneratedColumn<String>(
@@ -255,6 +265,7 @@ class $JobListingsTable extends JobListings with TableInfo<$JobListingsTable, Jo
     found,
     status,
     fit,
+    fitBy,
     assessment,
     notes,
   ];
@@ -342,6 +353,9 @@ class $JobListingsTable extends JobListings with TableInfo<$JobListingsTable, Jo
     if (data.containsKey('fit')) {
       context.handle(_fitMeta, fit.isAcceptableOrUnknown(data['fit']!, _fitMeta));
     }
+    if (data.containsKey('fit_by')) {
+      context.handle(_fitByMeta, fitBy.isAcceptableOrUnknown(data['fit_by']!, _fitByMeta));
+    }
     if (data.containsKey('assessment')) {
       context.handle(_assessmentMeta, assessment.isAcceptableOrUnknown(data['assessment']!, _assessmentMeta));
     }
@@ -384,6 +398,7 @@ class $JobListingsTable extends JobListings with TableInfo<$JobListingsTable, Jo
       found: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}found'])!,
       status: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}status'])!,
       fit: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}fit']),
+      fitBy: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}fit_by'])!,
       assessment: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}assessment'],
@@ -434,6 +449,10 @@ class Job extends DataClass implements Insertable<Job> {
   /// 0 to 100: the AI's when it has assessed the job, else the local match.
   final int? fit;
 
+  /// Who set [fit]: local (the offline match, redone whenever the profile
+  /// changes) | triage (the AI's quick score) | ai (a full assessment).
+  final String fitBy;
+
   /// The AI's assessment (FitAssessment), '' until asked.
   final String assessment;
   final String notes;
@@ -459,6 +478,7 @@ class Job extends DataClass implements Insertable<Job> {
     required this.found,
     required this.status,
     this.fit,
+    required this.fitBy,
     required this.assessment,
     required this.notes,
   });
@@ -496,6 +516,7 @@ class Job extends DataClass implements Insertable<Job> {
     if (!nullToAbsent || fit != null) {
       map['fit'] = Variable<int>(fit);
     }
+    map['fit_by'] = Variable<String>(fitBy);
     map['assessment'] = Variable<String>(assessment);
     map['notes'] = Variable<String>(notes);
     return map;
@@ -524,6 +545,7 @@ class Job extends DataClass implements Insertable<Job> {
       found: Value(found),
       status: Value(status),
       fit: fit == null && nullToAbsent ? const Value.absent() : Value(fit),
+      fitBy: Value(fitBy),
       assessment: Value(assessment),
       notes: Value(notes),
     );
@@ -553,6 +575,7 @@ class Job extends DataClass implements Insertable<Job> {
       found: serializer.fromJson<String>(json['found']),
       status: serializer.fromJson<String>(json['status']),
       fit: serializer.fromJson<int?>(json['fit']),
+      fitBy: serializer.fromJson<String>(json['fitBy']),
       assessment: serializer.fromJson<String>(json['assessment']),
       notes: serializer.fromJson<String>(json['notes']),
     );
@@ -582,6 +605,7 @@ class Job extends DataClass implements Insertable<Job> {
       'found': serializer.toJson<String>(found),
       'status': serializer.toJson<String>(status),
       'fit': serializer.toJson<int?>(fit),
+      'fitBy': serializer.toJson<String>(fitBy),
       'assessment': serializer.toJson<String>(assessment),
       'notes': serializer.toJson<String>(notes),
     };
@@ -609,6 +633,7 @@ class Job extends DataClass implements Insertable<Job> {
     String? found,
     String? status,
     Value<int?> fit = const Value.absent(),
+    String? fitBy,
     String? assessment,
     String? notes,
   }) => Job(
@@ -633,6 +658,7 @@ class Job extends DataClass implements Insertable<Job> {
     found: found ?? this.found,
     status: status ?? this.status,
     fit: fit.present ? fit.value : this.fit,
+    fitBy: fitBy ?? this.fitBy,
     assessment: assessment ?? this.assessment,
     notes: notes ?? this.notes,
   );
@@ -659,6 +685,7 @@ class Job extends DataClass implements Insertable<Job> {
       found: data.found.present ? data.found.value : this.found,
       status: data.status.present ? data.status.value : this.status,
       fit: data.fit.present ? data.fit.value : this.fit,
+      fitBy: data.fitBy.present ? data.fitBy.value : this.fitBy,
       assessment: data.assessment.present ? data.assessment.value : this.assessment,
       notes: data.notes.present ? data.notes.value : this.notes,
     );
@@ -688,6 +715,7 @@ class Job extends DataClass implements Insertable<Job> {
           ..write('found: $found, ')
           ..write('status: $status, ')
           ..write('fit: $fit, ')
+          ..write('fitBy: $fitBy, ')
           ..write('assessment: $assessment, ')
           ..write('notes: $notes')
           ..write(')'))
@@ -717,6 +745,7 @@ class Job extends DataClass implements Insertable<Job> {
     found,
     status,
     fit,
+    fitBy,
     assessment,
     notes,
   ]);
@@ -745,6 +774,7 @@ class Job extends DataClass implements Insertable<Job> {
           other.found == this.found &&
           other.status == this.status &&
           other.fit == this.fit &&
+          other.fitBy == this.fitBy &&
           other.assessment == this.assessment &&
           other.notes == this.notes);
 }
@@ -771,6 +801,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
   final Value<String> found;
   final Value<String> status;
   final Value<int?> fit;
+  final Value<String> fitBy;
   final Value<String> assessment;
   final Value<String> notes;
   final Value<int> rowid;
@@ -796,6 +827,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
     this.found = const Value.absent(),
     this.status = const Value.absent(),
     this.fit = const Value.absent(),
+    this.fitBy = const Value.absent(),
     this.assessment = const Value.absent(),
     this.notes = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -822,6 +854,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
     required String found,
     this.status = const Value.absent(),
     this.fit = const Value.absent(),
+    this.fitBy = const Value.absent(),
     this.assessment = const Value.absent(),
     this.notes = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -850,6 +883,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
     Expression<String>? found,
     Expression<String>? status,
     Expression<int>? fit,
+    Expression<String>? fitBy,
     Expression<String>? assessment,
     Expression<String>? notes,
     Expression<int>? rowid,
@@ -876,6 +910,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
       if (found != null) 'found': found,
       if (status != null) 'status': status,
       if (fit != null) 'fit': fit,
+      if (fitBy != null) 'fit_by': fitBy,
       if (assessment != null) 'assessment': assessment,
       if (notes != null) 'notes': notes,
       if (rowid != null) 'rowid': rowid,
@@ -904,6 +939,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
     Value<String>? found,
     Value<String>? status,
     Value<int?>? fit,
+    Value<String>? fitBy,
     Value<String>? assessment,
     Value<String>? notes,
     Value<int>? rowid,
@@ -930,6 +966,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
       found: found ?? this.found,
       status: status ?? this.status,
       fit: fit ?? this.fit,
+      fitBy: fitBy ?? this.fitBy,
       assessment: assessment ?? this.assessment,
       notes: notes ?? this.notes,
       rowid: rowid ?? this.rowid,
@@ -1002,6 +1039,9 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
     if (fit.present) {
       map['fit'] = Variable<int>(fit.value);
     }
+    if (fitBy.present) {
+      map['fit_by'] = Variable<String>(fitBy.value);
+    }
     if (assessment.present) {
       map['assessment'] = Variable<String>(assessment.value);
     }
@@ -1038,6 +1078,7 @@ class JobListingsCompanion extends UpdateCompanion<Job> {
           ..write('found: $found, ')
           ..write('status: $status, ')
           ..write('fit: $fit, ')
+          ..write('fitBy: $fitBy, ')
           ..write('assessment: $assessment, ')
           ..write('notes: $notes, ')
           ..write('rowid: $rowid')
@@ -13034,6 +13075,7 @@ typedef $$JobListingsTableCreateCompanionBuilder = JobListingsCompanion Function
   required String found,
   Value<String> status,
   Value<int?> fit,
+  Value<String> fitBy,
   Value<String> assessment,
   Value<String> notes,
   Value<int> rowid,
@@ -13060,6 +13102,7 @@ typedef $$JobListingsTableUpdateCompanionBuilder = JobListingsCompanion Function
   Value<String> found,
   Value<String> status,
   Value<int?> fit,
+  Value<String> fitBy,
   Value<String> assessment,
   Value<String> notes,
   Value<int> rowid,
@@ -13135,6 +13178,9 @@ class $$JobListingsTableFilterComposer extends Composer<_$AppDatabase, $JobListi
 
   ColumnFilters<int> get fit =>
       $composableBuilder(column: $table.fit, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get fitBy =>
+      $composableBuilder(column: $table.fitBy, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get assessment =>
       $composableBuilder(column: $table.assessment, builder: (column) => ColumnFilters(column));
@@ -13214,6 +13260,9 @@ class $$JobListingsTableOrderingComposer extends Composer<_$AppDatabase, $JobLis
   ColumnOrderings<int> get fit =>
       $composableBuilder(column: $table.fit, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get fitBy =>
+      $composableBuilder(column: $table.fitBy, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get assessment =>
       $composableBuilder(column: $table.assessment, builder: (column) => ColumnOrderings(column));
 
@@ -13285,6 +13334,8 @@ class $$JobListingsTableAnnotationComposer extends Composer<_$AppDatabase, $JobL
 
   GeneratedColumn<int> get fit => $composableBuilder(column: $table.fit, builder: (column) => column);
 
+  GeneratedColumn<String> get fitBy => $composableBuilder(column: $table.fitBy, builder: (column) => column);
+
   GeneratedColumn<String> get assessment =>
       $composableBuilder(column: $table.assessment, builder: (column) => column);
 
@@ -13337,6 +13388,7 @@ class $$JobListingsTableTableManager
                 Value<String> found = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int?> fit = const Value.absent(),
+                Value<String> fitBy = const Value.absent(),
                 Value<String> assessment = const Value.absent(),
                 Value<String> notes = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -13362,6 +13414,7 @@ class $$JobListingsTableTableManager
                 found: found,
                 status: status,
                 fit: fit,
+                fitBy: fitBy,
                 assessment: assessment,
                 notes: notes,
                 rowid: rowid,
@@ -13389,6 +13442,7 @@ class $$JobListingsTableTableManager
                 required String found,
                 Value<String> status = const Value.absent(),
                 Value<int?> fit = const Value.absent(),
+                Value<String> fitBy = const Value.absent(),
                 Value<String> assessment = const Value.absent(),
                 Value<String> notes = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -13414,6 +13468,7 @@ class $$JobListingsTableTableManager
                 found: found,
                 status: status,
                 fit: fit,
+                fitBy: fitBy,
                 assessment: assessment,
                 notes: notes,
                 rowid: rowid,

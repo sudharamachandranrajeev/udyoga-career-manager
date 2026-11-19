@@ -14,6 +14,7 @@ import 'companion_book.dart';
 import 'insights.dart';
 import 'json.dart';
 import 'profile.dart';
+import 'todos.dart';
 
 /// A Vidya study plan ("vidya-curriculum", version 1) from the candidate's
 /// gaps: competencies without enough interview stories, the gaps in their
@@ -261,7 +262,9 @@ extension VidyaLink on CareerBook {
   /// [importVidya] would change.
   Future<({int learning, int skills})> vidyaNew(VidyaDone done) async {
     final growth = {
-      for (final g in await (db.select(db.careerGrowth)..where((g) => g.deleted.not())).get())
+      for (final g in await (db.select(
+        db.careerGrowth,
+      )..where((g) => g.deleted.not() & g.kind.equals(todoKind).not())).get())
         if (g.status == 'done') g.title.toLowerCase().trim(),
     };
     final have = {for (final s in (await profile()).skills) s.toLowerCase().trim()};
@@ -276,14 +279,18 @@ extension VidyaLink on CareerBook {
     jobs: await (db.select(db.jobListings)..where((j) => j.deleted.not())).get(),
     stories: await stories(),
     storyCounts: await storyCounts(),
-    learning: await (db.select(db.careerGrowth)..where((g) => g.deleted.not())).get(),
+    learning: await (db.select(
+      db.careerGrowth,
+    )..where((g) => g.deleted.not() & g.kind.equals(todoKind).not())).get(),
   );
 
   /// Marks finished learning done on the Growth page (adding what is not
   /// there) and adds new skills to the profile. Returns how many changed.
   Future<({int learning, int skills})> importVidya(VidyaDone done, {required String today}) =>
       db.transaction(() async {
-        final existing = await (db.select(db.careerGrowth)..where((g) => g.deleted.not())).get();
+        final existing = await (db.select(
+          db.careerGrowth,
+        )..where((g) => g.deleted.not() & g.kind.equals(todoKind).not())).get();
         final byTitle = {for (final g in existing) g.title.toLowerCase().trim(): g};
         var learning = 0;
         for (final l in done.learning) {

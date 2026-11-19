@@ -61,11 +61,6 @@ Uri linkedInPeople(String keywords, {String company = ''}) => Uri.parse(
   '${company.trim().isEmpty ? '' : '&company=${Uri.encodeQueryComponent(company.trim())}'}',
 );
 
-/// LinkedIn company page search.
-Uri linkedInCompany(String company) => Uri.parse(
-  'https://www.linkedin.com/search/results/companies/?keywords=${Uri.encodeQueryComponent(company)}',
-);
-
 const countries = [
   Country(
     'GB',

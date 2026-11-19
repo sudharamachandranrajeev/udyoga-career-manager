@@ -669,10 +669,17 @@ void main() {
     test('local fit prefers matching titles and skills', () {
       final near = localFit(
         sampleProfile,
-        title: 'Clinical Informatics Nurse',
-        description: 'EPR systems and patient safety training',
+        const JobFacts(
+          title: 'Clinical Informatics Nurse',
+          description: 'EPR systems and patient safety training',
+        ),
+        today: '2026-11-19',
       );
-      final far = localFit(sampleProfile, title: 'Forklift Driver', description: 'Warehouse shifts');
+      final far = localFit(
+        sampleProfile,
+        const JobFacts(title: 'Forklift Driver', description: 'Warehouse shifts'),
+        today: '2026-11-19',
+      );
       expect(near, greaterThan(far));
       expect(near, inInclusiveRange(0, 100));
     });

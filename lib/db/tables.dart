@@ -44,6 +44,10 @@ class JobListings extends Table with SyncedRow {
   /// 0 to 100: the AI's when it has assessed the job, else the local match.
   IntColumn get fit => integer().nullable()();
 
+  /// Who set [fit]: local (the offline match, redone whenever the profile
+  /// changes) | triage (the AI's quick score) | ai (a full assessment).
+  TextColumn get fitBy => text().withDefault(const Constant('local'))();
+
   /// The AI's assessment (FitAssessment), '' until asked.
   TextColumn get assessment => text().withDefault(const Constant(''))();
   TextColumn get notes => text().withDefault(const Constant(''))();

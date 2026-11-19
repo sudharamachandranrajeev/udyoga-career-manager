@@ -95,3 +95,10 @@ String htmlToText(String html) {
       .replaceAll(RegExp(r'\n{3,}'), '\n\n')
       .trim();
 }
+
+/// True for a real calendar day written yyyy-MM-dd ("2027-02-30" is not).
+bool isDay(String s) {
+  if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(s)) return false;
+  final d = DateTime.tryParse(s);
+  return d != null && d.toIso8601String().startsWith(s);
+}

@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../db/database.dart';
 import 'advisor.dart';
 import 'book.dart';
+import 'career_file.dart';
 import 'companion.dart';
 import 'companion_book.dart';
 import 'documents.dart';
@@ -47,6 +48,12 @@ class Companion {
     void Function(String)? onProgress,
   }) async {
     onProgress?.call('Looking through your folders…');
+    try {
+      await CareerFile(book).applyFrom(folders, today: today);
+    } on Object {
+      // A broken settings file must not stop the documents being read; the
+      // routine refresh reports it.
+    }
     final files = await scanFolders(folders);
     final byHash = {for (final f in files) f.hash: f};
     final added = await book.recordFound([

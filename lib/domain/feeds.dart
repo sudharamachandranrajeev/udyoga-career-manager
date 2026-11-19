@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:xml/xml.dart';
@@ -48,9 +50,6 @@ class FeedQuery {
 abstract class JobFeed {
   String get id;
   String get name;
-
-  /// Where to get a key, or null when none is needed.
-  String? get keyUrl => null;
   bool covers(FeedQuery q);
   Future<List<Posting>> search(FeedQuery q);
 }
@@ -76,15 +75,35 @@ Future<Object?> _getJson(http.Client client, Uri uri, {Map<String, String> heade
       .timeout(const Duration(seconds: 30));
   if (r.statusCode == 401 || r.statusCode == 403) throw FeedException('the key was rejected');
   if (r.statusCode != 200) throw FeedException('error ${r.statusCode}');
-  return jsonDecode(utf8.decode(r.bodyBytes));
+  try {
+    return jsonDecode(utf8.decode(r.bodyBytes));
+  } on FormatException {
+    // A sign-in page on public Wi-Fi, or the site changed its reply.
+    throw FeedException('sent a reply that is not job data (a Wi-Fi sign-in page, or the site changed)');
+  }
 }
+
+/// What went wrong with a feed, in a few words: its own message, a reply
+/// that could not be read, a time-out, or no connection.
+String feedProblem(Object e) => switch (e) {
+  FeedException() => e.message,
+  FormatException() => 'sent a reply that could not be read',
+  TimeoutException() => 'did not answer in time',
+  SocketException() || HandshakeException() || http.ClientException() => 'not reachable',
+  _ => 'failed ($e)',
+};
 
 bool _mentions(String text, List<String> terms) {
   final t = text.toLowerCase();
   return terms.any((term) => term.toLowerCase().split(RegExp(r'\s+')).every(t.contains));
 }
 
-/// Adzuna: many countries, needs a free app id and key.
+/// Where Adzuna's postings must credit it (its terms ask for a "Jobs by
+/// Adzuna" link on every ad shown).
+const adzunaHome = 'https://www.adzuna.com';
+
+/// Adzuna: many countries, needs a free app id and key. Its terms: the free
+/// tier is for evaluating the API, and each ad shown links back to Adzuna.
 class AdzunaFeed extends JobFeed {
   AdzunaFeed(this.client, {required this.appId, required this.appKey});
   final http.Client client;
@@ -94,9 +113,6 @@ class AdzunaFeed extends JobFeed {
   String get id => 'adzuna';
   @override
   String get name => 'Adzuna';
-  @override
-  String get keyUrl => 'https://developer.adzuna.com/signup';
-
   @override
   bool covers(FeedQuery q) => appId.isNotEmpty && Country.of(q.country)?.adzuna != null;
 
@@ -152,9 +168,6 @@ class ReedFeed extends JobFeed {
   String get id => 'reed';
   @override
   String get name => 'Reed';
-  @override
-  String get keyUrl => 'https://www.reed.co.uk/developers/jobseeker';
-
   @override
   bool covers(FeedQuery q) => key.isNotEmpty && q.country == 'GB';
 

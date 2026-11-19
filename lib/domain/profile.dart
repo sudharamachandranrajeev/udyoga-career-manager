@@ -1,5 +1,6 @@
 import 'json.dart';
 import 'schema.dart';
+import 'work_rights.dart';
 
 /// A job held, from the CV.
 class Experience {
@@ -79,6 +80,7 @@ class Targets {
     this.salaryMin,
     this.salaryCurrency = '',
     this.notes = '',
+    this.exclusions = const [],
   });
 
   /// Job titles to aim for.
@@ -101,6 +103,10 @@ class Targets {
   /// Right to work, notice period, relocation, hours, anything else.
   final String notes;
 
+  /// Words or phrases that rule a job out: a job whose title or employer
+  /// says one (as a whole word) is never shown or scored. A hard rule.
+  final List<String> exclusions;
+
   bool get remote => workModes.contains('remote');
 
   factory Targets.fromJson(Json j) => Targets(
@@ -115,6 +121,7 @@ class Targets {
     },
     salaryCurrency: str(j['salaryCurrency']),
     notes: str(j['notes']),
+    exclusions: strs(j['exclusions']),
   );
 
   Json toJson() => {
@@ -126,6 +133,7 @@ class Targets {
     'salaryMin': salaryMin,
     'salaryCurrency': salaryCurrency,
     'notes': notes,
+    'exclusions': exclusions,
   };
 
   Targets copyWith({
@@ -138,6 +146,7 @@ class Targets {
     bool clearSalary = false,
     String? salaryCurrency,
     String? notes,
+    List<String>? exclusions,
   }) => Targets(
     roles: roles ?? this.roles,
     keywords: keywords ?? this.keywords,
@@ -147,6 +156,7 @@ class Targets {
     salaryMin: clearSalary ? null : salaryMin ?? this.salaryMin,
     salaryCurrency: salaryCurrency ?? this.salaryCurrency,
     notes: notes ?? this.notes,
+    exclusions: exclusions ?? this.exclusions,
   );
 }
 
@@ -196,6 +206,7 @@ class CandidateProfile {
     this.notes = const [],
     this.stories = const [],
     this.confirmed = const [],
+    this.rights = const WorkRights(),
   });
 
   final String name, headline, email, phone, location;
@@ -227,6 +238,10 @@ class CandidateProfile {
   /// Facts the candidate confirmed by answering a profile question. Loaded
   /// with the profile, never saved in it.
   final List<String> confirmed;
+
+  /// Passports, rights to work and languages with levels. Loaded with the
+  /// profile from their own pref, never saved in it (see WorkRights).
+  final WorkRights rights;
 
   bool get isEmpty => name.isEmpty && currentRole.isEmpty && experience.isEmpty && cvText.isEmpty;
 
@@ -297,6 +312,7 @@ class CandidateProfile {
     if (notes.isNotEmpty) j['ownNotes'] = notes;
     if (stories.isNotEmpty) j['workStories'] = stories;
     if (confirmed.isNotEmpty) j['confirmedByCandidate'] = confirmed;
+    if (!rights.isEmpty) j['workRights'] = rights.toJson();
     return j;
   }
 
@@ -325,6 +341,7 @@ class CandidateProfile {
     List<String>? notes,
     List<String>? stories,
     List<String>? confirmed,
+    WorkRights? rights,
   }) => CandidateProfile(
     name: name ?? this.name,
     headline: headline ?? this.headline,
@@ -350,6 +367,7 @@ class CandidateProfile {
     notes: notes ?? this.notes,
     stories: stories ?? this.stories,
     confirmed: confirmed ?? this.confirmed,
+    rights: rights ?? this.rights,
   );
 
   /// The shape the AI fills in when reading a CV.

@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
   ];
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -127,17 +127,27 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
         }
       }
       if (from < 6) {
+        // createTable is CREATE TABLE IF NOT EXISTS, so this can run again.
         await m.createTable(bridgeStudyPlans);
         await m.createTable(bridgeStudyProgress);
+      }
+      if (from < 7) {
+        // Who set each job's fit, so a profile change redoes only the
+        // offline scores. Only if not there yet, so it can run again.
+        final have = await customSelect('PRAGMA table_info(job_listings)')
+            .map((r) => r.read<String>('name'))
+            .get();
+        if (!have.contains(jobListings.fitBy.name)) await m.addColumn(jobListings, jobListings.fitBy);
+        await customStatement("UPDATE job_listings SET fit_by = 'ai' WHERE assessment != ''");
       }
     },
   );
 
   static const _indexes = [
-    'CREATE INDEX job_listings_source ON job_listings (source, source_id)',
-    'CREATE INDEX job_events_application ON job_events (application_id)',
-    'CREATE INDEX career_answers_session ON career_answers (session_id)',
-    'CREATE INDEX career_reports_kind ON career_reports (kind, created)',
+    'CREATE INDEX IF NOT EXISTS job_listings_source ON job_listings (source, source_id)',
+    'CREATE INDEX IF NOT EXISTS job_events_application ON job_events (application_id)',
+    'CREATE INDEX IF NOT EXISTS career_answers_session ON career_answers (session_id)',
+    'CREATE INDEX IF NOT EXISTS career_reports_kind ON career_reports (kind, created)',
     ..._v2Indexes,
     ..._v3Indexes,
     ..._v4Indexes,
@@ -146,8 +156,8 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
 
   /// Added in schema 2 (pre-employment checks and the archive).
   static const _v2Indexes = [
-    'CREATE INDEX job_checks_application ON job_checks (application_id)',
-    'CREATE INDEX job_archive_application ON job_archive (application_id)',
+    'CREATE INDEX IF NOT EXISTS job_checks_application ON job_checks (application_id)',
+    'CREATE INDEX IF NOT EXISTS job_archive_application ON job_archive (application_id)',
   ];
 
   /// Added in schema 3 (documents, profile questions, check-ins, stories).

@@ -7,6 +7,7 @@ import '../db/database.dart';
 import 'ai.dart';
 import 'companion_book.dart';
 import 'conversations.dart';
+import 'eligibility.dart';
 import 'feeds.dart';
 import 'insights.dart';
 import 'json.dart';
@@ -19,6 +20,7 @@ import 'pipeline.dart';
 import 'profile.dart';
 import 'resume.dart';
 import 'subscription.dart';
+import 'work_rights.dart';
 
 /// Pref keys. The prefs table is shared by every Brahma app, so Udyoga's
 /// keys carry its prefix.
@@ -43,6 +45,15 @@ abstract final class PrefKeys {
 
   /// The candidate's current pay and rent, for the pay change on each job.
   static const pay = 'udyoga.pay';
+
+  /// Passports, rights to work and languages (WorkRights), apart from the
+  /// profile so reading a CV never wipes them.
+  static const rights = 'udyoga.rights';
+
+  /// Which device runs the AI routine, and until when: {"device": id,
+  /// "until": ISO time, "ran": ISO time of the last successful run}. Synced,
+  /// so only one device spends on it.
+  static const aiLease = 'udyoga.ai.lease';
 }
 
 /// Device-only settings (local_settings).
@@ -69,6 +80,10 @@ abstract final class LocalKeys {
 
   /// Set once the phone has been asked to allow the reminder.
   static const checkInAsked = 'udyoga.checkin.asked';
+
+  /// The fingerprint of the career file's settings last applied here, so
+  /// the profile takes the file's values only when the file changes.
+  static const careerFile = 'udyoga.careerfile.applied';
 }
 
 /// Udyoga's write path and the reads screens share.
@@ -103,7 +118,18 @@ class CareerBook {
         ],
         stories: [for (final s in await stories()) CompanionBook.storyLine(s)],
         confirmed: [for (final q in await questions(status: 'answered')) '${q.topic}: ${q.answer}'],
+        rights: await workRights(),
       );
+
+  /// Passports, rights to work and languages.
+  Future<WorkRights> workRights() async =>
+      WorkRights.fromJson(await pref<Map<String, Object?>>(PrefKeys.rights, const {}));
+
+  /// Saves them and rescores the jobs, since eligibility changed.
+  Future<void> saveWorkRights(WorkRights r) async {
+    await setPref(PrefKeys.rights, r.toJson());
+    await rescoreJobs();
+  }
 
   /// The candidate's ideas and wins, newest first.
   Future<List<GrowthItem>> notes() =>
@@ -267,7 +293,12 @@ class CareerBook {
     return added;
   });
 
-  Future<void> saveProfile(CandidateProfile p) => setPref(PrefKeys.profile, p.toJson());
+  /// Saves the profile (not its rights, notes or stories, which live apart)
+  /// and rescores the jobs against it.
+  Future<void> saveProfile(CandidateProfile p) async {
+    await setPref(PrefKeys.profile, p.toJson());
+    await rescoreJobs();
+  }
 
   Future<FeedKeys> feedKeys() async =>
       FeedKeys.fromJson(await pref<Map<String, Object?>>(PrefKeys.feedKeys, const {}));
@@ -330,11 +361,15 @@ class CareerBook {
       '${title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '')}|${company.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '')}';
 
   /// Adds new openings and refreshes known ones (same source and id, same
-  /// link, or same title at the same employer), keeping the user's status,
-  /// notes and the AI's assessment. Returns the ids of the new ones.
+  /// link, or same title at the same employer). A known job is written only
+  /// when something the feed says changed, so a refresh never re-sends
+  /// untouched rows; the user's status, notes, dismissal and the AI's
+  /// scores are never written over, and a job the user dismissed or
+  /// deleted is left alone. Jobs the user's exclusions rule out are not
+  /// added. Returns the ids of the new ones.
   Future<List<String>> importPostings(List<Posting> postings, CandidateProfile p, {required String today}) =>
       db.transaction(() async {
-        final existing = await (db.select(db.jobListings)..where((j) => j.deleted.not())).get();
+        final existing = await db.select(db.jobListings).get();
         final bySource = {for (final j in existing) '${j.source}:${j.sourceId}': j};
         final byUrl = {
           for (final j in existing)
@@ -347,37 +382,73 @@ class CareerBook {
         final added = <String>[];
         for (final post in postings) {
           if (post.title.isEmpty) continue;
-          final match =
+          var match =
               bySource['${post.source}:${post.sourceId}'] ??
               (post.url.isEmpty ? null : byUrl[post.url]) ??
               (post.company.isEmpty ? null : byName[_key(post.title, post.company)]);
+          // A deleted job stays deleted, unless the user adds it again by hand.
+          if (match != null && match.deleted && post.source == 'manual') match = null;
+          if (match != null && (match.deleted || match.status == 'dismissed')) continue;
+          if (match == null &&
+              excludedBy(p.targets.exclusions, title: post.title, company: post.company) != null) {
+            continue;
+          }
           final id = match?.id ?? newId();
+          final facts = JobFacts(
+            title: post.title,
+            description: post.description.length >= (match?.description.length ?? 0)
+                ? post.description
+                : match!.description,
+            company: post.company.isNotEmpty ? post.company : match?.company ?? '',
+            location: post.location.isNotEmpty ? post.location : match?.location ?? '',
+            country: post.country.isNotEmpty ? post.country : match?.country ?? '',
+            remote: post.remote || (match?.remote ?? false),
+            salaryMin: post.salaryMin ?? match?.salaryMin,
+            salaryMax: post.salaryMax ?? match?.salaryMax,
+            currency: post.currency.isNotEmpty ? post.currency : match?.currency ?? '',
+            salaryText: post.salaryText.isNotEmpty ? post.salaryText : match?.salaryText ?? '',
+          );
+          final url = post.url.isNotEmpty ? post.url : match?.url ?? '';
+          final posted = post.posted ?? match?.posted;
+          final closing = post.closing ?? match?.closing;
+          final fit = match == null || match.fitBy == 'local' ? localFit(p, facts, today: today) : match.fit;
+          if (match != null &&
+              match.title == facts.title &&
+              match.company == facts.company &&
+              match.location == facts.location &&
+              match.country == facts.country &&
+              match.remote == facts.remote &&
+              match.salaryMin == facts.salaryMin &&
+              match.salaryMax == facts.salaryMax &&
+              match.currency == facts.currency &&
+              match.salaryText == facts.salaryText &&
+              match.url == url &&
+              match.description == facts.description &&
+              match.posted == posted &&
+              match.closing == closing &&
+              match.fit == fit) {
+            continue;
+          }
           final row = JobListingsCompanion(
             id: Value(id),
-            title: Value(post.title),
-            company: Value(post.company.isNotEmpty ? post.company : match?.company ?? ''),
-            location: Value(post.location.isNotEmpty ? post.location : match?.location ?? ''),
-            country: Value(post.country.isNotEmpty ? post.country : match?.country ?? ''),
-            remote: Value(post.remote || (match?.remote ?? false)),
-            salaryMin: Value(post.salaryMin ?? match?.salaryMin),
-            salaryMax: Value(post.salaryMax ?? match?.salaryMax),
-            currency: Value(post.currency.isNotEmpty ? post.currency : match?.currency ?? ''),
-            salaryText: Value(post.salaryText.isNotEmpty ? post.salaryText : match?.salaryText ?? ''),
-            url: Value(post.url.isNotEmpty ? post.url : match?.url ?? ''),
-            description: Value(
-              post.description.length >= (match?.description.length ?? 0)
-                  ? post.description
-                  : match!.description,
-            ),
-            posted: Value(post.posted ?? match?.posted),
-            closing: Value(post.closing ?? match?.closing),
+            title: Value(facts.title),
+            company: Value(facts.company),
+            location: Value(facts.location),
+            country: Value(facts.country),
+            remote: Value(facts.remote),
+            salaryMin: Value(facts.salaryMin),
+            salaryMax: Value(facts.salaryMax),
+            currency: Value(facts.currency),
+            salaryText: Value(facts.salaryText),
+            url: Value(url),
+            description: Value(facts.description),
+            posted: Value(posted),
+            closing: Value(closing),
             source: Value(match?.source ?? post.source),
             sourceId: Value(match?.sourceId ?? post.sourceId),
             found: Value(match?.found ?? today),
-            fit: Value(
-              match?.fit ??
-                  localFit(p, title: post.title, description: post.description, salaryMax: post.salaryMax),
-            ),
+            fit: Value(fit),
+            fitBy: Value(match?.fitBy ?? 'local'),
           );
           await save(db.jobListings, row, id);
           if (match == null) {
@@ -390,6 +461,41 @@ class CareerBook {
         }
         return added;
       });
+
+  /// What the quick match reads from a saved job.
+  static JobFacts factsOf(Job j) => JobFacts(
+    title: j.title,
+    description: j.description,
+    company: j.company,
+    location: j.location,
+    country: j.country,
+    remote: j.remote,
+    salaryMin: j.salaryMin,
+    salaryMax: j.salaryMax,
+    currency: j.currency,
+    salaryText: j.salaryText,
+  );
+
+  /// Redoes the quick match of every job the AI has not scored, against
+  /// the profile as it is now; writes only the ones whose score changed.
+  /// Returns how many changed.
+  Future<int> rescoreJobs({String? today}) async {
+    final p = await profile();
+    final on = today ?? DateTime.now().toIso8601String().substring(0, 10);
+    final jobs = await (db.select(
+      db.jobListings,
+    )..where((j) => j.deleted.not() & j.fitBy.equals('local'))).get();
+    var changed = 0;
+    await db.transaction(() async {
+      for (final j in jobs) {
+        final fit = localFit(p, factsOf(j), today: on);
+        if (fit == j.fit) continue;
+        await save(db.jobListings, j.copyWith(fit: Value(fit)), j.id);
+        changed++;
+      }
+    });
+    return changed;
+  }
 
   Future<Job> job(String id) => (db.select(db.jobListings)..where((j) => j.id.equals(id))).getSingle();
 
@@ -404,6 +510,7 @@ class CareerBook {
       db.jobListings,
       j.copyWith(
         fit: Value(a.fit.clamp(0, 100)),
+        fitBy: 'ai',
         assessment: jsonEncode(a.j),
         closing: Value(j.closing ?? (a.closing.length == 10 ? a.closing : null)),
       ),
@@ -418,7 +525,7 @@ class CareerBook {
       if (j == null || j.assessment.isNotEmpty) continue;
       await save(
         db.jobListings,
-        j.copyWith(fit: Value(e.value.fit), notes: j.notes.isEmpty ? e.value.why : j.notes),
+        j.copyWith(fit: Value(e.value.fit), fitBy: 'triage', notes: j.notes.isEmpty ? e.value.why : j.notes),
         j.id,
       );
     }
@@ -889,7 +996,40 @@ class CareerBook {
       ),
       id,
     );
+    await pruneReports(kind);
     return id;
+  }
+
+  /// How many reports of a kind are kept; older ones are deleted. Employer
+  /// research keeps the newest per employer, up to the cap.
+  static const reportCaps = {'assessment': 12, 'career_map': 12, 'employer': 100};
+
+  /// The cap for the other kinds (LinkedIn drafts and the like).
+  static const otherReportsCap = 60;
+
+  /// Deletes the reports of [kind] past its cap, oldest first. Returns how
+  /// many went.
+  Future<int> pruneReports(String kind) async {
+    final rows =
+        await (db.select(db.careerReports)
+              ..where((r) => r.kind.equals(kind) & r.deleted.not())
+              ..orderBy([(r) => OrderingTerm.desc(r.created), (r) => OrderingTerm.desc(r.id)]))
+            .get();
+    final cap = reportCaps[kind] ?? otherReportsCap;
+    final drop = <Report>[];
+    if (kind == 'employer') {
+      final seen = <String>{};
+      for (final r in rows) {
+        final name = str(decodeObject(r.content)['employer']).toLowerCase().trim();
+        if (!seen.add(name) || seen.length > cap) drop.add(r);
+      }
+    } else {
+      drop.addAll(rows.skip(cap));
+    }
+    for (final r in drop) {
+      await remove(db.careerReports, r.id);
+    }
+    return drop.length;
   }
 
   Future<Report?> latestReport(String kind) =>
