@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../app/interview_providers.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/delivery.dart';
@@ -25,6 +26,7 @@ import '../domain/interview_plan.dart';
 import '../domain/interview_process.dart';
 import '../domain/interview_scoring.dart';
 import '../domain/json.dart';
+import '../domain/ollama.dart' show Ollama;
 import '../vision/camera_coach.dart';
 import '../voice/models.dart';
 import '../voice/round.dart';
@@ -69,7 +71,7 @@ class _AdvisorCoach implements ContentCoach {
   @override
   Future<ContentNote> feedback(int question, RoundQuestion q, String answer) async {
     final p = await ref.read(profileProvider.future);
-    final advisor = await requireAdvisor(ref);
+    final advisor = await requireInterviewAdvisor(ref);
     final review = await advisor.review(
       p,
       role: round.role,
@@ -114,11 +116,12 @@ Future<(List<QuestionPlan>, String)> planRound(
   final templates = [for (final q in questions) templatePlan(q)];
   if (!useAi) return (templates, 'Built-in follow-ups');
   try {
-    final advisor = await requireAdvisor(ref);
+    final advisor = await requireInterviewAdvisor(ref);
     final fromAi = await advisor
         .questionPlan(role: role, questions: questions)
         .timeout(const Duration(seconds: 120));
-    return (mergePlans(questions, fromAi), 'Follow-ups planned by your AI');
+    final who = advisor.ai is Ollama ? 'the local model' : 'your AI';
+    return (mergePlans(questions, fromAi), 'Follow-ups planned by $who');
   } on Object catch (e) {
     return (templates, 'Built-in follow-ups (your AI did not answer: ${describeError(e)})');
   }
@@ -263,7 +266,7 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
   }
 
   Future<void> _start(PracticeSession session, List<PracticeQuestion> questions) async {
-    final hasAi = ref.read(advisorProvider).value != null;
+    final hasAi = ref.read(interviewAdvisorProvider).value != null;
     final settings = _settings;
     setState(() {
       _opening = true;
@@ -532,7 +535,7 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
     final r = _settings;
     final persona = Persona.of(r.persona);
     final level = Ladder.of(r.level);
-    final hasAi = ref.watch(advisorProvider).value != null;
+    final hasAi = ref.watch(interviewAdvisorProvider).value != null;
     final muted = Theme.of(context).textTheme.bodySmall
         ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
     return SectionCard(

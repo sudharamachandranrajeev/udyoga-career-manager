@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/navigation.dart';
+import '../app/interview_providers.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/answer_metrics.dart';
@@ -16,6 +17,7 @@ import 'camera_coach_ui.dart';
 import 'common.dart';
 import 'interview_confidence_ui.dart';
 import 'interview_debrief_page.dart';
+import 'interview_device_ui.dart';
 import 'interview_process_page.dart';
 import 'kit/kit.dart';
 import 'look.dart';
@@ -74,7 +76,7 @@ Future<void> startPractice(BuildContext context, WidgetRef ref, {String role = '
   final r = await runAi(
     context,
     title: 'Preparing your interview',
-    task: (progress) async => (await requireAdvisor(ref)).practiceQuestions(
+    task: (progress) async => (await requireInterviewAdvisor(ref)).practiceQuestions(
       p,
       role: roleField.text.trim(),
       mode: mode,
@@ -116,7 +118,7 @@ class InterviewPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasAi = ref.watch(advisorProvider).value != null;
+    final hasAi = ref.watch(interviewAdvisorProvider).value != null;
     final answers = ref.watch(answersProvider).value ?? const <PracticeAnswer>[];
     return PageScaffold(
       title: 'Interview',
@@ -130,7 +132,7 @@ class InterviewPage extends ConsumerWidget {
             )
           : null,
       children: [
-        if (!hasAi) const NeedsKey(what: 'Interview practice'),
+        if (!hasAi) const InterviewNoAi(),
         // Confidence first (plan I4): what is ready, then what to work on.
         const ReadyForCard(),
         SectionCard(
@@ -170,6 +172,7 @@ class InterviewPage extends ConsumerWidget {
             ],
           ),
         ),
+        const InterviewDeviceCard(),
         SectionCard(
           title: 'Rehearse a whole process',
           child: Column(
@@ -544,7 +547,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     setState(() => _busy.add(i));
     try {
       final p = await ref.read(profileProvider.future);
-      final advisor = await requireAdvisor(ref);
+      final advisor = await requireInterviewAdvisor(ref);
       final review = await advisor.review(p, role: round.role, mode: round.mode, question: q, answer: answer);
       await ref.mutate((s) => s.book.saveAnswer(round.id, i, answer, review, at: nowLocal()));
     } catch (e) {

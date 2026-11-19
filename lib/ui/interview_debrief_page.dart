@@ -13,6 +13,7 @@ import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, che
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/interview_providers.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/interview_book.dart';
@@ -117,7 +118,7 @@ class _RoleProfilePageState extends ConsumerState<RoleProfilePage> {
       context,
       title: 'Reading the criteria',
       status: 'Only the advert is sent to your AI.',
-      task: (_) async => (await requireAdvisor(ref)).readCriteria(advert: advert, title: _title.text.trim()),
+      task: (_) async => (await requireInterviewAdvisor(ref)).readCriteria(advert: advert, title: _title.text.trim()),
     );
     if (data == null || !mounted) return;
     final criteria = parseCriteria(data);
@@ -242,7 +243,7 @@ class _RoleProfilePageState extends ConsumerState<RoleProfilePage> {
   @override
   Widget build(BuildContext context) {
     if (_loading) return Scaffold(appBar: AppBar(), body: const SkeletonCards(count: 2));
-    final hasAi = ref.watch(advisorProvider).value != null;
+    final hasAi = ref.watch(interviewAdvisorProvider).value != null;
     final f = _profile.framework;
     final muted = Theme.of(context).textTheme.bodySmall;
     final asked = {for (final c in askedCriteria(_profile)) c.id};
@@ -443,7 +444,7 @@ class _DebriefPageState extends ConsumerState<DebriefPage> {
       context,
       title: 'Scoring the round',
       status: 'Only the transcripts and the criteria are sent to your AI.',
-      task: (_) async => (await requireAdvisor(ref)).scoreRound(
+      task: (_) async => (await requireInterviewAdvisor(ref)).scoreRound(
         role: l.round.role,
         framework: f,
         criteria: l.data.criteria,
@@ -494,7 +495,7 @@ class _DebriefPageState extends ConsumerState<DebriefPage> {
     final l = _loaded;
     if (l == null) return Scaffold(appBar: AppBar(), body: const SkeletonCards(count: 3));
     final d = _debrief(l.round, l.data, l.profile);
-    final hasAi = ref.watch(advisorProvider).value != null;
+    final hasAi = ref.watch(interviewAdvisorProvider).value != null;
     final t = Theme.of(context).textTheme;
     final scoreLines = d.scoreLines();
     final qs = {for (final q in l.data.questions) q.index: q};

@@ -773,3 +773,73 @@ class CoachPrefs {
   @override
   int get hashCode => Object.hash(selfView, roundHints, lensHint);
 }
+
+/// The interview's device-only settings (plan I6), kept in a local setting
+/// that never syncs: a local server's address belongs to one device.
+class InterviewDevice {
+  const InterviewDevice({
+    this.offline = false,
+    this.localAi = false,
+    this.ollamaHost = '',
+    this.ollamaModel = '',
+    this.captions = true,
+    this.captionScale = 1.25,
+  });
+
+  /// "Offline interview practice": on-device models only, plus the local
+  /// AI when it is ready; no network from the interview screens.
+  final bool offline;
+
+  /// Use Ollama on this computer (or the home network) for the interview's
+  /// AI tasks instead of the cloud AI.
+  final bool localAi;
+
+  /// Udyoga's own Ollama address and model, used when the Ask AI setting
+  /// is not a local server. Empty means the defaults.
+  final String ollamaHost, ollamaModel;
+
+  /// Live captions while the user speaks and while the panel speaks.
+  final bool captions;
+
+  /// The captions' text size, times the body text: [minScale] to [maxScale].
+  final double captionScale;
+
+  static const minScale = 1.0, maxScale = 2.0;
+
+  InterviewDevice copyWith({
+    bool? offline,
+    bool? localAi,
+    String? ollamaHost,
+    String? ollamaModel,
+    bool? captions,
+    double? captionScale,
+  }) => InterviewDevice(
+    offline: offline ?? this.offline,
+    localAi: localAi ?? this.localAi,
+    ollamaHost: ollamaHost ?? this.ollamaHost,
+    ollamaModel: ollamaModel ?? this.ollamaModel,
+    captions: captions ?? this.captions,
+    captionScale: captionScale ?? this.captionScale,
+  );
+
+  Json toJson() => {
+    'offline': offline,
+    'localAi': localAi,
+    'ollamaHost': ollamaHost,
+    'ollamaModel': ollamaModel,
+    'captions': captions,
+    'captionScale': captionScale,
+  };
+
+  factory InterviewDevice.fromJson(Json j) => InterviewDevice(
+    offline: j['offline'] == true,
+    localAi: j['localAi'] == true,
+    ollamaHost: str(j['ollamaHost']),
+    ollamaModel: str(j['ollamaModel']),
+    captions: j['captions'] != false,
+    captionScale: switch (j['captionScale']) {
+      final num n => n.toDouble().clamp(minScale, maxScale),
+      _ => 1.25,
+    },
+  );
+}
