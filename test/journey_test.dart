@@ -1,6 +1,6 @@
 // Local capability check (2026-11-12): follow-up and tracking for a made-up
-// health-sector clerical candidate aiming at Exampleton, with Northern Ireland as
-// a backup. Each test states what the candidate needs; a failure is a gap.
+// health-sector clerical candidate aiming at Exampleton, with Westmarch (a made-up
+// region) as a backup. Each test states what the candidate needs; a failure is a gap.
 import 'dart:async';
 import 'dart:io';
 
@@ -148,7 +148,7 @@ void main() {
   });
 
   test('fresh word from the employer stops an application being marked No reply', () async {
-    final id = await job(nhs('b', 'Patient Services Administrator', 'Example HSC Trust', 'Belfast'));
+    final id = await job(nhs('b', 'Patient Services Administrator', 'Example Westmarch Health Trust', 'Westbridge'));
     final app = await book.applyFor(await book.job(id), today: '2026-09-01', sent: true);
     await book.logEvent(
       app,
@@ -174,9 +174,9 @@ void main() {
 
   test('accepting one offer flags the other open applications', () async {
     final local = await job(nhs('a', 'Ward Clerk', 'Example Exampleton Hospitals Trust', 'Exampleton'));
-    final belfast = await job(nhs('b', 'Admin Officer', 'Example HSC Trust', 'Belfast'));
+    final westbridge = await job(nhs('b', 'Admin Officer', 'Example Westmarch Health Trust', 'Westbridge'));
     final won = await book.applyFor(await book.job(local), today: '2026-11-03', sent: true);
-    final other = await book.applyFor(await book.job(belfast), today: '2026-11-03', sent: true);
+    final other = await book.applyFor(await book.job(westbridge), today: '2026-11-03', sent: true);
     await book.logEvent(won, 'offer', at: '2026-11-20T10:00');
     await book.logEvent(won, 'accepted', at: '2026-11-21T10:00');
     final o = await book.application(other);
@@ -202,8 +202,8 @@ void main() {
     expect((after.status, after.followUp), ('contacted', '2026-11-10'));
   });
 
-  test('an HSC waiting-list offer must be answered within two working days', () async {
-    final id = await job(nhs('b', 'Admin Officer', 'Example HSC Trust', 'Belfast'));
+  test('a regional waiting-list offer must be answered within two working days', () async {
+    final id = await job(nhs('b', 'Admin Officer', 'Example Westmarch Health Trust', 'Westbridge'));
     final app = await book.applyFor(await book.job(id), today: '2026-11-03', sent: true);
     await book.logEvent(app, 'interview', at: '2026-11-17T10:00');
     await book.logEvent(app, 'waitlist', at: '2026-11-20T09:00', summary: 'Ranked 3rd');
@@ -413,20 +413,20 @@ void main() {
     await h.close();
   });
 
-  testWidgets('saves the HSC job on screen from the in-app browser', (tester) async {
+  testWidgets('saves the job on screen from the in-app browser', (tester) async {
     final h = AppHarness(tester)..desktop();
     await h.open(seed: (b) => b.saveProfile(clerk));
     await h.run();
     h.browser.current = (
-      url: 'https://jobs.hscni.net/Job/12345/ward-clerk',
-      title: 'Ward Clerk | HSC Jobs',
-      text: 'Ward Clerk, Belfast. Band 3. Closing date 1 December 2026.',
+      url: 'https://jobs.example.org/Job/12345/ward-clerk',
+      title: 'Ward Clerk | Example Health Jobs',
+      text: 'Ward Clerk, Westbridge. Band 3. Closing date 1 December 2026.',
     );
     unawaited(
       openSite(
         tester.element(find.byType(Scaffold).first),
-        url: 'https://jobs.hscni.net/',
-        title: 'HSC Jobs',
+        url: 'https://jobs.example.org/',
+        title: 'Example Health Jobs',
       ),
     );
     await h.settle();
@@ -436,8 +436,8 @@ void main() {
     final saved = jobs.single;
     expect(saved.title, 'Ward Clerk');
     expect(saved.status, 'saved');
-    expect(saved.url, 'https://jobs.hscni.net/Job/12345/ward-clerk');
-    expect(saved.description, contains('Belfast'));
+    expect(saved.url, 'https://jobs.example.org/Job/12345/ward-clerk');
+    expect(saved.description, contains('Westbridge'));
 
     await h.tap(find.byTooltip('Save this job'));
     await tester.runAsync(() async => jobs = await h.book.db.select(h.book.db.jobListings).get());
@@ -545,20 +545,20 @@ void main() {
     );
     expect(closed.problems.single, contains('Closed'));
 
-    final hsc = checkListing(
+    final official = checkListing(
       await add(
         const Posting(
           source: 'manual',
           sourceId: 'x',
           title: 'Admin Officer',
-          company: 'Belfast Trust',
-          url: 'https://jobs.hscni.net/Job/1/admin-officer',
+          company: 'Westbridge Trust',
+          url: 'https://www.jobs.nhs.uk/candidate/jobadvert/E0001-26-0001',
           posted: '2026-11-01',
         ),
       ),
       today: '2026-11-12',
     );
-    expect(hsc.official, isTrue);
+    expect(official.official, isTrue);
 
     final stale = checkListing(
       await add(
