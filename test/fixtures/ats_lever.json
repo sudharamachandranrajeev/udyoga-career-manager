@@ -1,0 +1,52 @@
+[
+ {
+  "id": "ad208490-4052-4f91-a57e-433f2d1e484b",
+  "text": "Customer Success Manager",
+  "categories": {
+   "commitment": "Regular Full Time (Salary)",
+   "department": "Customer Success",
+   "location": "Atlanta, Georgia",
+   "team": "Customer Success Team",
+   "allLocations": [
+    "Atlanta, Georgia"
+   ]
+  },
+  "createdAt": 1788199939703,
+  "hostedUrl": "https://jobs.lever.co/leverdemo/ad208490-4052-4f91-a57e-433f2d1e484b",
+  "applyUrl": "https://jobs.lever.co/leverdemo/ad208490-4052-4f91-a57e-433f2d1e484b/apply",
+  "workplaceType": "hybrid",
+  "country": "US",
+  "salaryRange": {
+   "min": 85000,
+   "max": 175000,
+   "currency": "USD",
+   "interval": "per-year-salary"
+  },
+  "descriptionPlain": "This is a test job - created by Alex Haugan, for testing candidate insights.\n \nJoin a scaling, tight-knit team that’s working directly with innovative talent acquisition teams and thought leaders acro"
+ },
+ {
+  "id": "120b5976-ee4e-4dc5-b31b-2b1ca124460c",
+  "text": "Dentist",
+  "categories": {
+   "commitment": "Regular Full Time (Salary)",
+   "department": "People (HR)",
+   "location": "Houston, TX",
+   "team": "People",
+   "allLocations": [
+    "Houston, TX"
+   ]
+  },
+  "createdAt": 1787600587936,
+  "hostedUrl": "https://jobs.lever.co/leverdemo/120b5976-ee4e-4dc5-b31b-2b1ca124460c",
+  "applyUrl": "https://jobs.lever.co/leverdemo/120b5976-ee4e-4dc5-b31b-2b1ca124460c/apply",
+  "workplaceType": "onsite",
+  "country": "US",
+  "salaryRange": {
+   "min": 150000,
+   "max": 185000,
+   "currency": "USD",
+   "interval": "per-year-salary"
+  },
+  "descriptionPlain": ""
+ }
+]

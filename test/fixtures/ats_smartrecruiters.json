@@ -1,0 +1,37 @@
+{
+ "offset": 0,
+ "limit": 100,
+ "totalFound": 1,
+ "content": [
+  {
+   "id": "744000158320111",
+   "name": "Senior / Lead Engineering Operations Manager",
+   "refNumber": "REF2042H",
+   "company": {
+    "identifier": "smartrecruiters",
+    "name": "SmartRecruiters Inc"
+   },
+   "releasedDate": "2026-10-28T15:14:43.941Z",
+   "location": {
+    "city": "Poland",
+    "region": "Remote",
+    "country": "pl",
+    "remote": true,
+    "hybrid": false,
+    "fullLocation": "Poland, Remote, Poland"
+   },
+   "department": {
+    "id": "5408693",
+    "label": "Engineering"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "experienceLevel": {
+    "id": "mid_senior_level",
+    "label": "Mid-Senior Level"
+   }
+  }
+ ]
+}

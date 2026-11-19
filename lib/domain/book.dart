@@ -300,6 +300,19 @@ class CareerBook {
     await rescoreJobs();
   }
 
+  /// Adds [code] to the target countries (keeping the home country first
+  /// when none were chosen yet), so the job feeds search it on the next
+  /// refresh. False when it is already there.
+  Future<bool> addTargetCountry(String code) async {
+    final cc = code.toUpperCase();
+    final p = await profile();
+    final now = p.searchCountries;
+    if (now.contains(cc)) return false;
+    final stored = CandidateProfile.fromJson(await pref<Map<String, Object?>>(PrefKeys.profile, const {}));
+    await saveProfile(stored.copyWith(targets: stored.targets.copyWith(countries: [...now, cc])));
+    return true;
+  }
+
   Future<FeedKeys> feedKeys() async =>
       FeedKeys.fromJson(await pref<Map<String, Object?>>(PrefKeys.feedKeys, const {}));
 

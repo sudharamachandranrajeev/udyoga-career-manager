@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 
 import 'book.dart';
+import 'employers.dart';
 import 'json.dart';
 import 'profile.dart';
 import 'todos.dart';
@@ -20,8 +21,18 @@ import 'work_rights.dart';
 ///   "rightToWork": [{"country": "GB", "status": "Skilled Worker visa", "until": "2028-01-31"}],
 ///   "passport": {"country": "IE", "confirmed": true},
 ///   "languages": [{"language": "French", "level": "fluent"}],
-///   "todos": [{"id": "renew-licence", "title": "Renew licence", "notes": "", "due": "2027-03-01"}]
+///   "todos": [{"id": "renew-licence", "title": "Renew licence", "notes": "", "due": "2027-03-01"}],
+///   "watchEmployers": [{"id": "example-health-trust", "name": "Example Health Trust",
+///                       "aliases": ["Example Health"], "why": "", "sources": ["nhs"], "keywords": []}]
 /// }
+/// ```
+///
+/// A place may also be an object, {"place": "Exampleton", "radiusMiles": 15,
+/// "commuteTowns": ["Sampleby"]}, and `targets.radiusMiles` sets the radius
+/// for the rest:
+///
+/// ```json
+/// {"targets": {"places": ["Exampleton", {"place": "Sampleby", "commuteTowns": []}], "radiusMiles": 20}}
 /// ```
 ///
 /// Other keys are left alone.
@@ -37,6 +48,9 @@ class CareerFileSettings {
     this.passport,
     this.languages,
     this.todos = const [],
+    this.areas,
+    this.radiusMiles,
+    this.watchEmployers = const [],
   });
 
   /// Null when the file does not say.
@@ -50,16 +64,39 @@ class CareerFileSettings {
   final List<SpokenLanguage>? languages;
   final List<SeedTodo> todos;
 
+  /// Home areas, when a place gave a radius or commute towns, or
+  /// [radiusMiles] was set.
+  final List<HomeArea>? areas;
+  final int? radiusMiles;
+  final List<WatchedEmployer> watchEmployers;
+
   factory CareerFileSettings.fromJson(Json j) {
     final t = obj(j['targets']);
     List<String>? list(Json from, String key) => from.containsKey(key) ? strs(from[key]) : null;
     final passport = obj(j['passport']);
     final confirmed = passport['confirmed'];
     final passportCode = countryCode(str(passport['country']));
+    final rawPlaces = t['places'] ?? t['locations'];
+    final areas = rawPlaces is List
+        ? [
+            for (final p in rawPlaces)
+              if (p is Map) HomeArea.fromJson(obj(p)) else HomeArea(place: str(p)),
+          ].where((a) => a.place.isNotEmpty).toList()
+        : null;
+    final radius = switch (intOf(t['radiusMiles'])) {
+      final v? when v > 0 => v,
+      _ => null,
+    };
     return CareerFileSettings(
       roles: list(t, 'roles'),
       keywords: list(t, 'keywords'),
-      places: list(t, 'places') ?? list(t, 'locations'),
+      places: areas?.map((a) => a.place).toList(),
+      areas: areas,
+      radiusMiles: radius,
+      watchEmployers: [
+        for (final o in objs(j['watchEmployers']))
+          if (WatchedEmployer.fromJson(o) case final e when e.id.isNotEmpty && e.name.isNotEmpty) e,
+      ],
       countries: list(t, 'countries')?.map(countryCode).where((c) => c.isNotEmpty).toList(),
       salaryFloor: switch (intOf(t['salaryFloor'] ?? t['salaryMin'])) {
         final v? when v > 0 => v,
@@ -96,6 +133,8 @@ class CareerFileSettings {
         countries: countries,
         salaryMin: salaryFloor,
         exclusions: exclusions,
+        areas: areas,
+        radiusMiles: radiusMiles,
       ),
     );
   }
@@ -114,7 +153,8 @@ class CareerFileSettings {
       places != null ||
       countries != null ||
       salaryFloor != null ||
-      exclusions != null;
+      exclusions != null ||
+      radiusMiles != null;
 
   bool get touchesRights => rightToWork != null || passport != null || languages != null;
 }
@@ -139,10 +179,19 @@ String _words(String key) =>
 
 /// What applying the career file did.
 class CareerFileResult {
-  const CareerFileResult({this.path = '', this.profile = false, this.rights = false, this.todos = 0});
+  const CareerFileResult({
+    this.path = '',
+    this.profile = false,
+    this.rights = false,
+    this.todos = 0,
+    this.employers = 0,
+  });
   final String path;
   final bool profile, rights;
   final int todos;
+
+  /// Watched employers added or updated.
+  final int employers;
 }
 
 /// Reads the career file from the candidate's folders and applies it.
@@ -202,6 +251,7 @@ class CareerFile {
     }
     if (profile || rights) await book.rescoreJobs(today: today);
     final todos = await book.importTodos(s.todos, today: today);
-    return CareerFileResult(path: path, profile: profile, rights: rights, todos: todos);
+    final employers = await book.importWatchedEmployers(s.watchEmployers);
+    return CareerFileResult(path: path, profile: profile, rights: rights, todos: todos, employers: employers);
   }
 }

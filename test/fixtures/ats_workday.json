@@ -1,0 +1,25 @@
+{
+ "total": 207,
+ "jobPostings": [
+  {
+   "title": "AI Engineer",
+   "externalPath": "/job/Canada-BC-Vancouver/AI-Engineer_JR-0109305",
+   "locationsText": "Canada, BC, Vancouver",
+   "postedOn": "Posted 30+ Days Ago",
+   "remoteType": "Flex",
+   "bulletFields": [
+    "JR-0109305"
+   ]
+  },
+  {
+   "title": "AI Engineer",
+   "externalPath": "/job/USA-CA-Pleasanton/AI-Engineer_JR-0110881",
+   "locationsText": "USA, CA, Pleasanton",
+   "postedOn": "Posted 30+ Days Ago",
+   "remoteType": "Flex",
+   "bulletFields": [
+    "JR-0110881"
+   ]
+  }
+ ]
+}

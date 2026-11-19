@@ -3,8 +3,10 @@ import 'package:drift/drift.dart' show BooleanExpressionOperators;
 import 'package:http/http.dart' as http;
 
 import 'advisor.dart';
+import 'ats.dart';
 import 'book.dart';
 import 'career_file.dart';
+import 'employers.dart';
 import 'feeds.dart';
 import 'insights.dart';
 import 'json.dart';
@@ -72,10 +74,16 @@ const mapAgeDays = 30;
 /// user turned the AI routine on and it is due) an AI web search, quick AI
 /// scores for the new jobs and a fresh career map.
 class Refresher {
-  Refresher(this.book, this.client, {this.advisor, this.sponsors});
+  Refresher(this.book, this.client, {this.advisor, this.sponsors, this.secrets, this.watch});
   final CareerBook book;
   final http.Client client;
   final Advisor? advisor;
+
+  /// This device's keychain, for the USAJOBS and Jooble keys; null: none.
+  final SecretStore? secrets;
+
+  /// The employer watch, run with the feeds; null leaves it out.
+  final EmployerWatch? watch;
 
   /// The UK sponsor register, refreshed when the UK is a target; null
   /// leaves it alone.
@@ -108,7 +116,20 @@ class Refresher {
     final checked = DateTime.tryParse(await db.localSetting(LocalKeys.feedsChecked) ?? '');
     if (force || checked == null || now.difference(checked) >= feedInterval) {
       onProgress?.call('Checking job sites…');
-      final (:added, :answered) = await _feeds(p, report, today);
+      var (:added, :answered) = await _feeds(p, report, today);
+      if (watch != null) {
+        final watched = await book.watchedEmployers();
+        if (watched.isNotEmpty) {
+          onProgress?.call('Checking the employers you watch…');
+          final w = await watch!.run(p, watched);
+          report
+            ..found += w.postings.length
+            ..problems.addAll(w.problems);
+          added = [...added, ...await book.importPostings(w.postings, p, today: today)];
+          // The feeds count as checked when either part answered.
+          if (!answered && w.asked > w.failed) answered = true;
+        }
+      }
       report.added += added.length;
       if (answered) {
         report.feedsChecked = true;
@@ -162,30 +183,45 @@ class Refresher {
 
   Future<String> _routine() => book.pref<String>(PrefKeys.aiRoutine, 'off');
 
-  /// One query per target country (and town, if any), plus one for remote work.
+  /// One query per target country, or one per home area in it (each with
+  /// its radius); then one not tied to a country, for remote work and the
+  /// UN jobs.
   static List<FeedQuery> queries(CandidateProfile p) => [
     for (final c in p.searchCountries)
-      FeedQuery(
-        terms: p.searchTerms,
-        country: c,
-        place: c == p.country && p.targets.locations.isNotEmpty ? p.targets.locations.first : '',
-        remote: p.targets.remote,
-      ),
-    if (p.targets.remote) FeedQuery(terms: p.searchTerms, country: '', remote: true),
+      ...switch ([
+        for (final a in p.targets.homeAreas)
+          if ((a.country.isEmpty ? p.country : a.country) == c) a,
+      ]) {
+        final areas when areas.isNotEmpty => [
+          for (final a in areas)
+            FeedQuery(
+              terms: p.searchTerms,
+              country: c,
+              place: a.place,
+              radiusMiles: a.radiusMiles,
+              remote: p.targets.remote,
+            ),
+        ],
+        _ => [FeedQuery(terms: p.searchTerms, country: c, remote: p.targets.remote)],
+      },
+    FeedQuery(terms: p.searchTerms, country: '', remote: p.targets.remote),
   ];
 
-  /// Asks every feed that covers a query. [answered] is false only when
-  /// feeds were asked and every one failed.
+  /// Asks every feed that covers a query; a feed that does not search by
+  /// town is asked once per country. [answered] is false only when feeds
+  /// were asked and every one failed.
   Future<({List<String> added, bool answered})> _feeds(
     CandidateProfile p,
     RefreshReport report,
     String today,
   ) async {
-    final feeds = allFeeds(client, await book.feedKeys());
+    final feeds = allFeeds(client, await (await book.feedKeys()).withSecrets(secrets));
     final postings = <Posting>[];
     var asked = 0, failed = 0;
+    final once = <String>{};
     for (final q in queries(p)) {
       for (final f in feeds.where((f) => f.covers(q))) {
+        if (!f.usesPlace && !once.add('${f.id}:${q.country}')) continue;
         asked++;
         try {
           postings.addAll(await f.search(q));
