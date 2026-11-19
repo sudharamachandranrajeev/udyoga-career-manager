@@ -50,12 +50,14 @@ double peakDbfs(Pcm p) {
   return peak <= 0 ? -160 : 20 * math.log(peak) / math.ln10;
 }
 
-/// The real engines: models under [models], recordings under [takesRoot]
-/// (both in the app's own data folder, never synced).
+/// The real engines: models under [models], recordings under [takesRoot],
+/// and the voice's ready-made fixed lines under [voiceCache] (all in the
+/// app's own data folder, never synced).
 class NativeSpokenEngines implements SpokenEngines {
-  NativeSpokenEngines(this.models, this.takesRoot);
+  NativeSpokenEngines(this.models, this.takesRoot, {this.voiceCache});
   final ModelManager models;
   final Directory takesRoot;
+  final Directory? voiceCache;
   final _player = TakePlayer();
 
   @override
@@ -74,7 +76,11 @@ class NativeSpokenEngines implements SpokenEngines {
 
   @override
   Future<(InterviewerVoice, AnswerListener)> open(List<String> texts) async {
-    final voice = await KokoroVoice.open(models.folder(speechModel(voiceModelId)), texts: texts);
+    final voice = await KokoroVoice.open(
+      models.folder(speechModel(voiceModelId)),
+      texts: texts,
+      cacheDir: voiceCache,
+    );
     try {
       final listener = await LiveListener.open(
         vadModel: models.path(speechModel(vadModelId)),

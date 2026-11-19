@@ -33,11 +33,17 @@ void main() {
     expect(find.text(nhsStyle.stages[0].about), findsOneWidget);
     await app.tapText('Check the microphone');
     await app.tapText('Start the round');
-    // The settler, after the opening and the interrupt script. Nothing to probe.
+    // The settler, after the greeting. Level 3 does not interrupt, so no
+    // interrupt script, and the stage's name is on the screen, not said.
     await app.tapText('Ask me');
     expect(
       engines.voice.said.single,
-      allOf(contains('This is the screening call.'), contains(mayInterruptScript)),
+      allOf(
+        startsWith(personas[nhsStyle.stages[0].persona]!.greeting),
+        endsWith(nhsStyle.stages[0].settler.question),
+        isNot(contains(mayInterruptScript)),
+        isNot(contains('This is the')),
+      ),
     );
     await app.tapText('Done');
     expect(find.text('Follow-up'), findsNothing);

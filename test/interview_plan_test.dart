@@ -469,10 +469,16 @@ void main() {
       expect(templatePlan(qs.first).expected, isEmpty);
       expect(qs.first.j['seconds'], 60);
       expect(qs[1].j['seconds'], panel.answerTime.inSeconds);
-      expect(
-        panel.opening(Persona.of(PersonaKind.neutral)),
-        allOf(contains('panel interview'), contains(mayInterruptScript)),
-      );
+      // The interrupt script only where the panel interrupts; the stage's
+      // name is on the screen, not said.
+      final neutral = Persona.of(PersonaKind.neutral);
+      expect(panel.opening(neutral, Ladder.of(3)), neutral.greeting);
+      for (final level in [4, 5]) {
+        expect(panel.opening(neutral, Ladder.of(level)), '${neutral.greeting} $mayInterruptScript');
+      }
+      for (final level in [1, 2, 3, 4, 5]) {
+        expect(panel.opening(neutral, Ladder.of(level)), isNot(contains('panel interview')));
+      }
 
       final talk = civilServiceStyle.stages[2];
       final tq = talk.roundQuestions();

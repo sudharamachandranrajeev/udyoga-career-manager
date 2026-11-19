@@ -145,7 +145,7 @@ Future<Map<String, Object?>> _run(List<String> args) async {
     final persona = Persona.of(_stage.persona);
     final questions = _stage.roundQuestions();
     final plans = mergePlans(questions, const []);
-    final opening = _stage.opening(persona);
+    final opening = _stage.opening(persona, ladderLevel);
     final interviewer = Interviewer(
       persona: persona,
       level: ladderLevel,

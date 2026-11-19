@@ -38,6 +38,9 @@ enum ExerciseKind {
   static ExerciseKind? byName(String n) => values.where((k) => k.name == n).firstOrNull;
 }
 
+/// What the panel says to start a presentation.
+const presentationPrompt = 'Whenever you are ready, please give your presentation.';
+
 /// Shown on every reasoning exercise: the real tests are not published.
 const practiceFormatLabel = 'Practice format, not the real test';
 
@@ -121,9 +124,9 @@ class InterviewStage {
     deliveryTime: deliveryTime ?? this.deliveryTime,
   );
 
-  /// What the interviewer says before the first question: the persona's
-  /// greeting, what this stage is, and that they may interrupt.
-  String opening(Persona p) => '${p.greeting} This is the ${title.toLowerCase()}. $mayInterruptScript';
+  /// What the interviewer says before the first question at [level]: see
+  /// [roundOpening]. The stage's name is on the screen, not in the voice.
+  String opening(Persona p, Ladder level) => roundOpening(p, level);
 
   /// The questions as the spoken round asks them: the settler, the
   /// presentation itself when there is one, then the stage's questions,
@@ -132,7 +135,7 @@ class InterviewStage {
     PracticeQuestion({...settler.j, 'category': 'Settler', 'seconds': 60}),
     if (presents)
       PracticeQuestion({
-        'question': 'Whenever you are ready, please give your presentation.',
+        'question': presentationPrompt,
         'category': 'Presentation',
         'why': 'The brief: $brief',
         'lookFor': const [

@@ -36,7 +36,11 @@ import 'kit/kit.dart';
 final spokenEnginesProvider = FutureProvider<SpokenEngines>((ref) async {
   final mm = await ref.watch(modelManagerProvider.future);
   final base = await getApplicationSupportDirectory();
-  return NativeSpokenEngines(mm, Directory('${base.path}/interview-takes'));
+  return NativeSpokenEngines(
+    mm,
+    Directory('${base.path}/interview-takes'),
+    voiceCache: Directory('${base.path}/voice-cache'),
+  );
 });
 
 /// Saves each answer's text with the practice round.
@@ -266,9 +270,7 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
       if (mounted) setState(() => _openingStep = 'Loading the voice…');
       final persona = Persona.of(settings.persona);
       final level = Ladder.of(settings.level);
-      final opening =
-          widget.stage?.opening(persona) ??
-          (level.interrupts ? '${persona.greeting} $mayInterruptScript' : persona.greeting);
+      final opening = widget.stage?.opening(persona, level) ?? roundOpening(persona, level);
       final interviewer = Interviewer(
         persona: persona,
         level: level,

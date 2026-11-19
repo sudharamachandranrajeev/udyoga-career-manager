@@ -23,6 +23,7 @@ import 'lab.dart' show Pcm;
 import 'lexicon.dart';
 import 'native_engines.dart';
 import 'round.dart';
+import 'voice_cache.dart';
 import 'worker.dart';
 
 /// Splits [text] into sentences, so the first can play while the rest are
@@ -36,15 +37,19 @@ typedef _Clip = (Float32List, int);
 
 /// The interviewer's voice: Kokoro loaded once, on its own isolate.
 class KokoroVoice implements InterviewerVoice {
-  KokoroVoice._(this._worker, this._temp);
+  KokoroVoice._(this._worker, this._temp, this._cache);
 
   /// Loads the voice from [folder]. [texts] are the round's questions: any
   /// of their words missing from the voice's word list are filled in from
-  /// their base words first (lexicon.dart), so none is skipped.
+  /// their base words first (lexicon.dart), so none is skipped. With
+  /// [cacheDir], the app's fixed sentences (greetings, acknowledgements,
+  /// the interrupt lines, built-in follow-ups, template settlers) are kept
+  /// there once made, so the next round says them at once ([VoiceCache]).
   static Future<KokoroVoice> open(
     String folder, {
     required List<String> texts,
     int voice = kokoroBritishVoice,
+    Directory? cacheDir,
   }) async {
     final temp = await Directory.systemTemp.createTemp('udyoga-voice-');
     final extraPath = '${temp.path}/extra-lexicon.txt';
@@ -63,7 +68,7 @@ class KokoroVoice implements InterviewerVoice {
           return (a.samples, a.sampleRate);
         };
       });
-      return KokoroVoice._(worker, temp);
+      return KokoroVoice._(worker, temp, cacheDir == null ? null : VoiceCache(cacheDir, voice: voice));
     } on Object {
       await temp.delete(recursive: true);
       rethrow;
@@ -72,6 +77,7 @@ class KokoroVoice implements InterviewerVoice {
 
   final EngineWorker _worker;
   final Directory _temp;
+  final VoiceCache? _cache;
   final _made = <String, List<Future<_Clip>>>{};
   AudioPlayer? _player;
   Completer<void>? _playing;
@@ -82,7 +88,7 @@ class KokoroVoice implements InterviewerVoice {
     final have = _made.remove(text);
     // Most recent last; keep a few (the current, the next, a re-ask, a
     // follow-up and an acknowledgement).
-    final clips = _made[text] = have ?? [for (final s in sentencesOf(text)) _worker.call<_Clip>(s)];
+    final clips = _made[text] = have ?? [for (final s in sentencesOf(text)) _clip(s)];
     while (_made.length > 5) {
       _made.remove(_made.keys.first);
     }
@@ -90,6 +96,26 @@ class KokoroVoice implements InterviewerVoice {
       c.ignore();
     }
     return clips;
+  }
+
+  /// One sentence: from the cache when it is a fixed line made before,
+  /// otherwise made now (and kept when it is a fixed line).
+  Future<_Clip> _clip(String sentence) async {
+    final cache = _cache;
+    final key = cache?.keyFor(sentence);
+    if (cache != null && key != null) {
+      final hit = await cache.read(key);
+      if (hit != null) return hit;
+    }
+    final made = await _worker.call<_Clip>(sentence);
+    if (cache != null && key != null) {
+      try {
+        await cache.write(key, made.$1, made.$2);
+      } on FileSystemException {
+        // A full or read-only disk only costs speed next time.
+      }
+    }
+    return made;
   }
 
   @override

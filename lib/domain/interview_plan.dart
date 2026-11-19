@@ -662,6 +662,12 @@ const mayInterruptScript =
     'Before we start: I may interrupt you now and then to keep us to time. It is not meant to be rude; it just '
     'means we can cover everything.';
 
+/// What the interviewer says before the first question: the persona's
+/// greeting, and the interrupt script only at the levels that interrupt
+/// (4 and 5). The screen already names the stage, so the voice does not.
+String roundOpening(Persona p, Ladder level) =>
+    level.interrupts ? '${p.greeting} $mayInterruptScript' : p.greeting;
+
 /// How long a one-sentence wrap-up may take.
 const wrapUpTime = Duration(seconds: 20);
 
