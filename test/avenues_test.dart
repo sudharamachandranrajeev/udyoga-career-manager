@@ -117,13 +117,19 @@ void main() {
     final r = await Advisor(ai, today: today).assessAvenue(
       p,
       s,
-      economy: const CountryEconomy(code: 'IE', figures: [(label: 'GDP', value: '1', year: '2025', url: 'u')]),
+      economy: const CountryEconomy(
+        code: 'IE',
+        figures: [(label: 'GDP', value: '1', year: '2025', url: 'u')],
+      ),
     );
     expect(ai.web, isTrue);
     final sent = ai.content.map((c) => c['text']).join();
     expect(sent, allOf(contains('<screen>'), contains('General Employment Permit'), contains('<economy>')));
     expect(AvenueAssessment(r.data).confidence, 'medium');
-    expect((ai.schema['properties'] as Map).keys, containsAll(['adverts', 'route', 'pushback', 'confidence']));
+    expect(
+      (ai.schema['properties'] as Map).keys,
+      containsAll(['adverts', 'route', 'pushback', 'confidence']),
+    );
   });
 
   test('the prep plan carries the known qualification options and the deadline', () async {
@@ -179,9 +185,24 @@ void main() {
       expect(todos.single.target, '2026-11-25');
       expect(todos.single.kind, todoKind);
 
-      await book.saveReport(avenueKind, {'country': 'IE', 'summary': 'old'}, const [], at: '2026-11-18T10:00:00');
-      await book.saveReport(avenueKind, {'country': 'GB', 'summary': 'uk'}, const [], at: '2026-11-19T10:00:00');
-      await book.saveReport(avenueKind, {'country': 'IE', 'summary': 'new'}, const [], at: '2026-11-19T11:00:00');
+      await book.saveReport(
+        avenueKind,
+        {'country': 'IE', 'summary': 'old'},
+        const [],
+        at: '2026-11-18T10:00:00',
+      );
+      await book.saveReport(
+        avenueKind,
+        {'country': 'GB', 'summary': 'uk'},
+        const [],
+        at: '2026-11-19T10:00:00',
+      );
+      await book.saveReport(
+        avenueKind,
+        {'country': 'IE', 'summary': 'new'},
+        const [],
+        at: '2026-11-19T11:00:00',
+      );
       final ie = await book.latestAvenue('ie');
       expect(decodeObject(ie!.content)['summary'], 'new');
       expect(await book.latestPrepPlan('IE'), isNull);

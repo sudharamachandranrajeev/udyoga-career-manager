@@ -142,7 +142,9 @@ RouteCheck checkRoute(
         }
         final occ = t.occupation;
         if (t.floor == null) {
-          reasons.add('${o.title}: SOC ${o.soc} (${occ.title}) is not eligible for the Skilled Worker visa (Table 6).');
+          reasons.add(
+            '${o.title}: SOC ${o.soc} (${occ.title}) is not eligible for the Skilled Worker visa (Table 6).',
+          );
           continue;
         }
         if (occ.table == '1a') {
@@ -163,13 +165,21 @@ RouteCheck checkRoute(
         }
         final f = t.floor!, ne = t.newEntrantFloor!;
         final fit = _payFit(pay, Money(f, 'GBP'), Money(ne, 'GBP'));
-        reasons.add('${o.title}: SOC ${o.soc}, pay at least ${_gbp(f)} (${_gbp(ne)} as a new entrant). ${fit.$2}');
+        reasons.add(
+          '${o.title}: SOC ${o.soc}, pay at least ${_gbp(f)} (${_gbp(ne)} as a new entrant). ${fit.$2}',
+        );
         if (fit.$1.index < best.index || best == RouteFit.ineligible) {
           best = fit.$1;
           floor = Money(f, 'GBP');
         }
       }
-      return RouteCheck(r, best, reasons, floor: floor, deadline: best == RouteFit.ineligible ? null : deadline);
+      return RouteCheck(
+        r,
+        best,
+        reasons,
+        floor: floor,
+        deadline: best == RouteFit.ineligible ? null : deadline,
+      );
     case OccupationRule.ukHealthCare:
       final coded = occupations.where((o) => o.soc.isNotEmpty).toList();
       final listed = coded.where((o) => uk.occupations[o.soc]?.healthCare == true).toList();
@@ -276,7 +286,12 @@ CountryScreen screenCountry(
         '${rule.name}: ${rule.detail} It covers ${hit.map((o) => o.title).toSet().join(', ')}'
         '${rule.source.verified ? '' : ' (unverified)'}.';
     if (hit.length == coded.length) {
-      return CountryScreen(country: country, tier: Tier.blocked, blockers: [line, ...blockers], target: target);
+      return CountryScreen(
+        country: country,
+        tier: Tier.blocked,
+        blockers: [line, ...blockers],
+        target: target,
+      );
     }
     blockers.add(line);
   }
@@ -286,12 +301,17 @@ CountryScreen screenCountry(
     return CountryScreen(
       country: country,
       tier: Tier.later,
-      reasons: [...reasons, 'Udyoga has no route data for ${country.name} yet. The AI assessment can research it.'],
+      reasons: [
+        ...reasons,
+        'Udyoga has no route data for ${country.name} yet. The AI assessment can research it.',
+      ],
       blockers: blockers,
       target: target,
     );
   }
-  final checks = [for (final r in routes) checkRoute(r, occupations: occupations, pay: pay, uk: rules, today: today)];
+  final checks = [
+    for (final r in routes) checkRoute(r, occupations: occupations, pay: pay, uk: rules, today: today),
+  ];
   final fits = checks.where((c) => c.fit == RouteFit.fits).toList();
   if (checks.every((c) => c.fit == RouteFit.ineligible)) {
     return CountryScreen(

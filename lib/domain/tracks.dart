@@ -1,6 +1,7 @@
 import 'dart:convert';
 
-import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider, addMonths;
+import 'package:brahma_core/brahma_core.dart'
+    hide Release, UpdateException, checksumsName, updaterProvider, addMonths;
 import 'package:drift/drift.dart';
 
 import '../db/database.dart';
@@ -39,18 +40,22 @@ class Milestone {
     );
   }
 
-  Milestone copyWith({String? title, Value<String?>? due, Value<String?>? done, Value<String?>? todo}) => Milestone(
-    id: id,
-    title: title ?? this.title,
-    due: due == null ? this.due : due.value,
-    done: done == null ? this.done : done.value,
-    todo: todo == null ? this.todo : todo.value,
-  );
+  Milestone copyWith({String? title, Value<String?>? due, Value<String?>? done, Value<String?>? todo}) =>
+      Milestone(
+        id: id,
+        title: title ?? this.title,
+        due: due == null ? this.due : due.value,
+        done: done == null ? this.done : done.value,
+        todo: todo == null ? this.todo : todo.value,
+      );
 }
 
 /// The milestones stored on a track, by due date (undated last).
 List<Milestone> milestonesOf(RouteTrack t) {
-  final list = decodeList(t.milestones).map((e) => Milestone.fromJson(obj(e))).where((m) => m.id.isNotEmpty).toList();
+  final list = decodeList(t.milestones)
+      .map((e) => Milestone.fromJson(obj(e)))
+      .where((m) => m.id.isNotEmpty)
+      .toList();
   list.sort((a, b) {
     if ((a.due == null) != (b.due == null)) return a.due == null ? 1 : -1;
     return (a.due ?? '').compareTo(b.due ?? '');
@@ -91,11 +96,17 @@ String _earliest(String a, String? b) => b != null && b.compareTo(a) < 0 ? b : a
         add('Reach B2 in the language: ${b.split(';').first}', horizon);
       }
       if (route != null && route.route.sponsored) {
-        add('List employers in $name that sponsor ${route.route.name}', _earliest(addMonths(today, 1), horizon));
+        add(
+          'List employers in $name that sponsor ${route.route.name}',
+          _earliest(addMonths(today, 1), horizon),
+        );
         add('Apply to five sponsored roles', _earliest(addMonths(today, 2), horizon));
         if (s.deadline != null) add('Offer and certificate or permit issued', _minus(s.deadline!, 1));
       } else if (route != null) {
-        add('Check the ${route.route.name} requirements on the official page', _earliest(addMonths(today, 1), horizon));
+        add(
+          'Check the ${route.route.name} requirements on the official page',
+          _earliest(addMonths(today, 1), horizon),
+        );
       } else {
         add('Run the AI assessment for $name', addMonths(today, 1));
       }
@@ -109,7 +120,8 @@ String _earliest(String a, String? b) => b != null && b.compareTo(a) < 0 ? b : a
       route?.floor != null
           ? 'An offer at or above ${route!.floor!.label} under ${route.route.name}.'
           : 'An offer under ${route?.route.name ?? 'a work route'}.',
-    Tier.later => s.blockers.isNotEmpty ? 'Once this is solved: ${s.blockers.first}' : 'Once the route is verified.',
+    Tier.later =>
+      s.blockers.isNotEmpty ? 'Once this is solved: ${s.blockers.first}' : 'Once the route is verified.',
     Tier.blocked => 'A change in the rules.',
   };
   return (

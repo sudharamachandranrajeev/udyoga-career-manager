@@ -53,7 +53,10 @@ void main() {
 
   test('a changed or broken page falls back', () {
     expect(parseSkilledOccupations('nope', base: stale, today: '2026-11-19'), isNull);
-    expect(parseSkilledOccupations('{"details":{"body":"<p>moved</p>"}}', base: stale, today: '2026-11-19'), isNull);
+    expect(
+      parseSkilledOccupations('{"details":{"body":"<p>moved</p>"}}', base: stale, today: '2026-11-19'),
+      isNull,
+    );
   });
 
   test('Express Entry rounds: newest first, broken rows skipped', () {
@@ -87,7 +90,10 @@ void main() {
     await refresh.refreshUk(now: now.add(const Duration(days: 2)));
     expect(calls, 1);
     up = false;
-    await expectLater(refresh.refreshUk(now: now.add(const Duration(days: 9))), throwsA(isA<FeedException>()));
+    await expectLater(
+      refresh.refreshUk(now: now.add(const Duration(days: 9))),
+      throwsA(isA<FeedException>()),
+    );
     expect((await refresh.ukRules()).live, isTrue);
 
     up = true;

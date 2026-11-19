@@ -193,7 +193,9 @@ Evaluate this job for the candidate as a demanding hiring manager would. If the 
       _candidate(p),
       _text('<screen>\n${jsonEncode(screenForPrompt(screen))}\n</screen>'),
       if (occupations.isNotEmpty)
-        _text('<occupation_codes>\n${jsonEncode([for (final o in occupations) o.toJson()])}\n</occupation_codes>'),
+        _text(
+          '<occupation_codes>\n${jsonEncode([for (final o in occupations) o.toJson()])}\n</occupation_codes>',
+        ),
       if (economy != null && economy.figures.isNotEmpty)
         _text('<economy>\n${jsonEncode(economy.toJson())}\n</economy>'),
       _text(
@@ -245,23 +247,27 @@ Qualification planner: decide whether the route or the target jobs need the cand
 
   /// Research on what it is like to work for [employer]: systems, culture
   /// evidence with sources, and risks.
-  Future<AiResult> researchEmployer(CandidateProfile p, String employer, {String place = '', Progress? onProgress}) =>
-      ai.ask(
-        system: _system(p),
-        content: [
-          _candidate(p),
-          _text('<employer>$employer${place.isEmpty ? '' : ' ($place)'}</employer>'),
-          _text(
-            '''
+  Future<AiResult> researchEmployer(
+    CandidateProfile p,
+    String employer, {
+    String place = '',
+    Progress? onProgress,
+  }) => ai.ask(
+    system: _system(p),
+    content: [
+      _candidate(p),
+      _text('<employer>$employer${place.isEmpty ? '' : ' ($place)'}</employer>'),
+      _text(
+        '''
 Research what it is like to work for this employer in the candidate's kind of role. Find the systems staff use day to day (for health employers: the electronic patient record, patient administration and rostering systems, and any planned replacement with its date), evidence on culture from official sources (the latest staff survey results such as "would recommend as a place to work", inspection ratings, awards, recent news), and any risks such as restructures, mergers or financial pressure. Cite a source URL for every culture point. Say plainly when you could not find something; do not guess. End with good questions the candidate could ask at interview.''',
-          ),
-        ],
-        schema: EmployerBrief.schema,
-        web: true,
-        searches: 8,
-        effort: 'medium',
-        onProgress: onProgress,
-      );
+      ),
+    ],
+    schema: EmployerBrief.schema,
+    web: true,
+    searches: 8,
+    effort: 'medium',
+    onProgress: onProgress,
+  );
 
   /// A CV (and cover letter) for [job], from the profile.
   Future<AiResult> tailor(CandidateProfile p, Job job, {FitAssessment? fit, Progress? onProgress}) => ai.ask(
@@ -271,13 +277,15 @@ Research what it is like to work for this employer in the candidate's kind of ro
       _text('<base_cv>\n${jsonEncode(ResumeDoc.fromProfile(p).toJson())}\n</base_cv>'),
       _text('<job>\n${_job(job)}\n</job>'),
       if (fit != null) _text('<fit_assessment>\n${jsonEncode(fit.j)}\n</fit_assessment>'),
-      _text('''
+      _text(
+        '''
 Tailor the CV to this job. Follow the job description, key responsibilities, essential and desirable criteria and the employer's values:
 - Rewrite the profile for this role. Order skills and bullets so the most relevant come first; lead bullets with actions and results, using real figures from the CV only.
 - Use the advert's wording where it truthfully describes the candidate's experience, so applicant tracking systems match it. Do not add a skill, duty, qualification or result the candidate does not have; list such keywords as missing instead.
 - Keep it to about two pages: cut or shorten what does not serve this job.
 - Keep the candidate's real job titles, employers and dates.
-Then write the cover letter (or supporting statement, if the advert asks for one against criteria), and the notes.'''),
+Then write the cover letter (or supporting statement, if the advert asks for one against criteria), and the notes.''',
+      ),
     ],
     schema: tailorSchema,
     effort: 'high',
@@ -378,22 +386,23 @@ Return up to 20, best fit first.'''),
 
   /// People worth contacting about [job] or at [company]: recruiters,
   /// hiring managers, teams, from public professional pages.
-  Future<AiResult> findLeads(CandidateProfile p, {Job? job, String company = '', Progress? onProgress}) => ai.ask(
-    system: _system(p),
-    content: [
-      _candidate(p),
-      if (job != null) _text('<job>\n${_job(job)}\n</job>'),
-      _text(
-        '''
+  Future<AiResult> findLeads(CandidateProfile p, {Job? job, String company = '', Progress? onProgress}) =>
+      ai.ask(
+        system: _system(p),
+        content: [
+          _candidate(p),
+          if (job != null) _text('<job>\n${_job(job)}\n</job>'),
+          _text(
+            '''
 Find people and teams the candidate could contact about ${job != null ? 'this job' : 'openings${company.isEmpty ? ' in their field' : ' at $company'}'}: the recruiter or hiring manager named on the advert, the employer's recruitment team, specialist recruitment agencies and consultants for this field and area, and professional groups or events where they would meet hiring managers. Use only professional information that people or organisations publish for this purpose (adverts, team pages, agency sites, public LinkedIn profiles and company pages). Do not guess e-mail addresses or include private contact details. For each, say how to approach them and what to say first.''',
-      ),
-    ],
-    schema: LeadSuggestion.schema,
-    web: true,
-    searches: 8,
-    effort: 'medium',
-    onProgress: onProgress,
-  );
+          ),
+        ],
+        schema: LeadSuggestion.schema,
+        web: true,
+        searches: 8,
+        effort: 'medium',
+        onProgress: onProgress,
+      );
 
   /// A short message: outreach to a lead, chasing feedback, thanks after an
   /// interview.
@@ -504,7 +513,11 @@ Then the overall score, what was strong, what to improve (most important first),
 
   /// Reads the candidate's own documents: what each is, what it states
   /// about them and the stories in it. A few at a time.
-  Future<List<DocumentReading>> readDocuments(CandidateProfile p, List<CvSource> docs, {Progress? onProgress}) async {
+  Future<List<DocumentReading>> readDocuments(
+    CandidateProfile p,
+    List<CvSource> docs, {
+    Progress? onProgress,
+  }) async {
     final r = await ai.ask(
       system:
           'You read a job candidate\'s own documents (CVs, references, interview notes, application answers, '
@@ -619,7 +632,11 @@ Then the overall score, what was strong, what to improve (most important first),
   }
 
   /// What a check-in answer adds: stories, skills, wins, learning.
-  Future<CheckInDigest> digestCheckIn(CandidateProfile p, {required String question, required String answer}) async {
+  Future<CheckInDigest> digestCheckIn(
+    CandidateProfile p, {
+    required String question,
+    required String answer,
+  }) async {
     final r = await ai.ask(
       system:
           '${_system(p)}\n\nYou are reading the candidate\'s end-of-day check-in. Take only what they actually '

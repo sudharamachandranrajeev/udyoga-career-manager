@@ -19,10 +19,10 @@ void main() {
   });
 
   test('titles to code keep targets first and drop repeats', () {
-    expect(titlesToCode(targets: ['Data Analyst', 'data analyst'], current: 'Staff Nurse', past: ['Staff nurse']), [
-      'Data Analyst',
-      'Staff Nurse',
-    ]);
+    expect(
+      titlesToCode(targets: ['Data Analyst', 'data analyst'], current: 'Staff Nurse', past: ['Staff nurse']),
+      ['Data Analyst', 'Staff Nurse'],
+    );
   });
 
   test('ESCO search results give 4-digit ISCO codes', () {

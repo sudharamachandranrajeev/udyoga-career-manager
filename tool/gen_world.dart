@@ -51,7 +51,10 @@ Future<void> main() async {
     'localeDisplayNames',
     'languages',
   ]);
-  final info = _at(await _get('cldr-core/supplemental/territoryInfo.json'), ['supplemental', 'territoryInfo']);
+  final info = _at(await _get('cldr-core/supplemental/territoryInfo.json'), [
+    'supplemental',
+    'territoryInfo',
+  ]);
   final currencies = _at(await _get('cldr-core/supplemental/currencyData.json'), [
     'supplemental',
     'currencyData',

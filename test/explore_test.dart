@@ -21,8 +21,13 @@ const english = SpokenLanguage('English', LanguageLevel.native);
 
 OccupationMatch code(String title) => socMatches(title).first;
 
-CountryScreen screen(String c, CandidateProfile p, {List<OccupationMatch> occ = const [], Money? pay, UkRules? uk}) =>
-    screenCountry(worldCountry(c)!, profile: p, today: today, occupations: occ, pay: pay, uk: uk);
+CountryScreen screen(
+  String c,
+  CandidateProfile p, {
+  List<OccupationMatch> occ = const [],
+  Money? pay,
+  UkRules? uk,
+}) => screenCountry(worldCountry(c)!, profile: p, today: today, occupations: occ, pay: pay, uk: uk);
 
 void main() {
   test('a passport and the language make a country Ready', () {
@@ -41,11 +46,17 @@ void main() {
     expect(de.tier, Tier.later);
     expect(de.blockers.single, contains('German'));
     final basic = withRights(
-      const WorkRights(passports: ['IE'], languages: [english, SpokenLanguage('German', LanguageLevel.basic)]),
+      const WorkRights(
+        passports: ['IE'],
+        languages: [english, SpokenLanguage('German', LanguageLevel.basic)],
+      ),
     );
     expect(screen('DE', basic).blockers.single, contains('German at Basic'));
     final b2 = withRights(
-      const WorkRights(passports: ['IE'], languages: [english, SpokenLanguage('German', LanguageLevel.professional)]),
+      const WorkRights(
+        passports: ['IE'],
+        languages: [english, SpokenLanguage('German', LanguageLevel.professional)],
+      ),
     );
     expect(screen('DE', b2).tier, Tier.ready);
   });
@@ -142,7 +153,10 @@ void main() {
 
   test('Netherlands compares monthly floors with yearly pay', () {
     final p = withRights(
-      const WorkRights(passports: ['IN'], languages: [english, SpokenLanguage('Dutch', LanguageLevel.professional)]),
+      const WorkRights(
+        passports: ['IN'],
+        languages: [english, SpokenLanguage('Dutch', LanguageLevel.professional)],
+      ),
     );
     expect(screen('NL', p, pay: const Money(72000, 'EUR')).tier, Tier.possible);
     expect(screen('NL', p, pay: const Money(60000, 'EUR')).tier, Tier.later);

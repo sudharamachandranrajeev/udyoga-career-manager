@@ -678,12 +678,15 @@ const _germanyRoutes = [
     id: 'de.blue-card',
     country: 'DE',
     name: 'EU Blue Card',
-    summary: 'For skilled jobs at or above the yearly minimum; lower for shortage occupations and new entrants.',
+    summary:
+        'For skilled jobs at or above the yearly minimum; lower for shortage occupations and new entrants.',
     rule: OccupationRule.payFloor,
     floor: Money(50700, 'EUR'),
     reducedFloor: Money(45934.20, 'EUR'),
     reducedWhen: 'shortage occupations and new entrants',
-    requirements: ['A job offer at or above €50,700 a year in 2026 (€45,934.20 for shortage jobs or new entrants).'],
+    requirements: [
+      'A job offer at or above €50,700 a year in 2026 (€45,934.20 for shortage jobs or new entrants).',
+    ],
     notes: [
       'A recognised university degree is normally needed; IT specialists may qualify on experience '
           '(unverified: check with the Federal Employment Agency).',
@@ -728,7 +731,9 @@ const _netherlandsRoutes = [
     floor: Money(5942, 'EUR', per: 'month'),
     reducedFloor: Money(4754, 'EUR', per: 'month'),
     reducedWhen: 'the reduced amount (for example recent graduates)',
-    requirements: ['A gross monthly salary of at least €5,942 (2026), or €4,754 where the reduced amount applies.'],
+    requirements: [
+      'A gross monthly salary of at least €5,942 (2026), or €4,754 where the reduced amount applies.',
+    ],
     source: _ind,
   ),
 ];
@@ -784,7 +789,11 @@ const _canadaRoutes = [
       'A language test and an educational credential assessment (such as WES, about C\$264) are needed '
           '(unverified: confirm on IRCC).',
     ],
-    source: RouteSource('IRCC: Express Entry rounds of invitations (JSON)', expressEntryRoundsUrl, asOf: routesAsOf),
+    source: RouteSource(
+      'IRCC: Express Entry rounds of invitations (JSON)',
+      expressEntryRoundsUrl,
+      asOf: routesAsOf,
+    ),
     more: [expressEntryCategories],
   ),
 ];
@@ -812,10 +821,13 @@ const _newZealandRoutes = [
     id: 'nz.accredited-employer',
     country: 'NZ',
     name: 'Accredited Employer Work Visa',
-    summary: 'An accredited employer offers a job paying at least the median wage, unless an exemption applies.',
+    summary:
+        'An accredited employer offers a job paying at least the median wage, unless an exemption applies.',
     rule: OccupationRule.payFloor,
     floor: Money(35, 'NZD', per: 'hour'),
-    requirements: ['At least NZ\$35.00 an hour from 9 March 2026 (unverified: from a search summary of INZ pages).'],
+    requirements: [
+      'At least NZ\$35.00 an hour from 9 March 2026 (unverified: from a search summary of INZ pages).',
+    ],
     notes: ['The Green List gives some occupations a faster route to residence (unverified).'],
     source: RouteSource(
       'Immigration New Zealand (not read directly)',
@@ -859,7 +871,12 @@ const nationalsOnlyRules = [
     name: 'Omanisation',
     detail: 'Many administrative, clerical and HR jobs are restricted to Omani nationals, with quotas for the rest.',
     iscoPrefixes: ['4', '1212', '2423'],
-    source: RouteSource('Ministry of Labour, Oman', 'https://www.mol.gov.om/', asOf: routesAsOf, verified: false),
+    source: RouteSource(
+      'Ministry of Labour, Oman',
+      'https://www.mol.gov.om/',
+      asOf: routesAsOf,
+      verified: false,
+    ),
   ),
   NationalsOnly(
     country: 'KW',
@@ -886,19 +903,48 @@ List<VisaRoute> routesFor(String country, {UkRules? uk}) => switch (country.toUp
   'CA' => _canadaRoutes,
   'AU' => _australiaRoutes,
   'NZ' => _newZealandRoutes,
-  'AE' => [_gccRoute('AE', 'the UAE', 'Ministry of Human Resources and Emiratisation', 'https://www.mohre.gov.ae/en')],
+  'AE' => [
+    _gccRoute(
+      'AE',
+      'the UAE',
+      'Ministry of Human Resources and Emiratisation',
+      'https://www.mohre.gov.ae/en',
+    ),
+  ],
   'SA' => [
-    _gccRoute('SA', 'Saudi Arabia', 'Ministry of Human Resources and Social Development', 'https://www.hrsd.gov.sa/en'),
+    _gccRoute(
+      'SA',
+      'Saudi Arabia',
+      'Ministry of Human Resources and Social Development',
+      'https://www.hrsd.gov.sa/en',
+    ),
   ],
   'QA' => [_gccRoute('QA', 'Qatar', 'Ministry of Interior, Qatar', 'https://portal.moi.gov.qa/')],
   'OM' => [_gccRoute('OM', 'Oman', 'Ministry of Labour, Oman', 'https://www.mol.gov.om/')],
-  'KW' => [_gccRoute('KW', 'Kuwait', 'Public Authority for Manpower, Kuwait', 'https://www.manpower.gov.kw/')],
+  'KW' => [
+    _gccRoute('KW', 'Kuwait', 'Public Authority for Manpower, Kuwait', 'https://www.manpower.gov.kw/'),
+  ],
   'BH' => [_gccRoute('BH', 'Bahrain', 'Labour Market Regulatory Authority, Bahrain', 'https://lmra.gov.bh/')],
   _ => const [],
 };
 
 /// Countries with route data, for the "has data" filter.
-const countriesWithRoutes = ['GB', 'IE', 'DE', 'NL', 'SG', 'CA', 'AU', 'NZ', 'AE', 'SA', 'QA', 'OM', 'KW', 'BH'];
+const countriesWithRoutes = [
+  'GB',
+  'IE',
+  'DE',
+  'NL',
+  'SG',
+  'CA',
+  'AU',
+  'NZ',
+  'AE',
+  'SA',
+  'QA',
+  'OM',
+  'KW',
+  'BH',
+];
 
 /// The nationals-only rules in [country].
 List<NationalsOnly> nationalsOnlyIn(String country) =>

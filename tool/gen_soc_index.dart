@@ -61,9 +61,10 @@ Future<void> main(List<String> args) async {
       .attributes
       .firstWhere((a) => a.name.local == 'id')
       .value;
-  final target = XmlDocument.parse(
-    read('xl/_rels/workbook.xml.rels'),
-  ).findAllElements('Relationship').firstWhere((r) => r.getAttribute('Id') == rid).getAttribute('Target')!;
+  final target = XmlDocument.parse(read('xl/_rels/workbook.xml.rels'))
+      .findAllElements('Relationship')
+      .firstWhere((r) => r.getAttribute('Id') == rid)
+      .getAttribute('Target')!;
   final sheet = XmlDocument.parse(read('xl/${target.replaceFirst(RegExp('^/?xl/'), '')}'));
 
   List<String> cells(XmlElement row) {
@@ -128,5 +129,7 @@ Future<void> main(List<String> args) async {
   }
   out.writeln('];');
   await File('lib/domain/soc_index_data.dart').writeAsString(out.toString());
-  stdout.writeln('Wrote ${entries.length} titles in ${units.length} unit groups to lib/domain/soc_index_data.dart');
+  stdout.writeln(
+    'Wrote ${entries.length} titles in ${units.length} unit groups to lib/domain/soc_index_data.dart',
+  );
 }

@@ -136,7 +136,8 @@ class PrepPlan {
 
   /// The day everything has to fit before, yyyy-MM-dd, or ''.
   String get deadline => str(j['deadline']);
-  List<PrepStep> get steps => objs(j['steps']).map(PrepStep.new).toList()..sort((a, b) => a.order.compareTo(b.order));
+  List<PrepStep> get steps =>
+      objs(j['steps']).map(PrepStep.new).toList()..sort((a, b) => a.order.compareTo(b.order));
   Json get qualification => obj(j['qualification']);
   List<Json> get qualificationOptions => objs(qualification['options']);
   List<String> get risks => strs(j['risks']);
@@ -216,7 +217,11 @@ const qualificationOptions = <String, List<QualificationOption>>{
       cost: '£223.20 (2 working days) or £284.40 (1 working day)',
       time: '1 to 2 working days once documents are in',
       needsUniversity: 'unknown',
-      source: RouteSource('UK ENIC: Fast Track', 'https://enic.org.uk/qualifications/fast-track', asOf: _read),
+      source: RouteSource(
+        'UK ENIC: Fast Track',
+        'https://enic.org.uk/qualifications/fast-track',
+        asOf: _read,
+      ),
     ),
     QualificationOption(
       name: 'Ecctis Qualification and Language Service',
@@ -498,17 +503,21 @@ extension AvenueBook on CareerBook {
   }
 
   /// Makes a to-do from a prep step (once per step and country).
-  Future<String> stepTodo(PrepPlan plan, PrepStep step, {required String countryName, required String today}) =>
-      saveTodo(
-        id: 'todo.avenue.${plan.country.toLowerCase()}.${step.id}',
-        title: step.title,
-        notes: [
-          'Prep plan for $countryName.',
-          step.why,
-          if (step.cost.isNotEmpty) 'Cost: ${step.cost}.',
-          if (step.url.isNotEmpty) step.url,
-        ].where((t) => t.isNotEmpty).join(' '),
-        due: step.due,
-        today: today,
-      );
+  Future<String> stepTodo(
+    PrepPlan plan,
+    PrepStep step, {
+    required String countryName,
+    required String today,
+  }) => saveTodo(
+    id: 'todo.avenue.${plan.country.toLowerCase()}.${step.id}',
+    title: step.title,
+    notes: [
+      'Prep plan for $countryName.',
+      step.why,
+      if (step.cost.isNotEmpty) 'Cost: ${step.cost}.',
+      if (step.url.isNotEmpty) step.url,
+    ].where((t) => t.isNotEmpty).join(' '),
+    due: step.due,
+    today: today,
+  );
 }

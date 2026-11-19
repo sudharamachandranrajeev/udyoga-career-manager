@@ -120,7 +120,13 @@ class ExpressEntryRound {
   final String name;
   final int size, crs;
 
-  Json toJson() => {'drawNumber': number, 'drawDate': date, 'drawName': name, 'drawSize': size, 'drawCRS': crs};
+  Json toJson() => {
+    'drawNumber': number,
+    'drawDate': date,
+    'drawName': name,
+    'drawSize': size,
+    'drawCRS': crs,
+  };
 }
 
 /// The rounds in IRCC's JSON, newest first.
