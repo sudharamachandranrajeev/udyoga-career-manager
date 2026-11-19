@@ -337,3 +337,104 @@ keeps the `-android.apk` name, so older versions' updaters still find it;
 `-android-armeabi-v7a.apk` and `-android-x86_64.apk` are the others, and the
 updater fetches the one for the phone. No phone timing yet (open question 5
 stands).
+
+## I2: follow-ups, panels and stages
+
+### How a follow-up is picked
+
+At the start of a round the interviewer has a plan for each question: what
+it tests, which parts of an answer to listen for, and its own follow-ups.
+With an AI the plan is written by the AI the user chose, from the questions
+alone (no profile, no answers). Without one, or if the AI fails, built-in
+plans by question kind are used: all six parts for "tell us about a time"
+questions, fewer for values, situational and technical questions, none for
+settlers, strengths and "do you have any questions".
+
+The six parts are the situation, what the speaker did themselves, a
+measure, the result, what they learned and who else was involved. After
+each answer a matcher on the device reads the transcript (and any earlier
+follow-up answers to the same question) and lists what is missing. It is
+deterministic: no AI is needed to choose the follow-up. "What you yourself
+did" needs at least two "I did" actions, or "my role was", "I took the
+lead" and the like; a run of "we" does not count. A measure is any number,
+percentage, count, check or feedback.
+
+The follow-up asks about the first missing part, using the plan's own
+wording first, then the built-in one. Never more than two per question,
+never the same part or the same wording twice. Parts missed in the
+previous stage are asked about first.
+
+### Panels and levels
+
+| Panel | Says after an answer | Gap after an answer | Gap before a follow-up |
+| --- | --- | --- | --- |
+| Friendly | one of three warm lines | 1 s | 1 s |
+| Neutral | "Thank you." | 2 s | 1.5 s |
+| Probing | "Thank you." (one extra follow-up) | 1.5 s | 1 s |
+| Quiet | nothing | 4 s | 3 s |
+
+The quiet panel's silences are deliberate: the screen says "The panel is
+writing notes. Silence is normal." (methodology rule 7).
+
+| Level | Follow-ups | Time for an answer | Interrupts |
+| --- | --- | --- | --- |
+| 1 Rehearsal | 0 | untimed | no |
+| 2 Gentle | 1 | 1.5 × usual | no |
+| 3 Standard panel | 2 | usual | no |
+| 4 Realistic | 2 | usual | 15 s after the time |
+| 5 Tough | 2 | 0.75 × usual | at the time |
+
+At levels 4 and 5 an answer over time is stopped with "Thank you. I am
+going to stop you there so we keep to time. Could you sum that up in one
+sentence?", and the user has 20 s for a one-sentence wrap-up. No follow-ups
+come after an interruption.
+
+The end of an answer is now a setting, 3 to 10 s of silence (5 s by
+default). A pause shorter than that never ends the answer.
+
+### Stages
+
+A process is a list of stages, each with its own panel, times, a settler
+question and the opening "I may interrupt you now and then to keep us to
+time". The three templates (NHS-style, Civil Service-style, private sector)
+use generic, self-written questions and can be edited. Exercise stages
+(in-tray, a spreadsheet task set out in text, reasoning questions labelled
+"Practice format, not the real test") and presentation stages (preparation
+clock, then the presentation as a timed answer) come before the spoken
+part. Each stage is saved as its own practice round. Progress through a
+process is kept in memory while the process page is open.
+
+At the end of a stage, "For next time" lists up to three fixes (running
+over time first, then the parts missed most, with the latest stage counted
+twice) and up to two things to keep. The next stage shows them before it
+starts, and its follow-ups go after those parts first.
+
+### One stage on this laptop
+
+`tool/interview_stage_check.dart` runs a three-question screening call
+(friendly panel, level 5, answer time 30 s, so 22.5 s at level 5) with the
+real engines. The candidate's fictional answers are made with a second
+Kokoro voice and played into a PipeWire null sink that the app reads as
+its microphone (`PULSE_SOURCE`), as in I1. Two runs gave the same
+results, within 0.5 s:
+
+- **Opening and settler.** The opening (greeting, "this is the screening
+  call", the interrupt script) and the settler were said as one turn; the
+  microphone opened 22 s after the round started. No follow-up on the
+  settler; the panel said "Thank you, that is really helpful."
+- **A short answer with a 3.5 s pause to think in the middle.** The pause
+  did not end the answer: the transcript has both halves. The answer
+  ended 5.5 s after the speaker stopped (the 5 s setting plus the speech
+  detector's tail).
+- **Follow-ups.** The answer had no measure and no learning. The panel
+  asked "Thank you. How did you measure this?", then "Thank you. What did
+  you learn?", and stopped at two. With the follow-up answers, all six
+  parts were covered.
+- **The interruption.** A 31 s answer to the third question was stopped at
+  22.5 s, mid-sentence; the panel asked for a one-sentence wrap-up, and the
+  wrap-up was transcribed in full.
+- **Carry-forward.** "For next time": lead with the result so the answer
+  fits the time; say how you knew it worked; close with what you learned.
+- Transcription slip: "We counted the complaints" came out as "100%
+  accounted the complaints". The measure was still found (from "6 to 1").
+- The three take files were deleted with the take folder at the end.
