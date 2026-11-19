@@ -628,3 +628,125 @@ The Interview page now opens with "What you're ready for":
 - the nerves trend.
 
 The ways to practise, the drills and the gaps come after it.
+
+## I5: the camera coach
+
+### I4 follow-ups
+
+- **Vidya: cards a plan no longer sends.** When a plan comes again
+  without a card it sent before (the story was deleted in Udyoga), Vidya
+  sets the card aside instead of deleting it:
+  - its schedule and reviews are kept;
+  - it is never due, and Review counts it apart ("set aside");
+  - if the plan sends it again, it comes back as it was.
+
+  Cards now record the plan they came from (Vidya schema 6, filled in for
+  plans already received through sync). One part of a long plan never
+  sets anything aside.
+- **Vidya: progress back more often, not more noisily.** A review grade
+  no longer writes a report. The report goes when a review session ends,
+  when Vidya opens and when it comes back to the front, at most once
+  every ten minutes. A request inside the ten minutes runs when they are
+  over, so nothing is lost. A report still writes only when something
+  changed.
+- **Udyoga: the voice cache goes with the voice.** Deleting the
+  interviewer voice in the lab also deletes its ready-made clips. The
+  lab shows the cache's size with a **Clear voice cache** button.
+
+### What it does
+
+Plan rule 4 binds all of it. The camera is off at the start of every
+round. Turning it on is one button, and a red **Camera on** pill shows
+while it runs; tapping the pill turns it off. The choice is not saved.
+
+Each frame is read in memory, turned into a few numbers and dropped:
+
+- the largest face box from BlazeFace;
+- how many faces;
+- the mean brightness of the face box and of the rest of the picture.
+
+No frame and no number is written to disk or the database, sent or
+synced. Nothing reads identity, expression or the eyes. Nothing is
+scored.
+
+**The setup check** (before a round or stage, and on its own from the
+Interview page, "Check my video setup") reads the last second of frames.
+Medians smooth out a bad frame. Each check shows a green tick or one
+plain tip:
+
+| Check | Fine when | Tip otherwise |
+| --- | --- | --- |
+| Face in the picture | a face in at least half the frames, its centre within 0.15 of the middle across | "No face in the picture yet…" (or "very dark" when the picture is); "Move so your face is in the middle of the picture…" |
+| Head and shoulders | face box 0.18 to 0.5 of the picture's height | "Move closer…" / "Move back a little…" |
+| Light | face at least 70 of 255, no more than 225, and the rest of the picture no more than 45 brighter | "The light is behind you… Move the light in front of you…"; "in shadow"; "very bright" |
+| Camera height | face centre 0.28 to 0.6 down the picture, head not at the top edge | "Raise the camera to eye height…" / "Tilt the camera down a little…" |
+| Steady picture | the face centre moves less than 0.025 (spread over the last second) | "Rest the camera or phone on something steady." |
+
+The tips never say left or right, because previews are mirrored.
+
+**During a round**, if switched on (both are off by default):
+
+- **Out of the picture.** After more than 3 s with no face, a quiet note
+  says "You have moved out of the picture." It clears when a face is
+  back.
+- **"Looking at the lens".** This comes only from where the face box
+  sits, with no gaze or iris model. When the face sits well to one side
+  or low for most of two seconds, the note suggests putting the panel's
+  window under the camera. It says the habit is optional and never
+  scored.
+
+**Self-view** is a switch, on by default once the camera is on, because
+some people find seeing themselves distracting. The checks work either
+way.
+
+**At the end of the round** the camera turns itself off. The finished
+screen may list **Setup notes**: the tips that were still open when the
+round started, marked "Information only: not part of any score, and not
+saved". The debrief, the answers and the scores are the same with or
+without the camera. A test runs the same round both ways and compares
+everything saved.
+
+Everything works with the camera off, and no other feature needs it.
+
+### Platforms
+
+- **Linux:** `camera_desktop` (GStreamer), BGRA frames. Tested here.
+- **Android:** `camera` (CameraX), YUV frames. The camera permission was
+  already in the manifest and is asked for when the camera first opens.
+  Not run on a phone.
+- **Windows:** `camera_desktop` streams BGRA there too, and the code path
+  is the same as Linux. It was written but not built or run (no Windows
+  machine here).
+
+### On this laptop
+
+`tool/camera_coach_check.dart` runs the coach with the real webcam and
+the real face finder. `tool/camera_setup_live.dart` shows the real setup
+card with the webcam on.
+
+**The webcam, for real.** It ran at 848x480 and about 16.7 frames a
+second, and the face finder took 6.2 to 7.6 ms a frame. Nobody was in
+front of the camera, and the room was dark (brightness 11 to 12 of 255).
+The check said so: "The picture is very dark, so no face shows. Turn on
+a light in front of you…". The setup card rendered with the live preview
+and no Flutter errors.
+
+**A still picture, fed as camera frames.** The picture was a
+public-domain 1864 portrait photograph from Wikimedia Commons. It was
+kept outside the repository and drawn into a 640x480 frame five ways.
+The real face finder ran on each, 5.5 to 6.3 ms a frame:
+
+| Setup | Face box (left, top, w x h) | Face / rest brightness | Result |
+| --- | --- | --- | --- |
+| As it is | 0.35, 0.26, 0.26x0.34 | 107 / 107 | all five ticks |
+| Small in a big frame | 0.42, 0.42, 0.13x0.17 | 117 / 92 | "Move closer…" |
+| Cropped close | 0.22, 0.22, 0.53x0.70 | 102 / 144 | "Move back a little…" |
+| Darkened, bright surround | 0.36, 0.26, 0.25x0.34 | 36 / 132 | "The light is behind you…" |
+| Empty frame | none | 90 / 90 | "No face in the picture yet…" |
+
+For the away note, the picture was shown for 1 s, then an empty frame
+for 4 s, then the picture again, with 15 fps time stamps. The note
+showed at seconds 4 and 5 and was gone at 6.
+
+**Nothing written.** Both runs listed the app support folder and the
+system temp folder before and after: no file was added.

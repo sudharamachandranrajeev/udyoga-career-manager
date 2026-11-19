@@ -50,6 +50,10 @@ or a Claude or ChatGPT plan.
   type). You see what each question tests first, then your transcript, your pace, pauses and
   fillers against usual ranges (never a score), and can re-take and compare. It runs on your
   device; recordings never leave it.
+- 📷 **Camera setup check** – optional, off every time until you turn it on. Before a video
+  interview it checks your face is in the picture, head and shoulders fit, the light is in front
+  of you, the camera is near eye height and the picture is steady, with a plain tip for each.
+  Frames are looked at on your device and dropped; nothing is scored.
 - 🧭 **A career map** – a blunt view of where you stand, and five to eight paths from here with
   steps, pay and how AI is changing each one.
 - 💼 **LinkedIn helper** – profile score, posts, comments and connection notes, all drafted for
@@ -315,7 +319,8 @@ scripts/make-icons.sh                                               # app icons 
   updater fetches the one for the phone's ABI.
 - Speech models are never bundled: the interview round downloads them on request. To time the
   speech stack on a device, build `tool/interview_spike.dart` or `tool/spoken_round_check.dart`
-  with `-t` (results in [docs/interview-spike.md](docs/interview-spike.md)).
+  with `-t`; for the camera coach, `tool/camera_coach_check.dart` (results in
+  [docs/interview-spike.md](docs/interview-spike.md)).
 - Changes per version: [CHANGELOG.md](CHANGELOG.md). Lead workflow and LinkedIn study:
   [docs/n8n](docs/n8n/README.md).
 
