@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi' show Abi;
 import 'dart:io';
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
@@ -54,18 +55,32 @@ class Release {
   final String notes;
   final Map<String, Asset> assets;
 
-  /// The file that installs on [os], when the release has one.
-  Asset? installerFor(String os) {
-    final suffix = switch (os) {
-      'android' => '-android.apk',
-      'windows' => '-windows-x64-setup.exe',
-      'linux' => '-linux-x64.tar.gz',
-      _ => null,
+  /// The file that installs on [os], when the release has one. Android
+  /// releases are split per ABI: `-android.apk` is the 64-bit ARM build
+  /// (most phones, and the name older Udyoga versions look for), and the
+  /// other ABIs carry their name, e.g. `-android-armeabi-v7a.apk`. Releases
+  /// before the split had one universal `-android.apk`, so that is the
+  /// fallback for every ABI.
+  Asset? installerFor(String os, {String abi = 'arm64-v8a'}) {
+    final suffixes = switch (os) {
+      'android' => [if (abi != 'arm64-v8a') '-android-$abi.apk', '-android.apk'],
+      'windows' => ['-windows-x64-setup.exe'],
+      'linux' => ['-linux-x64.tar.gz'],
+      _ => const <String>[],
     };
-    if (suffix == null) return null;
-    return assets.values.where((a) => a.name.endsWith(suffix)).firstOrNull;
+    for (final suffix in suffixes) {
+      if (assets.values.where((a) => a.name.endsWith(suffix)).firstOrNull case final a?) return a;
+    }
+    return null;
   }
 }
+
+/// This device's Android ABI, as Flutter's split APKs name it.
+String androidAbi() => switch (Abi.current()) {
+  Abi.androidArm => 'armeabi-v7a',
+  Abi.androidX64 => 'x86_64',
+  _ => 'arm64-v8a',
+};
 
 /// "v0.10.2-beta.1" → [0, 10, 2]; anything after a '-' is dropped and a part
 /// that is not a number counts as 0.
@@ -106,7 +121,8 @@ Map<String, String> parseChecksums(String text) => {
 /// releases the release workflow publishes. Nothing is installed unless it
 /// matches the release's SHA256SUMS.txt.
 class Updater {
-  Updater(this._http, {required this.current, required this.os, required this.dir});
+  Updater(this._http, {required this.current, required this.os, required this.dir, String? abi})
+    : abi = abi ?? androidAbi();
 
   final http.Client _http;
 
@@ -118,6 +134,9 @@ class Updater {
 
   /// Where downloads go.
   final Directory dir;
+
+  /// The Android ABI whose APK to fetch (see [Release.installerFor]).
+  final String abi;
 
   static const _agent = {'user-agent': 'Udyoga'};
 
@@ -140,13 +159,13 @@ class Updater {
       throw UpdateException('GitHub answered with error ${response.statusCode}.');
     }
     final r = newestRelease(jsonDecode(utf8.decode(response.bodyBytes)));
-    return r != null && isNewer(r.version, current) && r.installerFor(os) != null ? r : null;
+    return r != null && isNewer(r.version, current) && r.installerFor(os, abi: abi) != null ? r : null;
   }
 
   /// Downloads this device's file of [release] and checks it against the
   /// published checksum. [onProgress] hears 0 to 1.
   Future<File> download(Release release, {void Function(double done)? onProgress}) async {
-    final asset = release.installerFor(os);
+    final asset = release.installerFor(os, abi: abi);
     final sums = release.assets[checksumsName];
     if (asset == null) throw UpdateException('Udyoga ${release.version} has no file for this device.');
     if (sums == null) {

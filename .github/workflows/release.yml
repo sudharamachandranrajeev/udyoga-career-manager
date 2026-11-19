@@ -88,10 +88,17 @@ jobs:
           UDYOGA_KEY_ALIAS: ${{ secrets.UDYOGA_KEY_ALIAS }}
           UDYOGA_KEY_PASSWORD: ${{ secrets.UDYOGA_KEY_PASSWORD }}
         run: |
-          flutter build apk --release \
+          # One APK per ABI keeps each download small (the speech engines are
+          # native). The 64-bit ARM one keeps the plain -android.apk name, which
+          # older Udyoga versions' updaters look for.
+          flutter build apk --release --split-per-abi \
             --build-name=${{ needs.version.outputs.name }} --build-number=${{ needs.version.outputs.build }}
           mkdir -p dist
-          cp build/app/outputs/flutter-apk/app-release.apk dist/Udyoga-${{ needs.version.outputs.version }}-android.apk
+          v=${{ needs.version.outputs.version }}
+          out=build/app/outputs/flutter-apk
+          cp "$out/app-arm64-v8a-release.apk" "dist/Udyoga-$v-android.apk"
+          cp "$out/app-armeabi-v7a-release.apk" "dist/Udyoga-$v-android-armeabi-v7a.apk"
+          cp "$out/app-x86_64-release.apk" "dist/Udyoga-$v-android-x86_64.apk"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: android
