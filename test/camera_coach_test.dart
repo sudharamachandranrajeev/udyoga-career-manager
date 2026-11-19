@@ -280,6 +280,26 @@ void main() {
       expect(spy.made, isEmpty);
     });
 
+    test('only the switches are remembered, and only when the user changes one', () async {
+      final told = <CoachPrefs>[];
+      final c = CameraCoach(onPrefs: told.add);
+      c.usePrefs(const CoachPrefs(selfView: false, lensHint: true));
+      expect((c.selfView, c.roundHints, c.lensHint, c.on), (false, false, true, false));
+      expect(told, isEmpty, reason: 'loading the saved switches is not a change');
+      c.set(lensHint: true);
+      expect(told, isEmpty, reason: 'no change, nothing to save');
+      c.set(roundHints: true);
+      expect(told.single, const CoachPrefs(selfView: false, roundHints: true, lensHint: true));
+      expect(CoachPrefs.fromJson(told.single.toJson()), told.single);
+      expect(told.single.toJson().keys, [
+        'selfView',
+        'roundHints',
+        'lensHint',
+      ], reason: 'settings, no camera data');
+      expect(CoachPrefs.fromJson(const {}), const CoachPrefs(), reason: 'defaults: self-view on, hints off');
+      c.dispose();
+    });
+
     test('a camera that will not open says so and stays off', () async {
       final c = CameraCoach();
       await c.turnOn(_Broken());

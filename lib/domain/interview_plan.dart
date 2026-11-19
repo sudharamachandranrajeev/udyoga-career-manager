@@ -747,3 +747,29 @@ class RoundSettings {
     aiPlan: j['aiPlan'] != false,
   );
 }
+
+/// The coach's three switches, remembered on this device only (a local
+/// setting, never synced). They are settings, not camera data: the camera
+/// itself is still off at the start of every session.
+class CoachPrefs {
+  const CoachPrefs({this.selfView = true, this.roundHints = false, this.lensHint = false});
+  final bool selfView, roundHints, lensHint;
+
+  Map<String, Object?> toJson() => {'selfView': selfView, 'roundHints': roundHints, 'lensHint': lensHint};
+
+  factory CoachPrefs.fromJson(Map<String, Object?> j) => CoachPrefs(
+    selfView: j['selfView'] != false,
+    roundHints: j['roundHints'] == true,
+    lensHint: j['lensHint'] == true,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is CoachPrefs &&
+      other.selfView == selfView &&
+      other.roundHints == roundHints &&
+      other.lensHint == lensHint;
+
+  @override
+  int get hashCode => Object.hash(selfView, roundHints, lensHint);
+}

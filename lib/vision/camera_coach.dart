@@ -1,7 +1,8 @@
 /// The camera coach (plan rule 4): an opt-in setup check before a round, and
 /// during it, if asked, two gentle hints. It is off at the start of every
-/// session and nothing about it is saved: not the choice, not a frame, not
-/// a number. Frames are measured in memory and dropped (face_camera.dart),
+/// session and nothing it sees is saved: not a frame, not a number, not
+/// whether it was on. Only its three switches are remembered, on this
+/// device ([CoachPrefs]). Frames are measured in memory and dropped (face_camera.dart),
 /// nothing is sent or synced, and nothing it sees reaches a score.
 library;
 
@@ -10,6 +11,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import '../domain/interview_plan.dart' show CoachPrefs;
+
+export '../domain/interview_plan.dart' show CoachPrefs;
 import '../voice/models.dart';
 import 'face_camera.dart';
 import 'setup_check.dart';
@@ -70,10 +74,18 @@ class _NativeFeed implements CoachFeed {
   Future<void> close() => _cam.close();
 }
 
-/// The coach's state for one screen. Everything is in memory and goes with
-/// it.
+/// The coach's state for one screen. Everything it sees is in memory and
+/// goes with it; only the switches ([CoachPrefs]) are remembered, through
+/// [onPrefs].
 class CameraCoach extends ChangeNotifier {
-  CameraCoach({DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
+  CameraCoach({DateTime Function()? clock, CoachPrefs prefs = const CoachPrefs(), this.onPrefs})
+    : _clock = clock ?? DateTime.now,
+      selfView = prefs.selfView,
+      roundHints = prefs.roundHints,
+      lensHint = prefs.lensHint;
+
+  /// Told when the user changes a switch, to remember it on this device.
+  final void Function(CoachPrefs prefs)? onPrefs;
 
   final DateTime Function() _clock;
   CoachFeed? _feed;
@@ -85,14 +97,25 @@ class CameraCoach extends ChangeNotifier {
   final lens = LensHint();
 
   /// Show the live picture. Some people find it distracting.
-  bool selfView = true;
+  bool selfView;
 
   /// During the round: say so when the face has left the picture.
-  bool roundHints = false;
+  bool roundHints;
 
   /// During the round: the "looking at the lens" hint, from the face box's
   /// place only.
-  bool lensHint = false;
+  bool lensHint;
+
+  CoachPrefs get prefs => CoachPrefs(selfView: selfView, roundHints: roundHints, lensHint: lensHint);
+
+  /// Takes the remembered switches (loaded after the screen opened). The
+  /// camera stays as it is: off unless the user turned it on.
+  void usePrefs(CoachPrefs p) {
+    selfView = p.selfView;
+    roundHints = p.roundHints;
+    lensHint = p.lensHint;
+    _notify();
+  }
 
   /// The setup tips still open when the round started: information for the
   /// end of the round, never part of a score, never saved.
@@ -180,9 +203,11 @@ class CameraCoach extends ChangeNotifier {
   }
 
   void set({bool? selfView, bool? roundHints, bool? lensHint}) {
+    final before = prefs;
     this.selfView = selfView ?? this.selfView;
     this.roundHints = roundHints ?? this.roundHints;
     this.lensHint = lensHint ?? this.lensHint;
+    if (prefs != before) onPrefs?.call(prefs);
     _notify();
   }
 

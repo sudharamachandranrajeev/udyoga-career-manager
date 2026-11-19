@@ -10,7 +10,7 @@ import 'conversations.dart';
 import 'eligibility.dart';
 import 'feeds.dart';
 import 'insights.dart';
-import 'interview_plan.dart' show RoundSettings;
+import 'interview_plan.dart' show CoachPrefs, RoundSettings;
 import 'json.dart';
 import 'linkedin_export.dart';
 import 'linkedin_messages.dart';
@@ -88,6 +88,11 @@ abstract final class LocalKeys {
 
   /// The spoken round's settings on this device (RoundSettings as JSON).
   static const roundSettings = 'udyoga.interview.round';
+
+  /// The camera coach's switches on this device (CoachPrefs as JSON): self-
+  /// view and the two round hints. Settings only; the camera is still off
+  /// at the start of every session, and nothing it sees is stored.
+  static const coachPrefs = 'udyoga.interview.coach';
 }
 
 /// Udyoga's write path and the reads screens share.
@@ -347,6 +352,12 @@ class CareerBook {
 
   Future<void> setRoundSettings(RoundSettings r) =>
       db.setLocalSetting(LocalKeys.roundSettings, jsonEncode(r.toJson()));
+
+  Future<CoachPrefs> coachPrefs() async =>
+      CoachPrefs.fromJson(decodeObject(await db.localSetting(LocalKeys.coachPrefs) ?? ''));
+
+  Future<void> setCoachPrefs(CoachPrefs p) =>
+      db.setLocalSetting(LocalKeys.coachPrefs, jsonEncode(p.toJson()));
 
   Future<bool> updateOnStart() async => await db.localSetting(LocalKeys.updateOnStart) != 'off';
 

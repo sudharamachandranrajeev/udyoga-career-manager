@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:udyoga/domain/book.dart';
 import 'package:udyoga/domain/common_questions.dart';
+import 'package:udyoga/domain/interview_plan.dart' show CoachPrefs;
 import 'package:udyoga/ui/camera_coach_ui.dart';
 import 'package:udyoga/ui/spoken_round_page.dart';
 import 'package:udyoga/vision/setup_check.dart';
@@ -154,6 +156,70 @@ void main() {
     await app.tap(find.text('Download 230 kB').last);
     expect(camera.downloads, 1);
     expect(find.text('Camera on'), findsOneWidget);
+    await app.close();
+  });
+
+  testWidgets('the self-view and hint switches are remembered on this device; the camera is not', (
+    tester,
+  ) async {
+    final app = AppHarness(tester)..desktop();
+    await app.open();
+    final camera = FakeCamera();
+    final overrides = [coachCameraProvider.overrideWith((ref) async => camera)];
+    await app.run(home: const CameraSetupPage(), overrides: overrides);
+    await app.tapText('Turn the camera on');
+    await app.tap(find.widgetWithText(SwitchListTile, 'Show my picture'));
+
+    // Leave and come back: the camera is off again, the switch is as left.
+    await tester.pumpWidget(const SizedBox());
+    await app.run(home: const CameraSetupPage(), overrides: overrides);
+    expect(find.text('Camera on'), findsNothing);
+    expect(find.text('Turn the camera on'), findsOneWidget);
+    expect(camera.feeds.where((f) => !f.closed), isEmpty);
+    await app.tapText('Turn the camera on');
+    expect(
+      tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, 'Show my picture')).value,
+      isFalse,
+    );
+
+    final (local, outbox) = (await tester.runAsync(() async {
+      final db = app.book.db;
+      return (await db.localSetting(LocalKeys.coachPrefs), (await db.select(db.outbox).get()).join('\n'));
+    }))!;
+    expect(local, contains('"selfView":false'), reason: 'a local setting: settings only');
+    expect(outbox, isNot(contains('selfView')), reason: 'never synced');
+    await app.close();
+  });
+
+  testWidgets('the round hints come back switched on in the next round, with the camera off', (tester) async {
+    final app = AppHarness(tester)..desktop();
+    late String id;
+    await app.open(
+      seed: (b) async {
+        await b.setCoachPrefs(const CoachPrefs(selfView: false, roundHints: true, lensHint: true));
+        id = await b.startPractice(
+          role: 'Common questions',
+          mode: 'standard',
+          questions: commonQuestions.take(1).toList(),
+          at: '2026-11-19T10:00',
+        );
+      },
+    );
+    final camera = FakeCamera();
+    await app.run(
+      home: SpokenRoundPage(id),
+      overrides: [
+        coachCameraProvider.overrideWith((ref) async => camera),
+        spokenEnginesProvider.overrideWith((ref) async => FakeEngines()),
+      ],
+    );
+    expect(find.text('Turn the camera on'), findsOneWidget);
+    expect(camera.feeds, isEmpty, reason: 'off at the start of every session');
+    await app.tapText('Turn the camera on');
+    bool on(String title) => tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, title)).value;
+    expect(on('Show my picture'), isFalse);
+    expect(on('Tell me if I leave the picture'), isTrue);
+    expect(on('"Looking at the lens" hint'), isTrue);
     await app.close();
   });
 }

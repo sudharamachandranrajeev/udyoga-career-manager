@@ -4,10 +4,13 @@
 /// nothing here is needed for any other feature.
 library;
 
+import 'dart:async';
+
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/providers.dart';
 import '../vision/camera_coach.dart';
 import '../vision/setup_check.dart';
 import '../voice/models.dart';
@@ -302,15 +305,23 @@ class CameraRoundBar extends StatelessWidget {
 }
 
 /// The setup check on its own, from the Interview page.
-class CameraSetupPage extends StatefulWidget {
+class CameraSetupPage extends ConsumerStatefulWidget {
   const CameraSetupPage({super.key});
 
   @override
-  State<CameraSetupPage> createState() => _CameraSetupPageState();
+  ConsumerState<CameraSetupPage> createState() => _CameraSetupPageState();
 }
 
-class _CameraSetupPageState extends State<CameraSetupPage> {
-  final _coach = CameraCoach();
+class _CameraSetupPageState extends ConsumerState<CameraSetupPage> {
+  late final _coach = CameraCoach(onPrefs: (p) => unawaited(ref.read(sessionProvider).book.setCoachPrefs(p)));
+
+  @override
+  void initState() {
+    super.initState();
+    ref.read(sessionProvider).book.coachPrefs().then((p) {
+      if (mounted) _coach.usePrefs(p);
+    }).ignore();
+  }
 
   @override
   void dispose() {

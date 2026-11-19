@@ -657,7 +657,9 @@ The ways to practise, the drills and the gaps come after it.
 
 Plan rule 4 binds all of it. The camera is off at the start of every
 round. Turning it on is one button, and a red **Camera on** pill shows
-while it runs; tapping the pill turns it off. The choice is not saved.
+while it runs; tapping the pill turns it off. Whether it was on is not
+saved. (Since I6 the self-view and hint switches are remembered on the
+device; see the I6 section.)
 
 Each frame is read in memory, turned into a few numbers and dropped:
 

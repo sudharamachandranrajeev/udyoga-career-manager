@@ -165,8 +165,9 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
   final _typed = TextEditingController();
   String? _playing;
 
-  /// The camera coach: off at the start of every round, kept in memory only.
-  final _coach = CameraCoach();
+  /// The camera coach: off at the start of every round. Only its switches
+  /// are remembered, on this device.
+  late final _coach = CameraCoach(onPrefs: (p) => unawaited(ref.read(sessionProvider).book.setCoachPrefs(p)));
 
   @override
   void initState() {
@@ -176,7 +177,10 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
   }
 
   Future<void> _loadSettings() async {
-    final saved = await ref.read(sessionProvider).book.roundSettings();
+    final book = ref.read(sessionProvider).book;
+    final saved = await book.roundSettings();
+    final prefs = await book.coachPrefs();
+    if (mounted) _coach.usePrefs(prefs);
     final stage = widget.stage;
     if (mounted) setState(() => _settings = stage == null ? saved : saved.copyWith(persona: stage.persona));
   }
