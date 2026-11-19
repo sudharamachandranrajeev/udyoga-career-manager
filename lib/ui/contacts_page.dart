@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/countries.dart';
+import '../domain/fill_drafts.dart';
 import '../domain/insights.dart';
 import '../domain/json.dart';
 import '../domain/pipeline.dart';
@@ -413,6 +414,17 @@ class LeadTile extends ConsumerWidget {
       ),
     );
     if (d == null || !context.mounted) return;
+    // Kept so a text-box fill in Udyoga's browser can start from it.
+    await ref.mutate(
+      (s) => s.book.keepDraft(
+        kind: l.status == 'new' ? 'intro' : 'conversation',
+        ref: l.id,
+        to: l.name,
+        text: d.message,
+        at: nowLocal(),
+      ),
+    );
+    if (!context.mounted) return;
     await showDraft(context, d.subject, d.message);
   }
 }

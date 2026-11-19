@@ -10,8 +10,14 @@ library;
 import 'dart:convert';
 
 import '../db/database.dart';
+import 'book.dart';
 import 'polite.dart';
 import 'recipes.dart';
+
+/// Synced pref: how many fills [recipeId] made on [day] (yyyy-MM-dd) on
+/// any device of the account, so a daily cap (LinkedIn's 15 above all)
+/// holds across devices, not on each one.
+String syncedFillsKey(String recipeId, String day) => 'udyoga.recipe.fills.$recipeId.$day';
 
 /// What a fill would do, shown to the user before anything happens.
 class FillPlan {
@@ -45,9 +51,32 @@ class FillPlan {
 
 /// Plans fills and carries them out once the user has seen the plan.
 class AssistFill {
-  AssistFill(this.db, {DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
+  AssistFill(this.db, {DateTime Function()? clock, this.book}) : _clock = clock ?? DateTime.now;
   final AppDatabase db;
   final DateTime Function() _clock;
+
+  /// Where the synced counts live; without it the counts stay on this
+  /// device.
+  final CareerBook? book;
+
+  String get _today => _clock().toIso8601String().substring(0, 10);
+
+  /// Fills made today with [recipe]: the larger of this device's count and
+  /// the account's synced count.
+  Future<int> used(Recipe recipe) async {
+    final local = await DailyCounter(db, clock: _clock).used(recipe.use);
+    final b = book;
+    if (b == null) return local;
+    final synced = await b.pref<int>(syncedFillsKey(recipe.id, _today), 0);
+    return synced > local ? synced : local;
+  }
+
+  /// Counts one fill on this device and in the synced pref.
+  Future<void> _count(Recipe recipe) async {
+    final n = await used(recipe) + 1;
+    await DailyCounter(db, clock: _clock).raiseTo(recipe.use, n);
+    await book?.setPref(syncedFillsKey(recipe.id, _today), n);
+  }
 
   /// The dry run: the text [recipe] would put on [pageUrl], from the
   /// user's approved [draft] or the recipe's template filled with [values]
@@ -78,7 +107,7 @@ class AssistFill {
       text = text.substring(0, fill.maxLength).trimRight();
       cut = true;
     }
-    final used = await DailyCounter(db, clock: _clock).used(recipe.use);
+    final used = await this.used(recipe);
     if (used >= recipe.effectiveCap) {
       problems.add(
         'Today\'s limit of ${recipe.effectiveCap} for ${recipe.title} is used up. It resets tomorrow.',
@@ -100,12 +129,12 @@ class AssistFill {
     Future<Object?> Function(String selector, String text) fillTextBox,
   ) async {
     if (!plan.ready) return plan.problems.first;
-    // The cap is checked again: a plan can be stale.
-    final counter = DailyCounter(db, clock: _clock);
-    if (await counter.used(plan.recipe.use) >= plan.cap) return 'Today\'s limit is used up.';
+    // The cap is checked again: a plan can be stale, and another device
+    // may have filled since.
+    if (await used(plan.recipe) >= plan.cap) return 'Today\'s limit is used up.';
     final reply = _decode(await fillTextBox(plan.target, plan.text));
     if (reply['ok'] != true) return '${reply['reason'] ?? 'The page did not take the text.'}';
-    await counter.add(plan.recipe.use);
+    await _count(plan.recipe);
     await db.setLocalSetting(_lastKey(plan.recipe), _clock().toIso8601String());
     return null;
   }

@@ -54,6 +54,13 @@ class DailyCounter {
     final n = await used(use);
     await db.setLocalSetting(PoliteKeys.count(use), jsonEncode({'day': _today, 'n': n + 1}));
   }
+
+  /// Raises today's count for [use] to [n] (a count from another device);
+  /// a lower [n] changes nothing.
+  Future<void> raiseTo(String use, int n) async {
+    if (n <= await used(use)) return;
+    await db.setLocalSetting(PoliteKeys.count(use), jsonEncode({'day': _today, 'n': n}));
+  }
 }
 
 /// Reads web pages politely. Every request names Udyoga ([politeAgent]),

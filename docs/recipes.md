@@ -34,7 +34,8 @@ Each recipe has one **mode**:
   target box and today's count against the cap. Nothing happens until you
   confirm.
 - **Daily caps.** Every recipe has a `dailyCap`. LinkedIn fills are capped
-  at **15 a day**, even if a recipe asks for more.
+  at **15 a day**, even if a recipe asks for more. Fill counts sync between
+  your devices, so the cap holds for your account, not for each device.
 - **Strict checking.** A file with an unknown field, an unknown mode, or a
   missing `rate` or `dailyCap` is refused as a whole.
 
@@ -49,7 +50,7 @@ Each recipe has one **mode**:
 | `mode` | string | yes | `fetch`, `browser-read` or `assist-fill`. |
 | `record` | string | no | What a page becomes: `job` (the default), `person` or `company`. `fetch` reads jobs only. |
 | `rate` | number | yes | The fewest seconds between two requests, or between two fills. The minimum is 1, and 5 for `fetch`. |
-| `dailyCap` | whole number | yes | The most requests (for `fetch`) or fills (for `assist-fill`) a day, on this device. |
+| `dailyCap` | whole number | yes | The most requests a day on this device (for `fetch`), or the most fills a day across all your devices (for `assist-fill`). |
 | `robots` | true/false | for `fetch` | Must be `true` for `fetch`: robots.txt is obeyed. |
 | `list` | object | for `fetch` | The search page and its job links (see below). |
 | `detail` | object | for `fetch` and `browser-read` | How to read one page into a record (see below). |
@@ -93,7 +94,7 @@ The record fields are:
 | Field | Meaning |
 | --- | --- |
 | `targetSelector` | A CSS selector for the text box: a `textarea`, a text `input` or a `contenteditable` element. Buttons are refused. |
-| `templateSource` | `draft`: the text you write or paste in Udyoga and approve. `recipe`: the recipe's own `template`, which you can still edit before the dry run. |
+| `templateSource` | `draft`: the text you write, paste or pick from your saved drafts in Udyoga, and approve. The saved drafts are the LinkedIn studio's connection notes and messages, and the drafts and intro messages written for a conversation or a contact. `recipe`: the recipe's own `template`, which you can still edit before the dry run. |
 | `template` | For `recipe`: the text, with `{firstName}`, `{name}`, `{company}` and `{jobTitle}` filled from the page. |
 | `maxLength` | The box's character limit. The text is cut to fit, and the dry run says so. Use 0 for no limit. |
 | `neverClick` | Must be `true`. |

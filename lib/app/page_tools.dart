@@ -10,6 +10,7 @@ import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, che
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
+import '../domain/assist_fill.dart';
 import '../domain/ocr.dart';
 import '../domain/polite.dart';
 import '../domain/recipes.dart';
@@ -30,8 +31,14 @@ final recipesFolderProvider = FutureProvider<String>((ref) async {
 /// Each recipe's use today, by id.
 final recipeUsageProvider = FutureProvider<Map<String, int>>((ref) async {
   final set = await ref.watch(recipesProvider.future);
-  final counter = DailyCounter(ref.watch(sessionProvider).db);
-  return {for (final r in set.recipes) r.id: await counter.used(r.use)};
+  final session = ref.watch(sessionProvider);
+  final counter = DailyCounter(session.db);
+  // Fills count across the account's devices (synced); fetches per device.
+  final fills = AssistFill(session.db, book: session.book);
+  return {
+    for (final r in set.recipes)
+      r.id: r.mode == RecipeMode.assistFill ? await fills.used(r) : await counter.used(r.use),
+  };
 });
 
 /// Device-only key: "yes" once the user agreed to ML Kit, "no" if they

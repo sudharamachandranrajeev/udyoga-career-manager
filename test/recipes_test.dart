@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:udyoga/domain/assist_fill.dart';
 import 'package:udyoga/domain/book.dart';
+import 'package:udyoga/domain/fill_drafts.dart';
+import 'package:udyoga/domain/linkedin.dart';
 import 'package:udyoga/domain/page_reader.dart';
 import 'package:udyoga/domain/polite.dart';
 import 'package:udyoga/domain/recipes.dart';
@@ -428,6 +430,170 @@ void main() {
       expect(over.problems.single, contains('limit of 15'));
       expect(await fill.apply(over, box), contains('limit of 15'));
       expect(calls, hasLength(15));
+    });
+
+    test('LinkedIn\'s 15 a day holds across devices through the synced count', () async {
+      final li = Recipe.fromJson({
+        ...fillRecipe(site: 'www.linkedin.com', cap: 100),
+        'rate': 1,
+        'urlPatterns': ['https://www.linkedin.com/in/*'],
+      });
+      const page = 'https://www.linkedin.com/in/someone-example';
+      Future<Object?> box(String _, String _) async => '{"ok":true}';
+      final key = syncedFillsKey(li.id, '2026-11-19');
+
+      // The laptop fills 9.
+      final laptop = AssistFill(book.db, clock: () => now, book: book);
+      for (var i = 0; i < 9; i++) {
+        now = now.add(const Duration(seconds: 2));
+        expect(await laptop.apply(await laptop.plan(li, pageUrl: page, draft: 'Hi $i'), box), isNull);
+      }
+      expect(await book.pref<int>(key, 0), 9);
+
+      // The phone has its own database; sync brings the laptop's count.
+      final phone = CareerBook(await Store.open(memoryDatabase()));
+      await phone.setPref(key, await book.pref<int>(key, 0));
+      final fill = AssistFill(phone.db, clock: () => now, book: phone);
+      final first = await fill.plan(li, pageUrl: page, draft: 'Hello');
+      expect((first.used, first.cap, first.left), (9, 15, 6));
+      var made = 0;
+      for (var i = 0; i < 10; i++) {
+        now = now.add(const Duration(seconds: 2));
+        if (await fill.apply(await fill.plan(li, pageUrl: page, draft: 'Hi $i'), box) == null) made++;
+      }
+      expect(made, 6, reason: 'only 15 in all, whatever device');
+      expect(await phone.pref<int>(key, 0), 15);
+      expect(await DailyCounter(phone.db, clock: () => now).used(li.use), 15);
+
+      // The next day starts again from nothing.
+      now = now.add(const Duration(days: 1));
+      expect((await fill.plan(li, pageUrl: page, draft: 'Hi')).used, 0);
+    });
+
+    test('the larger of the device and synced counts wins, and the synced count catches up', () async {
+      final r = Recipe.fromJson({...fillRecipe(), 'rate': 1});
+      const page = 'https://jobs.example.org/messages/1';
+      final key = syncedFillsKey(r.id, '2026-11-19');
+      // This device counted 4 before the synced count (2) arrived.
+      final counter = DailyCounter(book.db, clock: () => now);
+      for (var i = 0; i < 4; i++) {
+        await counter.add(r.use);
+      }
+      await book.setPref(key, 2);
+      final fill = AssistFill(book.db, clock: () => now, book: book);
+      expect((await fill.plan(r, pageUrl: page, draft: 'Hi')).used, 4);
+      expect(
+        await fill.apply(await fill.plan(r, pageUrl: page, draft: 'Hi'), (_, _) async => '{"ok":true}'),
+        isNull,
+      );
+      expect(await book.pref<int>(key, 0), 5);
+      expect(await counter.used(r.use), 5);
+
+      // A higher synced count raises this device's count.
+      await book.setPref(key, 8);
+      now = now.add(const Duration(seconds: 2));
+      expect(
+        await fill.apply(await fill.plan(r, pageUrl: page, draft: 'Hi'), (_, _) async => '{"ok":true}'),
+        isNull,
+      );
+      expect((await book.pref<int>(key, 0), await counter.used(r.use)), (9, 9));
+
+      // Without a book the count stays on the device, as before.
+      expect(await AssistFill(book.db, clock: () => now).used(r), 9);
+    });
+
+    test('saved drafts: studio notes and messages, conversation and intro drafts, newest first', () async {
+      await book.saveReport(
+        LinkedInTool.outreach.kind,
+        {
+          'input': {'who': 'Sam Example, Ward Manager, Example Trust'},
+          'sections': [
+            {
+              'title': 'Messages',
+              'blocks': [
+                {'label': 'Connection note', 'text': 'Hi Sam, I read your post on e-obs.', 'copy': true},
+                {'label': 'First message (day 1)', 'text': 'Thanks for connecting, Sam.', 'copy': true},
+                {'label': 'Why', 'text': 'Not for pasting.', 'copy': false},
+              ],
+            },
+          ],
+        },
+        const [],
+        at: '2026-11-18T10:00',
+      );
+      // Another tool's results are not offered.
+      await book.saveReport(
+        LinkedInTool.post.kind,
+        {
+          'sections': [
+            {
+              'blocks': [
+                {'label': 'Post', 'text': 'A post.', 'copy': true},
+              ],
+            },
+          ],
+        },
+        const [],
+        at: '2026-11-19T08:00',
+      );
+      await book.keepDraft(
+        kind: 'intro',
+        ref: 'lead-1',
+        to: 'Pat Example',
+        text: 'Hello Pat',
+        at: '2026-11-17T09:00',
+      );
+      await book.keepDraft(
+        kind: 'conversation',
+        ref: 'thread-1',
+        to: 'Jo Example',
+        text: 'Old draft',
+        at: '2026-11-18T09:00',
+      );
+      await book.keepDraft(
+        kind: 'conversation',
+        ref: 'thread-1',
+        to: 'Jo Example',
+        text: 'Newer draft',
+        at: '2026-11-19T09:00',
+      );
+      await book.keepDraft(kind: 'intro', ref: 'lead-2', to: 'Nobody', text: '   ', at: '2026-11-19T09:30');
+      expect(() => book.keepDraft(kind: 'post', ref: 'x', to: '', text: 'x', at: ''), throwsArgumentError);
+
+      final drafts = await book.fillDrafts();
+      expect(
+        [for (final d in drafts) (d.from, d.label, d.text)],
+        [
+          ('Conversation', 'Conversation: Jo Example', 'Newer draft'),
+          ('LinkedIn studio', 'Connection note: Sam Example', 'Hi Sam, I read your post on e-obs.'),
+          ('LinkedIn studio', 'First message (day 1): Sam Example', 'Thanks for connecting, Sam.'),
+          ('Intro', 'Intro: Pat Example', 'Hello Pat'),
+        ],
+      );
+
+      // Only the newest [savedDraftsCap] are kept.
+      for (var i = 0; i < savedDraftsCap + 5; i++) {
+        await book.keepDraft(kind: 'intro', ref: 'lead-x$i', to: 'X', text: 'Hi $i', at: '2026-11-19T10:00');
+      }
+      expect((await book.pref<List<Object?>>(savedDraftsKey, const [])).length, savedDraftsCap);
+    });
+
+    test('a picked draft still goes through the dry run', () async {
+      await book.keepDraft(
+        kind: 'conversation',
+        ref: 't',
+        to: 'Jo Example',
+        text: 'A saved draft that is well over forty characters long.',
+        at: '2026-11-19T09:00',
+      );
+      final picked = (await book.fillDrafts()).single.text;
+      final fill = AssistFill(book.db, clock: () => now, book: book);
+      final plan = await fill.plan(
+        Recipe.fromJson(fillRecipe()),
+        pageUrl: 'https://jobs.example.org/messages/1',
+        draft: picked,
+      );
+      expect((plan.ready, plan.cut, plan.text.length <= 40, plan.used), (true, true, true, 0));
     });
 
     test('fills wait the recipe\'s rate', () async {

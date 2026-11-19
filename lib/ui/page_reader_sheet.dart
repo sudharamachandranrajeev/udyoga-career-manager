@@ -10,6 +10,7 @@ import '../app/providers.dart';
 import '../domain/ai.dart';
 import '../domain/assist_fill.dart';
 import '../domain/employers.dart';
+import '../domain/fill_drafts.dart';
 import '../domain/lead_finder.dart';
 import '../domain/ocr.dart';
 import '../domain/page_reader.dart';
@@ -345,10 +346,13 @@ Future<void> fillOnPage(BuildContext context, WidgetRef ref, SiteBrowser browser
     'company': person?['company'].isNotEmpty == true ? person!['company'] : (job?['company'] ?? ''),
     'jobTitle': job?['title'] ?? '',
   };
+  final session = ref.read(sessionProvider);
+  final saved = await session.book.fillDrafts().catchError((_) => const <FillDraft>[]);
+  if (!context.mounted) return;
   final draft = TextEditingController(
     text: fill.templateSource == 'recipe' ? fillTemplate(fill.template, values) : '',
   );
-  final engine = AssistFill(ref.read(sessionProvider).db);
+  final engine = AssistFill(session.db, book: session.book);
   try {
     final approved = await showDialog<bool>(
       context: context,
@@ -356,16 +360,36 @@ Future<void> fillOnPage(BuildContext context, WidgetRef ref, SiteBrowser browser
         title: Text('Your draft for ${recipe.title}'),
         content: SizedBox(
           width: 480,
-          child: TextField(
-            controller: draft,
-            autofocus: true,
-            minLines: 4,
-            maxLines: 10,
-            maxLength: fill.maxLength > 0 ? fill.maxLength : null,
-            decoration: const InputDecoration(
-              helperText: 'Write or paste the text you approve. It goes into the box as it is.',
-              border: OutlineInputBorder(),
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (saved.isNotEmpty) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await _pickSavedDraft(context, saved, maxLength: fill.maxLength);
+                      if (picked != null) draft.text = picked;
+                    },
+                    icon: const Icon(Icons.drafts_outlined, size: 18),
+                    label: Text('Use a saved draft (${saved.length})'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              TextField(
+                controller: draft,
+                autofocus: true,
+                minLines: 4,
+                maxLines: 10,
+                maxLength: fill.maxLength > 0 ? fill.maxLength : null,
+                decoration: const InputDecoration(
+                  helperText: 'Write, paste or pick the text you approve. It goes into the box as it is.',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
           ),
         ),
         actions: [
@@ -421,7 +445,8 @@ Future<void> fillOnPage(BuildContext context, WidgetRef ref, SiteBrowser browser
       ),
     );
     if (go != true || !context.mounted) return;
-    final problem = await engine.apply(plan, browser.fillTextBox);
+    // Through mutate, so the synced count is queued for the other devices.
+    final problem = await ref.mutate((_) => engine.apply(plan, browser.fillTextBox));
     ref.invalidate(recipeUsageProvider);
     if (!context.mounted) return;
     showMessage(context, problem ?? 'Filled in. Check it on the page and press Send yourself.');
@@ -429,3 +454,35 @@ Future<void> fillOnPage(BuildContext context, WidgetRef ref, SiteBrowser browser
     draft.dispose();
   }
 }
+
+/// The saved drafts to choose from, newest first; the chosen text, or null.
+/// A draft longer than the box says so (it would be cut in the dry run).
+Future<String?> _pickSavedDraft(
+  BuildContext context,
+  List<FillDraft> drafts, {
+  int maxLength = 0,
+}) => showDialog<String>(
+  context: context,
+  builder: (context) => SimpleDialog(
+    title: const Text('Use a saved draft'),
+    children: [
+      for (final d in drafts)
+        SimpleDialogOption(
+          onPressed: () => Navigator.pop(context, d.text),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(d.label, style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                '${d.from}${d.at.length >= 10 ? ' · ${d.at.substring(0, 10)}' : ''} · ${d.text.length} characters'
+                '${maxLength > 0 && d.text.length > maxLength ? ' (longer than the box\'s $maxLength)' : ''}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 4),
+              Text(d.text, maxLines: 3, overflow: TextOverflow.ellipsis),
+            ],
+          ),
+        ),
+    ],
+  ),
+);

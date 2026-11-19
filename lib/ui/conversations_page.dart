@@ -8,6 +8,7 @@ import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/conversations.dart';
 import '../domain/countries.dart';
+import '../domain/fill_drafts.dart';
 import '../domain/humanizer.dart';
 import '../domain/pipeline.dart';
 import 'accounts_page.dart';
@@ -1065,7 +1066,18 @@ class _ComposerState extends ConsumerState<Composer> {
       ),
     );
     if (d == null || !mounted) return;
-    setState(() => text.text = humanize(d.message).text);
+    final draft = humanize(d.message).text;
+    setState(() => text.text = draft);
+    // Kept so a text-box fill in Udyoga's browser can start from it.
+    await ref.mutate(
+      (s) => s.book.keepDraft(
+        kind: first ? 'intro' : 'conversation',
+        ref: first ? l.id : thread.id,
+        to: l.name,
+        text: draft,
+        at: nowLocal(),
+      ),
+    );
   }
 }
 
