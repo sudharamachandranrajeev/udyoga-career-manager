@@ -34,8 +34,10 @@ Each recipe has one **mode**:
   target box and today's count against the cap. Nothing happens until you
   confirm.
 - **Daily caps.** Every recipe has a `dailyCap`. LinkedIn fills are capped
-  at **15 a day**, even if a recipe asks for more. Fill counts sync between
-  your devices, so the cap holds for your account, not for each device.
+  at **15 a day in all**: every recipe whose site is linkedin.com shares
+  those 15, and each recipe's own cap still applies. Fill counts sync between
+  your devices, so the caps hold for your account, not for each device.
+  Counts older than 7 days are deleted.
 - **Strict checking.** A file with an unknown field, an unknown mode, or a
   missing `rate` or `dailyCap` is refused as a whole.
 

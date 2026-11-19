@@ -502,6 +502,117 @@ void main() {
       expect(await AssistFill(book.db, clock: () => now).used(r), 9);
     });
 
+    test('LinkedIn recipes share one ceiling of 15 a day, synced, on top of each cap', () async {
+      Recipe li(String id, int cap) => Recipe.fromJson({
+        ...fillRecipe(site: 'www.linkedin.com', cap: cap),
+        'id': id,
+        'rate': 1,
+        'urlPatterns': ['https://www.linkedin.com/in/*'],
+      });
+      final notes = li('li-notes', 10), messages = li('li-messages', 10);
+      final other = Recipe.fromJson({...fillRecipe(cap: 30), 'id': 'other-site', 'rate': 1});
+      const page = 'https://www.linkedin.com/in/someone-example';
+      Future<Object?> box(String _, String _) async => '{"ok":true}';
+      final laptop = AssistFill(book.db, clock: () => now, book: book);
+      Future<String?> fillOnce(AssistFill f, Recipe r, {String url = page}) async {
+        now = now.add(const Duration(seconds: 2));
+        return f.apply(await f.plan(r, pageUrl: url, draft: 'Hi'), box);
+      }
+
+      // 10 notes reach that recipe's own cap.
+      for (var i = 0; i < 10; i++) {
+        expect(await fillOnce(laptop, notes), isNull);
+      }
+      expect(await fillOnce(laptop, notes), contains('limit of 10'));
+      // Another site's recipe is not part of the LinkedIn count.
+      for (var i = 0; i < 3; i++) {
+        expect(await fillOnce(laptop, other, url: 'https://jobs.example.org/messages/1'), isNull);
+      }
+      expect(await book.pref<int>(syncedLinkedInFillsKey('2026-11-19'), 0), 10);
+
+      // The messages recipe has 10 of its own, but only 5 left in all.
+      final plan = await laptop.plan(messages, pageUrl: page, draft: 'Hi');
+      expect((plan.used, plan.cap, plan.linkedInUsed, plan.left), (0, 10, 10, 5));
+      for (var i = 0; i < 2; i++) {
+        expect(await fillOnce(laptop, messages), isNull);
+      }
+
+      // The phone gets the synced counts and stops at 15 in all.
+      final phone = CareerBook(await Store.open(memoryDatabase()));
+      for (final key in [syncedLinkedInFillsKey('2026-11-19'), syncedFillsKey('li-messages', '2026-11-19')]) {
+        await phone.setPref(key, await book.pref<int>(key, 0));
+      }
+      final fill = AssistFill(phone.db, clock: () => now, book: phone);
+      var made = 0;
+      for (var i = 0; i < 6; i++) {
+        if (await fillOnce(fill, messages) == null) made++;
+      }
+      expect(made, 3, reason: '15 LinkedIn fills in all, whatever recipe or device');
+      final over = await fill.plan(messages, pageUrl: page, draft: 'Hi');
+      expect(over.ready, isFalse);
+      expect(over.problems.single, contains('all recipes together'));
+      expect(over.left, 0);
+      expect(await phone.pref<int>(syncedLinkedInFillsKey('2026-11-19'), 0), 15);
+      expect(await phone.pref<int>(syncedFillsKey('li-messages', '2026-11-19'), 0), 5);
+
+      // A plan made before the other device used the last fill is refused.
+      final stale = AssistFill(book.db, clock: () => now, book: book);
+      final early = await stale.plan(messages, pageUrl: page, draft: 'Hi');
+      expect(early.ready, isTrue);
+      await book.setPref(syncedLinkedInFillsKey('2026-11-19'), 15);
+      expect(await stale.apply(early, box), contains('all recipes together'));
+
+      // A non-LinkedIn plan carries no combined count.
+      expect(
+        (await laptop.plan(other, pageUrl: 'https://jobs.example.org/messages/1', draft: 'Hi')).linkedInUsed,
+        isNull,
+      );
+    });
+
+    test('synced fill counts older than 7 days are pruned on a fill and on demand', () async {
+      String key(String id, String day) => syncedFillsKey(id, day);
+      for (final day in ['2026-11-01', '2026-11-11', '2026-11-12', '2026-11-18']) {
+        await book.setPref(key('example-message', day), 3);
+        await book.setPref(syncedLinkedInFillsKey(day), 3);
+      }
+      await book.setPref('udyoga.recipe.fills.example-message.notadate', 1);
+      await book.setPref('udyoga.other.2026-01-01', 1);
+
+      final fill = AssistFill(book.db, clock: () => now, book: book);
+      final r = Recipe.fromJson({...fillRecipe(), 'rate': 1});
+      expect(
+        await fill.apply(
+          await fill.plan(r, pageUrl: 'https://jobs.example.org/messages/1', draft: 'Hi'),
+          (_, _) async => '{"ok":true}',
+        ),
+        isNull,
+      );
+      // 2026-11-19 minus 7 days is 2026-11-12: that day and later stay.
+      for (final day in ['2026-11-01', '2026-11-11']) {
+        expect(await book.pref<int>(key('example-message', day), -1), -1, reason: day);
+        expect(await book.pref<int>(syncedLinkedInFillsKey(day), -1), -1, reason: day);
+      }
+      for (final day in ['2026-11-12', '2026-11-18']) {
+        expect(await book.pref<int>(key('example-message', day), -1), 3, reason: day);
+      }
+      expect(await book.pref<int>(key('example-message', '2026-11-19'), 0), 1);
+      expect(await book.pref<int>('udyoga.recipe.fills.example-message.notadate', -1), 1);
+      expect(await book.pref<int>('udyoga.other.2026-01-01', -1), 1);
+
+      // Pruned rows are tombstones, so the deletion syncs.
+      final gone = await (book.db.select(
+        book.db.prefs,
+      )..where((p) => p.id.equals(key('example-message', '2026-11-01')))).getSingle();
+      expect(gone.deleted, isTrue);
+
+      // Eight days later, on demand (as at start-up): the 12th, 18th and
+      // 19th go too (two keys each for the 12th and 18th, one for the 19th).
+      now = now.add(const Duration(days: 8));
+      expect(await fill.pruneOldFills(), 5);
+      expect(await fill.pruneOldFills(), 0);
+      expect(await AssistFill(book.db, clock: () => now).pruneOldFills(), 0, reason: 'no book, no prune');
+    });
+
     test('saved drafts: studio notes and messages, conversation and intro drafts, newest first', () async {
       await book.saveReport(
         LinkedInTool.outreach.kind,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../ui/look.dart';
+import '../domain/assist_fill.dart';
 import '../domain/background.dart';
 import 'background.dart';
 import 'check_in_reminder.dart';
@@ -126,6 +127,11 @@ class _RootState extends ConsumerState<_Root> {
           ref.syncPostPlanReminders().ignore();
           // Android: the periodic refresh that runs while the app is closed.
           ref.syncBackground().ignore();
+          // Synced fill counts older than a week are not needed any more.
+          final s = ref.read(sessionProvider);
+          AssistFill(s.db, book: s.book).pruneOldFills().then((n) {
+            if (n > 0) ref.changed();
+          }).ignore();
         },
       ),
     ),

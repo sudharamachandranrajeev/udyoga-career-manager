@@ -413,7 +413,8 @@ Future<void> fillOnPage(BuildContext context, WidgetRef ref, SiteBrowser browser
             children: [
               Text('Text box: ${plan.target}'),
               Text(
-                'Fills today: ${plan.used} of ${plan.cap}${isLinkedIn(recipe.site) ? ' (LinkedIn: at most $linkedInDailyCeiling a day)' : ''}',
+                'Fills today: ${plan.used} of ${plan.cap}'
+                '${plan.linkedInUsed != null ? '. LinkedIn, all recipes together: ${plan.linkedInUsed} of $linkedInDailyCeiling' : ''}',
               ),
               if (plan.cut) Text('Shortened to the box\'s ${fill.maxLength} characters.'),
               const SizedBox(height: 12),

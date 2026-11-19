@@ -9,6 +9,8 @@ library;
 
 import 'dart:convert';
 
+import 'package:drift/drift.dart';
+
 import '../db/database.dart';
 import 'book.dart';
 import 'polite.dart';
@@ -19,12 +21,27 @@ import 'recipes.dart';
 /// holds across devices, not on each one.
 String syncedFillsKey(String recipeId, String day) => 'udyoga.recipe.fills.$recipeId.$day';
 
+/// The id the combined LinkedIn count is kept under. A recipe id cannot
+/// start with "_", so it never clashes with one.
+const linkedInFillsId = '_linkedin';
+
+/// Synced pref: fills made on [day] by every recipe whose site is
+/// linkedin.com, together, on any device of the account.
+String syncedLinkedInFillsKey(String day) => syncedFillsKey(linkedInFillsId, day);
+
+/// Synced fill counts are kept this many days, then pruned.
+const fillCountDays = 7;
+
+/// True when [r]'s fills count towards the combined LinkedIn ceiling.
+bool countsTowardsLinkedIn(Recipe r) => r.mode == RecipeMode.assistFill && isLinkedIn(r.site);
+
 /// What a fill would do, shown to the user before anything happens.
 class FillPlan {
   const FillPlan({
     required this.recipe,
     required this.text,
     required this.used,
+    this.linkedInUsed,
     this.problems = const [],
     this.cut = false,
   });
@@ -37,6 +54,10 @@ class FillPlan {
   /// Fills already made today with this recipe.
   final int used;
 
+  /// Fills already made today by all LinkedIn recipes together; null when
+  /// the recipe is not a LinkedIn one.
+  final int? linkedInUsed;
+
   /// Reasons it cannot go ahead (wrong page, cap reached, nothing to fill).
   final List<String> problems;
 
@@ -44,7 +65,16 @@ class FillPlan {
   final bool cut;
 
   int get cap => recipe.effectiveCap;
-  int get left => cap - used < 0 ? 0 : cap - used;
+
+  /// Fills left today: the recipe's own cap and, for LinkedIn, the
+  /// combined ceiling, whichever is lower.
+  int get left {
+    var n = cap - used;
+    final li = linkedInUsed;
+    if (li != null && linkedInDailyCeiling - li < n) n = linkedInDailyCeiling - li;
+    return n < 0 ? 0 : n;
+  }
+
   bool get ready => problems.isEmpty;
   String get target => recipe.fill!.targetSelector;
 }
@@ -63,19 +93,65 @@ class AssistFill {
 
   /// Fills made today with [recipe]: the larger of this device's count and
   /// the account's synced count.
-  Future<int> used(Recipe recipe) async {
-    final local = await DailyCounter(db, clock: _clock).used(recipe.use);
+  Future<int> used(Recipe recipe) => _used(recipe.use, syncedFillsKey(recipe.id, _today));
+
+  /// Fills made today by every LinkedIn recipe together, counted the same
+  /// way as [used].
+  Future<int> linkedInUsed() => _used(_linkedInUse, syncedLinkedInFillsKey(_today));
+
+  static const _linkedInUse = 'fill.linkedin';
+
+  Future<int> _used(String use, String syncedKey) async {
+    final local = await DailyCounter(db, clock: _clock).used(use);
     final b = book;
     if (b == null) return local;
-    final synced = await b.pref<int>(syncedFillsKey(recipe.id, _today), 0);
+    final synced = await b.pref<int>(syncedKey, 0);
     return synced > local ? synced : local;
   }
 
-  /// Counts one fill on this device and in the synced pref.
+  /// Counts one fill on this device and in the synced pref, and in the
+  /// combined LinkedIn count when it is a LinkedIn recipe.
   Future<void> _count(Recipe recipe) async {
-    final n = await used(recipe) + 1;
-    await DailyCounter(db, clock: _clock).raiseTo(recipe.use, n);
-    await book?.setPref(syncedFillsKey(recipe.id, _today), n);
+    await _raise(recipe.use, syncedFillsKey(recipe.id, _today));
+    if (countsTowardsLinkedIn(recipe)) await _raise(_linkedInUse, syncedLinkedInFillsKey(_today));
+  }
+
+  Future<void> _raise(String use, String syncedKey) async {
+    final n = await _used(use, syncedKey) + 1;
+    await DailyCounter(db, clock: _clock).raiseTo(use, n);
+    await book?.setPref(syncedKey, n);
+  }
+
+  /// Why [recipe] cannot fill again today, or null if it can.
+  Future<String?> _capProblem(Recipe recipe) async {
+    if (await used(recipe) >= recipe.effectiveCap) {
+      return 'Today\'s limit of ${recipe.effectiveCap} for ${recipe.title} is used up. It resets tomorrow.';
+    }
+    if (countsTowardsLinkedIn(recipe) && await linkedInUsed() >= linkedInDailyCeiling) {
+      return 'Today\'s limit of $linkedInDailyCeiling LinkedIn fills, all recipes together, is used up. '
+          'It resets tomorrow.';
+    }
+    return null;
+  }
+
+  /// Tombstones the synced fill counts older than [fillCountDays] days, so
+  /// the prefs table does not grow a row per recipe per day for ever.
+  /// Returns how many it removed. Needs [book]; without it, does nothing.
+  Future<int> pruneOldFills() async {
+    final b = book;
+    if (b == null) return 0;
+    final cutoff = _clock().subtract(const Duration(days: fillCountDays)).toIso8601String().substring(0, 10);
+    final rows = await (db.select(
+      db.prefs,
+    )..where((p) => p.id.like('udyoga.recipe.fills.%') & p.deleted.equals(false))).get();
+    var removed = 0;
+    for (final r in rows) {
+      final day = r.id.substring(r.id.lastIndexOf('.') + 1);
+      if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(day) || day.compareTo(cutoff) >= 0) continue;
+      await b.remove(db.prefs, r.id);
+      removed++;
+    }
+    return removed;
   }
 
   /// The dry run: the text [recipe] would put on [pageUrl], from the
@@ -108,17 +184,22 @@ class AssistFill {
       cut = true;
     }
     final used = await this.used(recipe);
-    if (used >= recipe.effectiveCap) {
-      problems.add(
-        'Today\'s limit of ${recipe.effectiveCap} for ${recipe.title} is used up. It resets tomorrow.',
-      );
-    }
+    final linkedIn = countsTowardsLinkedIn(recipe) ? await linkedInUsed() : null;
+    final capped = await _capProblem(recipe);
+    if (capped != null) problems.add(capped);
     final last = DateTime.tryParse(await db.localSetting(_lastKey(recipe)) ?? '');
     if (last != null && _clock().difference(last) < recipe.gap) {
       final wait = recipe.gap - _clock().difference(last);
       problems.add('Wait ${wait.inSeconds + 1} seconds between fills on ${recipe.title}.');
     }
-    return FillPlan(recipe: recipe, text: text, used: used, problems: problems, cut: cut);
+    return FillPlan(
+      recipe: recipe,
+      text: text,
+      used: used,
+      linkedInUsed: linkedIn,
+      problems: problems,
+      cut: cut,
+    );
   }
 
   /// Fills the box through [fillTextBox] (the browser's one fill call,
@@ -131,11 +212,13 @@ class AssistFill {
     if (!plan.ready) return plan.problems.first;
     // The cap is checked again: a plan can be stale, and another device
     // may have filled since.
-    if (await used(plan.recipe) >= plan.cap) return 'Today\'s limit is used up.';
+    final capped = await _capProblem(plan.recipe);
+    if (capped != null) return capped;
     final reply = _decode(await fillTextBox(plan.target, plan.text));
     if (reply['ok'] != true) return '${reply['reason'] ?? 'The page did not take the text.'}';
     await _count(plan.recipe);
     await db.setLocalSetting(_lastKey(plan.recipe), _clock().toIso8601String());
+    await pruneOldFills();
     return null;
   }
 
