@@ -12,6 +12,11 @@
 - Adzuna jobs show "Jobs by Adzuna"; Settings explains that the free tier is for evaluation under Adzuna's terms.
 - Saved reports are pruned past a cap; a bad reply from a job site is told apart from "not reachable".
 
+- Explore (new tab under Jobs): every country screened against your passports, rights to work, languages, job codes and pay, as Ready, Possible, Later or Blocked, each with its reasons and blockers. Country pages show each route's pay thresholds and requirements with the source and the day it was read (unverified ones say so): UK Skilled Worker and Health and Care with the SOC 2020 going rates and the Temporary Shortage List cut-off, Ireland's employment permits, the EU Blue Card in Germany and the Netherlands, Singapore's Employment Pass, Canada's latest Express Entry rounds, and basics for Australia, New Zealand and the Gulf states. The UK table and the Canadian rounds refresh from GOV.UK and IRCC.
+- Your job titles are coded as UK SOC 2020 (from the ONS coding index) and ISCO-08 (from ESCO), with the UK pay floor for each code.
+- AI avenue assessment per country (live adverts, pay against living costs, the route, blockers, pushback and a confidence) and a prep plan timed to your right-to-work end date, with a qualification planner. Plan steps become to-dos or go to Vidya as their own study plan.
+- Route tracks: work several routes side by side, each with a trigger and dated milestones; milestones can become to-dos and show on Today when due.
+
 - Send to Vidya (Coach page): when Udyoga and Vidya sync with the same account, the study plan goes straight into Vidya, and what you finish there shows on the Coach card with *Add to my profile*. Saving or copying the plan still works without sync.
 - Sync: *Change server address* follows your sync server to another computer without signing in again; edits that clashed with another device's are kept for you to bring back; the Sync card shows changes waiting to send.
 
