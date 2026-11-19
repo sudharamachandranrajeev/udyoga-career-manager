@@ -163,8 +163,12 @@ FitFactor _location(CandidateProfile p, JobFacts j) {
   if (wanted.isNotEmpty && !wanted.contains(j.country)) {
     return FitFactor('Location', 15, j.remote ? 0.5 : 0, '${Country.nameOf(j.country)} is not on your list');
   }
-  // In a wanted country: the home town list narrows it further.
-  final places = j.country == p.country ? p.targets.locations : const <String>[];
+  // In a wanted country: the home areas (and their commute towns) narrow
+  // it further.
+  final places = [
+    for (final a in p.targets.homeAreas)
+      if ((a.country.isEmpty ? p.country : a.country) == j.country) ...a.towns,
+  ];
   if (places.isEmpty || j.location.isEmpty) {
     return FitFactor('Location', 15, 1, 'In ${Country.nameOf(j.country)}');
   }

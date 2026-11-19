@@ -1,0 +1,70 @@
+{
+ "version": "1.0",
+ "title": "Stillingsfeeden fra arbeidsplassen.no",
+ "feed_url": "/api/v1/feed/94c23890-2ce8-4931-a0fb-10b89e895a4a",
+ "next_url": "/api/v1/feed/770fdc10-0b91-432a-921a-3744755a5065",
+ "id": "94c23890-2ce8-4931-a0fb-10b89e895a4a",
+ "next_id": "770fdc10-0b91-432a-921a-3744755a5065",
+ "items": [
+  {
+   "id": "d7959d14-6a62-4b8f-b475-daeeedb2177e",
+   "url": "/api/v1/feedentry/d7959d14-6a62-4b8f-b475-daeeedb2177e",
+   "title": "Vi søker motivert og effektiv Renholder",
+   "content_text": "Stillingsannonse",
+   "date_modified": "2026-11-18T18:49:41.142592+01:00",
+   "_feed_entry": {
+    "uuid": "d7959d14-6a62-4b8f-b475-daeeedb2177e",
+    "status": "ACTIVE",
+    "title": "Vi søker motivert og effektiv Renholder",
+    "businessName": "Burger King Norge",
+    "municipal": "TRONDHEIM",
+    "sistEndret": "2026-11-18T18:49:41.142592+01:00"
+   }
+  },
+  {
+   "id": "0baf3e25-3c8e-442f-9980-090c4df8df9d",
+   "url": "/api/v1/feedentry/0baf3e25-3c8e-442f-9980-090c4df8df9d",
+   "title": "Brenner du for gode gjesteopplevelser?",
+   "content_text": "Stillingsannonse",
+   "date_modified": "2026-11-18T18:49:41.158033+01:00",
+   "_feed_entry": {
+    "uuid": "0baf3e25-3c8e-442f-9980-090c4df8df9d",
+    "status": "ACTIVE",
+    "title": "Brenner du for gode gjesteopplevelser?",
+    "businessName": "Burger King Norge",
+    "municipal": "TØNSBERG",
+    "sistEndret": "2026-11-18T18:49:41.158033+01:00"
+   }
+  },
+  {
+   "id": "d4f0318d-e64c-4f9c-b7f4-eebf45b0dece",
+   "url": "/api/v1/feedentry/d4f0318d-e64c-4f9c-b7f4-eebf45b0dece",
+   "title": "Sykepleiere 100% faste stillinger",
+   "content_text": "Stillingsannonse",
+   "date_modified": "2026-11-18T20:54:11.280911+01:00",
+   "_feed_entry": {
+    "uuid": "d4f0318d-e64c-4f9c-b7f4-eebf45b0dece",
+    "status": "ACTIVE",
+    "title": "Sykepleiere 100% faste stillinger",
+    "businessName": "Selbu kommune Selbu sykehjem",
+    "municipal": "SELBU",
+    "sistEndret": "2026-11-18T20:54:11.280911+01:00"
+   }
+  },
+  {
+   "id": "a4e399fc-b195-4a78-90ee-77aefa6d61bb",
+   "url": "/api/v1/feedentry/a4e399fc-b195-4a78-90ee-77aefa6d61bb",
+   "title": "...",
+   "content_text": "Stillingsannonse",
+   "date_modified": "2026-11-18T19:51:40.850394+01:00",
+   "_feed_entry": {
+    "uuid": "a4e399fc-b195-4a78-90ee-77aefa6d61bb",
+    "status": "INACTIVE",
+    "title": "...",
+    "businessName": "",
+    "municipal": "BERGEN",
+    "sistEndret": "2026-11-18T19:51:40.850394+01:00"
+   }
+  }
+ ]
+}

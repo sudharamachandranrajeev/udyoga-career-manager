@@ -1,0 +1,38 @@
+{
+ "LanguageCode": "EN",
+ "SearchResult": {
+  "SearchResultCount": 1,
+  "SearchResultCountAll": 1,
+  "SearchResultItems": [
+   {
+    "MatchedObjectId": "21947200",
+    "MatchedObjectDescriptor": {
+     "PositionID": "SW62210-05-1716110PB411413H",
+     "PositionTitle": "IT SPECIALIST (INFOSEC/NETWORK)",
+     "PositionURI": "https://www.usajobs.gov/GetJob/ViewDetails/21947200",
+     "ApplyURI": [
+      "https://www.usajobs.gov/GetJob/ViewDetails/21947200?PostingChannelID=RESTAPI"
+     ],
+     "PositionLocationDisplay": "Point Loma Complex, San Diego, California",
+     "OrganizationName": "Space and Naval Warfare Systems Command",
+     "DepartmentName": "Department of the Navy",
+     "PositionRemuneration": [
+      {
+       "MinimumRange": "92108",
+       "MaximumRange": "119746",
+       "RateIntervalCode": "PA",
+       "Description": "Per Year"
+      }
+     ],
+     "PublicationStartDate": "2016-06-05T00:00:00Z",
+     "ApplicationCloseDate": "2016-12-01T00:00:00Z",
+     "UserArea": {
+      "Details": {
+       "JobSummary": "..."
+      }
+     }
+    }
+   }
+  ]
+ }
+}

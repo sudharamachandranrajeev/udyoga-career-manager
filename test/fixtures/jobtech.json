@@ -1,0 +1,55 @@
+{
+ "total": {
+  "value": 2465
+ },
+ "hits": [
+  {
+   "id": "31754003",
+   "webpage_url": "https://arbetsformedlingen.se/platsbanken/annonser/31754003",
+   "headline": "Sjuksköterska",
+   "application_deadline": "2026-12-03T23:59:59",
+   "description": {
+    "text": "Närvårdsavdelningen Tierp Älvkarleby\r\n\r\nVåra 1800 medarbetare arbetar med nära vård och hälsa i Uppsala län. Vi har ett brett utbud av tjänster inom första linjens vård. Våra patienter möter oss på Region Uppsalas egna vårdcentraler eller inom habilitering och vi ger råd på telefon via 1177. Utbildn"
+   },
+   "salary_description": null,
+   "employer": {
+    "name": "REGION UPPSALA",
+    "workplace": "Region Uppsala"
+   },
+   "application_details": {
+    "url": "https://lul.powerinit.com/Modules/Recruitments/Public/?JobPositionId=56260&RefNo=NVH407%2f2026"
+   },
+   "workplace_address": {
+    "municipality": "Tierp",
+    "region": "Uppsala län",
+    "country": "Sverige"
+   },
+   "publication_date": "2026-11-19T16:01:12",
+   "removed": false
+  },
+  {
+   "id": "31753828",
+   "webpage_url": "https://arbetsformedlingen.se/platsbanken/annonser/31753828",
+   "headline": "Sjuksköterska",
+   "application_deadline": "2026-12-03T23:59:59",
+   "description": {
+    "text": "Ofelia Vård AB är tillsammans med Skandinavisk Hälsovård, Svensk Närsjukvård, Doc Care, HLR Landslaget och Linguacom, en del av Skandinavisk Hälsovård Group.\n\nVi söker för kunds räkning sjuksköterska.\n\nUppdraget gäller från 23 jan 2027 och löpande.\n\nOfelia Vård är ett auktoriserat bemanningsföretag "
+   },
+   "salary_description": null,
+   "employer": {
+    "name": "Ofelia Vård AB",
+    "workplace": "Mottagning"
+   },
+   "application_details": {
+    "url": null
+   },
+   "workplace_address": {
+    "municipality": "Motala",
+    "region": "Östergötlands län",
+    "country": "Sverige"
+   },
+   "publication_date": "2026-11-19T15:41:18",
+   "removed": false
+  }
+ ]
+}

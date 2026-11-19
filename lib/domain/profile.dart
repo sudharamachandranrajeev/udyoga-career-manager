@@ -69,6 +69,65 @@ class Education {
   });
 }
 
+/// A home area to search around: a town, how far out (miles; null: the
+/// job site's own default) and the towns within a train commute, which
+/// count as local too.
+class HomeArea {
+  const HomeArea({required this.place, this.radiusMiles, this.commuteTowns = const [], this.country = ''});
+  final String place;
+  final int? radiusMiles;
+  final List<String> commuteTowns;
+
+  /// ISO alpha-2; '' is the candidate's own country.
+  final String country;
+
+  /// The place and its commute towns.
+  List<String> get towns => [place, ...commuteTowns];
+
+  factory HomeArea.fromJson(Json j) => HomeArea(
+    place: str(j['place']).isNotEmpty ? str(j['place']) : str(j['name']),
+    radiusMiles: switch (intOf(j['radiusMiles'])) {
+      final v? when v > 0 => v,
+      _ => null,
+    },
+    commuteTowns: strs(j['commuteTowns'] ?? j['commute']),
+    country: str(j['country']).toUpperCase(),
+  );
+
+  Json toJson() => {
+    'place': place,
+    'radiusMiles': radiusMiles,
+    'commuteTowns': commuteTowns,
+    if (country.isNotEmpty) 'country': country,
+  };
+
+  /// "Exampletown | 20 | Sampleby, Testford": the place, then optionally the miles
+  /// and the commute towns. Null for a blank line.
+  static HomeArea? parse(String line) {
+    final parts = line.split('|').map((x) => x.trim()).toList();
+    if (parts.first.isEmpty) return null;
+    return HomeArea(
+      place: parts.first,
+      radiusMiles: parts.length > 1
+          ? switch (intOf(parts[1])) {
+              final v? when v > 0 => v,
+              _ => null,
+            }
+          : null,
+      commuteTowns: parts.length > 2
+          ? parts[2].split(',').map((x) => x.trim()).where((x) => x.isNotEmpty).toList()
+          : const [],
+    );
+  }
+
+  /// The line [parse] reads back.
+  String get line => [
+    place,
+    if (radiusMiles != null || commuteTowns.isNotEmpty) radiusMiles?.toString() ?? '',
+    if (commuteTowns.isNotEmpty) commuteTowns.join(', '),
+  ].join(' | ');
+}
+
 /// What the candidate is looking for.
 class Targets {
   const Targets({
@@ -81,6 +140,8 @@ class Targets {
     this.salaryCurrency = '',
     this.notes = '',
     this.exclusions = const [],
+    this.areas = const [],
+    this.radiusMiles,
   });
 
   /// Job titles to aim for.
@@ -107,7 +168,29 @@ class Targets {
   /// says one (as a whole word) is never shown or scored. A hard rule.
   final List<String> exclusions;
 
+  /// Home areas with a radius and commute towns. Empty: each of
+  /// [locations] is an area with the default [radiusMiles].
+  final List<HomeArea> areas;
+
+  /// How far around a place to search when its area does not say.
+  final int? radiusMiles;
+
   bool get remote => workModes.contains('remote');
+
+  /// The areas to search, one per place.
+  List<HomeArea> get homeAreas => areas.isNotEmpty
+      ? [
+          for (final a in areas)
+            a.radiusMiles == null && radiusMiles != null
+                ? HomeArea(
+                    place: a.place,
+                    radiusMiles: radiusMiles,
+                    commuteTowns: a.commuteTowns,
+                    country: a.country,
+                  )
+                : a,
+        ]
+      : [for (final l in locations) HomeArea(place: l, radiusMiles: radiusMiles)];
 
   factory Targets.fromJson(Json j) => Targets(
     roles: strs(j['roles']),
@@ -122,6 +205,11 @@ class Targets {
     salaryCurrency: str(j['salaryCurrency']),
     notes: str(j['notes']),
     exclusions: strs(j['exclusions']),
+    areas: objs(j['areas']).map(HomeArea.fromJson).where((a) => a.place.isNotEmpty).toList(),
+    radiusMiles: switch (intOf(j['radiusMiles'])) {
+      final v? when v > 0 => v,
+      _ => null,
+    },
   );
 
   Json toJson() => {
@@ -134,6 +222,8 @@ class Targets {
     'salaryCurrency': salaryCurrency,
     'notes': notes,
     'exclusions': exclusions,
+    if (areas.isNotEmpty) 'areas': [for (final a in areas) a.toJson()],
+    if (radiusMiles != null) 'radiusMiles': radiusMiles,
   };
 
   Targets copyWith({
@@ -147,6 +237,8 @@ class Targets {
     String? salaryCurrency,
     String? notes,
     List<String>? exclusions,
+    List<HomeArea>? areas,
+    int? radiusMiles,
   }) => Targets(
     roles: roles ?? this.roles,
     keywords: keywords ?? this.keywords,
@@ -157,6 +249,8 @@ class Targets {
     salaryCurrency: salaryCurrency ?? this.salaryCurrency,
     notes: notes ?? this.notes,
     exclusions: exclusions ?? this.exclusions,
+    areas: areas ?? this.areas,
+    radiusMiles: radiusMiles ?? this.radiusMiles,
   );
 }
 

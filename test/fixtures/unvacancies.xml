@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Latest UN Jobs - unvacancies</title>
+    <link>https://unvacancies.org/</link>
+    <atom:link href="https://unvacancies.org/feed.xml" rel="self" type="application/rss+xml" />
+    <description>Newest United Nations jobs and vacancies discovered by unvacancies.</description>
+    <language>en</language>
+    <lastBuildDate>Thu, 19 Nov 2026 00:00:00 GMT</lastBuildDate>
+    <ttl>60</ttl>
+    <item>
+      <title>Human Rights Officer</title>
+      <link>https://unvacancies.org/jobs/human-rights-officer-R-288019</link>
+      <guid isPermaLink="true">https://unvacancies.org/jobs/human-rights-officer-R-288019</guid>
+      <pubDate>Thu, 19 Nov 2026 00:00:00 GMT</pubDate>
+      <description>Within delegated authority, the Human Rights Officer will be responsible for the following duties:</description>
+      <category>OHCHR</category>
+    </item>
+    <item>
+      <title>Asistente de investigación sobre asuntos productivos, de comercio exterior, empleo y salarios de la Argentina.</title>
+      <link>https://unvacancies.org/jobs/asistente-de-investigacion-sobre-asuntos-productivos-de-comercio-exterior-empleo-y-salarios-de-la-ar-C-288367</link>
+      <guid isPermaLink="true">https://unvacancies.org/jobs/asistente-de-investigacion-sobre-asuntos-productivos-de-comercio-exterior-empleo-y-salarios-de-la-ar-C-288367</guid>
+      <pubDate>Thu, 19 Nov 2026 00:00:00 GMT</pubDate>
+      <description>Bajo la supervisión del director de la Oficina de la CEPAL en Argentina y la coordinación de su equipo, el/la asistente desarrollará las siguientes actividades de apoyo:</description>
+      <category>ECLAC</category>
+    </item>
+    <item>
+      <title>Cataloguer</title>
+      <link>https://unvacancies.org/jobs/cataloguer-N-288526</link>
+      <guid isPermaLink="true">https://unvacancies.org/jobs/cataloguer-N-288526</guid>
+      <pubDate>Thu, 19 Nov 2026 00:00:00 GMT</pubDate>
+      <description>Under the overall supervision of the Chief, Research Services Unit, Library &amp; Archives, United Nations Office at Geneva, the Library Cataloguer will be responsible for the following duties:</description>
+      <category>United Nations Secretariat</category>
+    </item>
+  </channel>
+</rss>

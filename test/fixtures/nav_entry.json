@@ -1,0 +1,53 @@
+{
+ "uuid": "d4f0318d-e64c-4f9c-b7f4-eebf45b0dece",
+ "ad_content": {
+  "uuid": "d4f0318d-e64c-4f9c-b7f4-eebf45b0dece",
+  "published": "2026-11-18T00:00:00+01:00",
+  "expires": "2026-12-06T00:00:00+01:00",
+  "updated": "2026-11-19T09:33:38.254921+01:00",
+  "workLocations": [
+   {
+    "country": "NORGE",
+    "address": "Nestansringen 20",
+    "city": "SELBU",
+    "postalCode": "7580",
+    "county": "TRØNDELAG",
+    "municipal": "SELBU"
+   }
+  ],
+  "title": "Sykepleiere 100% faste stillinger",
+  "description": "<p>Vi trenger flere dyktige og positive kolleger. Ved Selbu sykehjem er det 3 ledige 100% faste stillinger for sykepleiere. For 2 av stillingene er det ønskelig med interesse for geriatri/demens.  </p</p>",
+  "sourceurl": "",
+  "source": "IMPORTAPI",
+  "applicationUrl": "https://selbu.easycruit.com/vacancy/application/3679423/240341?channel=NavRest&iso=no",
+  "applicationDue": "2026-12-06T00:00:00",
+  "occupationCategories": [
+   {
+    "level1": "Helse og sosial",
+    "level2": "Sykepleier"
+   }
+  ],
+  "categoryList": [
+   {
+    "categoryType": "ESCO",
+    "code": "http://data.europa.eu/esco/occupation/8d3e8aaa-791b-4c75-a465-f3f827028f50",
+    "name": "Sykepleier",
+    "description": "",
+    "score": 1.0
+   }
+  ],
+  "jobtitle": "Sykepleiere 100% faste stillinger",
+  "link": "https://arbeidsplassen.nav.no/stillinger/stilling/d4f0318d-e64c-4f9c-b7f4-eebf45b0dece",
+  "employer": {
+   "name": "Selbu kommune Selbu sykehjem",
+   "orgnr": "974030713"
+  },
+  "engagementtype": "Fast",
+  "extent": "Heltid",
+  "starttime": "",
+  "positioncount": "3",
+  "sector": "Offentlig"
+ },
+ "sistEndret": "2026-11-19T09:33:38.254+01:00",
+ "status": "ACTIVE"
+}
