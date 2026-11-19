@@ -7,6 +7,7 @@ import 'book.dart';
 import 'employers.dart';
 import 'feeds.dart';
 import 'json.dart';
+import 'polite.dart';
 import 'profile.dart';
 import 'work_rights.dart';
 
@@ -153,6 +154,54 @@ List<Posting> jobPostingsIn(String html, {required String pageUrl, String employ
     }
   }
   return out;
+}
+
+/// A schema.org JobPosting object as a posting, or null without a title.
+Posting? jobPostingFromLd(Json j, {required String pageUrl, String employer = ''}) =>
+    _jobPosting(j, pageUrl: pageUrl, employer: employer);
+
+/// The JSON-LD script bodies in [html].
+List<String> ldScriptsIn(String html) => [
+  for (final m in RegExp(
+    r'''<script[^>]*type\s*=\s*["']application/ld\+json["'][^>]*>(.*?)</script>''',
+    caseSensitive: false,
+    dotAll: true,
+  ).allMatches(html))
+    m[1]!.trim(),
+];
+
+/// Every typed object in JSON-LD [scripts]: top-level ones, those in an
+/// @graph, and the items of an ItemList. Scripts that do not parse are
+/// skipped.
+List<Json> ldObjects(Iterable<String> scripts) {
+  final out = <Json>[];
+  void visit(Object? v) {
+    if (v is List) {
+      v.forEach(visit);
+      return;
+    }
+    if (v is! Map) return;
+    final j = v.cast<String, Object?>();
+    if (j['@type'] != null) out.add(j);
+    visit(j['@graph']);
+    visit(j['itemListElement']);
+    if (ldTypes(j).contains('ListItem')) visit(j['item']);
+  }
+
+  for (final s in scripts) {
+    try {
+      visit(jsonDecode(s));
+    } on FormatException {
+      continue;
+    }
+  }
+  return out;
+}
+
+/// The @type of a JSON-LD object, as a list.
+List<String> ldTypes(Json j) {
+  final t = j['@type'];
+  return t is List ? [for (final x in t) str(x)] : [str(t)];
 }
 
 Posting? _jobPosting(Json j, {required String pageUrl, required String employer}) {
@@ -439,7 +488,7 @@ class EmployerWatch {
   final http.Client client;
   final DateTime Function() _clock;
 
-  static const pageEvery = Duration(days: 1), robotsEvery = Duration(days: 7);
+  static const pageEvery = Duration(days: 1);
 
   Future<WatchResult> run(CandidateProfile p, List<WatchedEmployer> watched) async {
     final out = WatchResult();
@@ -507,41 +556,9 @@ class EmployerWatch {
   }
 
   /// The careers page at [url]; throws when robots.txt asks not to read it.
-  Future<String> _page(String url) async {
-    final db = book.db;
-    final now = _clock();
-    final uri = Uri.parse(url);
-    if (!robotsAllows(await _robots(uri), uri.path.isEmpty ? '/' : uri.path)) {
-      throw FeedException('its robots.txt asks programs not to read ${uri.path}');
-    }
-    final r = await client
-        .get(uri, headers: {'user-agent': politeAgent, 'accept': 'text/html'})
-        .timeout(const Duration(seconds: 30));
-    await db.setLocalSetting(WatchKeys.page(url), now.toIso8601String());
-    if (r.statusCode == 403 || r.statusCode == 429) throw FeedException('the site turned Udyoga away');
-    if (r.statusCode != 200) throw FeedException('error ${r.statusCode}');
-    return utf8.decode(r.bodyBytes, allowMalformed: true);
-  }
-
-  /// The site's robots.txt, from the week's copy when there is one.
-  Future<String> _robots(Uri page) async {
-    final key = WatchKeys.robots(page.host);
-    final cached = decodeObject(await book.db.localSetting(key) ?? '');
-    final at = DateTime.tryParse(str(cached['at']));
-    if (at != null && _clock().difference(at) < robotsEvery) return str(cached['text']);
-    final r = await client
-        .get(
-          Uri(scheme: page.scheme, host: page.host, port: page.port, path: '/robots.txt'),
-          headers: {'user-agent': politeAgent},
-        )
-        .timeout(const Duration(seconds: 30));
-    // No robots.txt (404) allows everything; any other failure is read as
-    // "not now".
-    if (r.statusCode != 200 && r.statusCode != 404) {
-      throw FeedException('robots.txt answered ${r.statusCode}');
-    }
-    final text = r.statusCode == 200 ? utf8.decode(r.bodyBytes, allowMalformed: true) : '';
-    await book.db.setLocalSetting(key, jsonEncode({'at': _clock().toIso8601String(), 'text': text}));
-    return text;
-  }
+  /// The day's read is recorded once the site answers.
+  Future<String> _page(String url) => PoliteFetcher(book.db, client, clock: _clock).get(
+    Uri.parse(url),
+    onAnswer: () => book.db.setLocalSetting(WatchKeys.page(url), _clock().toIso8601String()),
+  );
 }
