@@ -148,7 +148,9 @@ void main() {
   });
 
   test('fresh word from the employer stops an application being marked No reply', () async {
-    final id = await job(nhs('b', 'Patient Services Administrator', 'Example Westmarch Health Trust', 'Westbridge'));
+    final id = await job(
+      nhs('b', 'Patient Services Administrator', 'Example Westmarch Health Trust', 'Westbridge'),
+    );
     final app = await book.applyFor(await book.job(id), today: '2026-09-01', sent: true);
     await book.logEvent(
       app,

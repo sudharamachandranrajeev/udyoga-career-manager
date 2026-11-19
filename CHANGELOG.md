@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Read this page: in Udyoga's browser (desktop and Android), one button reads the open page's text and schema.org markup into a job, a person and an employer, each shown for you to check, edit and tick before anything is kept. Pages with little text (canvas or PDF-like) can be read from a screenshot: Tesseract on Linux and Windows when you have installed it, Google ML Kit on Android only after you agree (it sends Google usage information), or your AI when its model reads images (Claude API, Gemini, Claude subscription).
+- Site recipes: JSON files in a folder you choose (Settings, Recipes) teach Udyoga one site each. Fetch recipes read jobs in the background through the politeness layer (robots.txt, a gap between requests, a daily cap, pages read once a week) and are refused for LinkedIn, Indeed and Glassdoor. Browser-read recipes read pages you open. Assist-fill recipes type a draft you approve into one text box after a dry run, never press Send or Submit, and stop at the daily cap (15 a day on LinkedIn whatever the recipe says). Udyoga ships no recipes; docs/recipes.md is the schema, with a made-up example.
+- Background refresh on Android is now off until you turn it on; Udyoga offers it once after your profile is set up.
+
 - Fit scores rebuilt: whole-word matching, skills counted as a share, pay compared only in the same currency, and location, seniority and eligibility now count. Scores update when your profile changes; the job page shows why.
 - Who can apply: Udyoga reads adverts for no sponsorship, nationals only, right to work or residence, security clearance, required languages and essential local experience, quotes the line, and weighs it against your rights to work. Exclusions you set hide jobs entirely.
 - Right to work and languages on the Profile page, with a countdown for any visa that ends and Today reminders 18, 12, 6 and 3 months before.
