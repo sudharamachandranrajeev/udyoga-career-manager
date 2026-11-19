@@ -15,6 +15,7 @@ import '../domain/subscription.dart';
 import '../domain/update.dart';
 import '../ui/accounts_page.dart';
 import '../ui/common.dart';
+import '../ui/interview_lab_page.dart';
 import 'background.dart';
 import 'check_in_reminder.dart';
 import 'page_tools.dart';
@@ -214,6 +215,7 @@ class SettingsPage extends ConsumerWidget {
               'sites) or use an AI feature (your profile and the job go to Google, Anthropic or OpenAI with your key '
               'or plan).',
         ),
+        const _DeveloperCard(),
         const AboutCard(
           description:
               'Career and job search: matched openings, tailored CVs, applications, contacts, career paths, '
@@ -508,6 +510,45 @@ class _BackgroundCard extends ConsumerWidget {
           ),
           if (status?.next case final next?)
             Text(next.isBefore(DateTime.now()) ? 'Next run: due now.' : 'Next run: about ${_when(next)}.'),
+        ],
+      ),
+    );
+  }
+}
+
+/// Developer tools, off by default and kept on this device only: the
+/// interview lab that checks the simulator's speech and camera stack.
+class _DeveloperCard extends ConsumerWidget {
+  const _DeveloperCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final on = ref.watch(devToolsProvider).value ?? false;
+    return SectionCard(
+      title: 'Developer',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Developer tools'),
+            subtitle: const Text('Test screens for features still being built. On this device only.'),
+            value: on,
+            onChanged: (v) async {
+              await ref.read(sessionProvider).db.setLocalSetting(devToolsKey, v ? 'on' : 'off');
+              ref.invalidate(devToolsProvider);
+            },
+          ),
+          if (on)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.science_outlined),
+              title: const Text('Interview lab'),
+              subtitle: const Text('Microphone, voice, transcriber and camera, all on this device.'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () =>
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InterviewLabPage())),
+            ),
         ],
       ),
     );
