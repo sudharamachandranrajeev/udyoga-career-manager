@@ -590,7 +590,8 @@ Also give the job title, the employer, and the framework this employer most like
 For each answer, score each criterion it tests (its "tests" ids) on the scale:
 - level: a code from the scale. "${scale.noEvidence.code}" when the answer has no evidence for it, or only a bare claim.
 - quote: the candidate's exact words (one sentence or part of one, copied character for character) that the level rests on; "" for "${scale.noEvidence.code}".
-Then one strength of the answer and one fix: a concrete thing to do differently next time.'''),
+Then one strength of the answer and one fix: a concrete thing to do differently in the answer next time.
+The strength and the fix never mention scores, levels, the scale or its numbers (not "move toward a 3", not "to score higher"). Say what to do, for example "Say how you knew it worked: a number, a check or feedback."'''),
       ],
       schema: scoringSchema(scale, [for (final c in criteria) c.id]),
       effort: 'medium',
@@ -632,7 +633,7 @@ Evaluate the answer as a strict, experienced panel would in today's market. Scor
 - Communication: concise, confident, right length (about two minutes), few fillers.
 - Role knowledge: understanding of the role, sector, standards and current practice.
 - AI and change readiness: awareness of how AI and new tools are changing the work, and adaptability.
-Then the overall score, what was strong, what to improve (most important first), any red flags, a better answer using only the candidate's real experience, and the follow-up a tough interviewer would ask.''',
+Then the overall score, what was strong, what to improve (most important first; each an action to take in the answer, never put in terms of the score), any red flags, a better answer using only the candidate's real experience, and the follow-up a tough interviewer would ask.''',
         ),
       ],
       schema: AnswerReview.schema,

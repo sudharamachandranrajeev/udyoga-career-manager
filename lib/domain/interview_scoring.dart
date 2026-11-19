@@ -679,11 +679,69 @@ Json scoringSchema(ScoringScale scale, List<String> criterionIds) => object({
           'quote': string('The candidate\'s exact words this rests on; "" for no evidence'),
         }),
       ),
-      'strength': string('One specific strength of this answer, about the task, not the person'),
-      'fix': string('One concrete thing to do differently next time, about the task'),
+      'strength': string('One specific strength of this answer, about the task, not the person; no scores'),
+      'fix': string(
+        'One concrete thing to do in the answer next time, about the task; never a score, level or the scale',
+      ),
     }),
   ),
 });
+
+// ---- feedback wording (plan rule 6) ----
+
+/// Talk about the scale instead of the task: "move toward a 3", "a score
+/// of 2", "level 4", "3/4", "N/O", "the top band". A fix is an action in
+/// the answer; the panel's numbers belong on the scores card only.
+/// A number followed by one of these is a count, not a score.
+const _countUnits =
+    r'(?![\s-]*(min|mins|minutes?|sec|secs|seconds?|sentences?|examples?|stories|people|staff|weeks?|days?|'
+    r'months?|years?|steps?|points? (each|with)|%|percent|words?|questions?))';
+
+final _scaleTalk = [
+  RegExp(r'\b(scores?|scored|scoring|ratings?|rated|grades?|graded|bands?|marks)\b', caseSensitive: false),
+  RegExp(r'\b(level|mark|point)s?\s+(of\s+)?(an?\s+)?(\d|N/?O\b)', caseSensitive: false),
+  RegExp(
+    r'\b(to|towards?|into|up to|reach|reaching|get|getting|achieve|earn|hit|for|worth)\s+(an?\s+)?(\d+|N/?O)\b'
+    '$_countUnits',
+    caseSensitive: false,
+  ),
+  // "a 3", "an 4": a bare number with an article is a scale point.
+  RegExp(r'\b(a|an)\s+\d+\b' '$_countUnits', caseSensitive: false),
+  RegExp(r'\b\d+\s*(/\s*\d+|out of \d+)', caseSensitive: false),
+  RegExp(r'\bN/O\b'),
+  RegExp(r'\b(anchors?|the scale|on the scale)\b', caseSensitive: false),
+];
+
+/// Whether [text] talks about scores or the scale rather than the task.
+bool mentionsScale(String text) => _scaleTalk.any((r) => r.hasMatch(text));
+
+/// [text] (a strength or a fix) with any talk of the scale taken out: a
+/// sentence that has it is cut back to the part before it when that part
+/// still reads as an action ("Add how you measured it, to move toward a 3"
+/// becomes "Add how you measured it."), and dropped otherwise. Returns ''
+/// when nothing task-level is left, so the caller uses its own wording.
+String taskLevelText(String text) {
+  final kept = <String>[];
+  for (final raw in text.trim().split(RegExp(r'(?<=[.!?])\s+'))) {
+    final s = raw.trim();
+    if (s.isEmpty) continue;
+    if (!mentionsScale(s)) {
+      kept.add(s);
+      continue;
+    }
+    final at = _scaleTalk.map((r) => r.firstMatch(s)?.start).whereType<int>().reduce((a, b) => a < b ? a : b);
+    final head = s.substring(0, at);
+    final cut = RegExp(r'(,|;|:|—| - |\bso that\b|\bso\b|\bin order to\b|\bto\b|\band\b|\bwhich\b)\s*')
+        .allMatches(head)
+        .map((m) => m.start)
+        .fold<int?>(null, (a, b) => b);
+    if (cut == null) continue;
+    final prefix = head.substring(0, cut).trim().replaceFirst(RegExp(r'[\s,;:—-]+$'), '');
+    if (prefix.split(RegExp(r'\s+')).length < 3 || mentionsScale(prefix)) continue;
+    kept.add('$prefix.');
+  }
+  return kept.join(' ');
+}
 
 /// Reads the scoring reply. Question numbers are 1-based in the request.
 List<AnswerScore> parseScoring(Json data) => [
@@ -740,7 +798,9 @@ Verified verifyScores(
       dropped += a.scores.length;
       continue;
     }
-    answers[a.question] = (strength: a.strength, fix: a.fix);
+    // No scale talk in the feedback: what is left of it, or the debrief's
+    // own task-level wording when nothing is.
+    answers[a.question] = (strength: taskLevelText(a.strength), fix: taskLevelText(a.fix));
     final allowed = asked[a.question] ?? const [];
     final done = <String>{};
     for (final s in a.scores) {

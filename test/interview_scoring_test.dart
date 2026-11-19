@@ -188,6 +188,82 @@ void main() {
     });
   });
 
+  group('feedback wording', () {
+    test('a fix that talks about scores is cut back to the action, or dropped', () {
+      // Cut back to the task-level part.
+      expect(
+        taskLevelText('Add how you measured the change, to move toward a 3.'),
+        'Add how you measured the change.',
+      );
+      expect(
+        taskLevelText('Say what you yourself did so that the panel can score you higher.'),
+        'Say what you yourself did.',
+      );
+      expect(
+        taskLevelText('Name the result. This would lift the answer from a 2 to a 3.'),
+        'Name the result.',
+      );
+      // Nothing task-level left: empty, so the debrief uses its own wording.
+      expect(taskLevelText('Aim for a 3 next time.'), '');
+      expect(taskLevelText('Move toward level 4.'), '');
+      expect(taskLevelText('This scored N/O.'), '');
+      expect(taskLevelText('3/4 is within reach.'), '');
+      // Task-level fixes with numbers that are not scores are left alone.
+      for (final ok in [
+        'Lead with the result in the first 30 seconds.',
+        'Keep the answer to 2 minutes.',
+        'Give three points, each with evidence.',
+        'Say how you knew it worked: a number, a check or feedback.',
+        'Cut the answer to 2 sentences of background.',
+      ]) {
+        expect(mentionsScale(ok), isFalse, reason: ok);
+        expect(taskLevelText(ok), ok);
+      }
+      // The app's own fixes and recovery lines pass the check.
+      for (final own in [...elementFixes.values, overTimeFix]) {
+        expect(mentionsScale(own), isFalse, reason: own);
+      }
+    });
+
+    test('scored feedback with scale talk is checked before the debrief shows it', () {
+      final scale = Framework.of('nhs_values').scale;
+      final v = verifyScores(
+        parseScoring({
+          'answers': [
+            {
+              'question': 1,
+              'scores': [
+                {'criterion': 'c1', 'level': '3', 'quote': 'I rang each patient on the list'},
+              ],
+              'strength': 'A clear example, worth a 3.',
+              'fix': 'Move toward a 4.',
+            },
+          ],
+        }),
+        scale,
+        heard: {0: fullAnswer},
+        asked: {
+          0: ['c1'],
+        },
+      );
+      expect(v.answers[0], (strength: 'A clear example.', fix: ''));
+      // The debrief falls back to its own task-level fix.
+      final d = Debrief.build(
+        framework: Framework.of('nhs_values'),
+        round: DebriefRound.of(
+          questions: questionsFromProfile(profile),
+          answers: {0: fullAnswer},
+          profile: profile,
+        ),
+        verified: v,
+      );
+      for (final n in d.notes) {
+        expect(mentionsScale(n.fix), isFalse, reason: n.fix);
+        expect(n.fix, isNotEmpty);
+      }
+    });
+  });
+
   group('the debrief', () {
     DebriefRound round(Map<int, String> answers) =>
         DebriefRound.of(questions: questionsFromProfile(profile), answers: answers, profile: profile);

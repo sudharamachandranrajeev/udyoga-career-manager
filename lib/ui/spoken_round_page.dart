@@ -74,9 +74,12 @@ class _AdvisorCoach implements ContentCoach {
       answer: answer,
     );
     await ref.mutate((s) => s.book.saveAnswer(round.id, question, answer, review, at: nowLocal()));
+    // Task-level wording only: the first of each with no talk of scores.
+    String first(List<String> items, String none) =>
+        items.map(taskLevelText).where((t) => t.isNotEmpty).firstOrNull ?? none;
     return ContentNote(
-      review.strengths.firstOrNull ?? 'No clear strength was found in this answer.',
-      review.improvements.firstOrNull ?? 'Nothing specific to fix.',
+      first(review.strengths, 'No clear strength was found in this answer.'),
+      first(review.improvements, 'Nothing specific to fix.'),
     );
   }
 }
