@@ -348,6 +348,30 @@ class CareerGrowth extends Table with SyncedRow {
   TextColumn get added => text()();
 }
 
+/// A route track: one way into a country being worked on, with dated
+/// milestones and the trigger that starts or switches it. Several run side
+/// by side (say Ireland now, the UK if a sponsor appears).
+@DataClassName('RouteTrack')
+class CareerTracks extends Table with SyncedRow {
+  /// ISO alpha-2.
+  TextColumn get country => text()();
+
+  /// The route's id from the route tables ("gb.skilled-worker"), or ''.
+  TextColumn get routeId => text().withDefault(const Constant(''))();
+  TextColumn get title => text()();
+
+  /// active | paused | done | dropped
+  TextColumn get status => text().withDefault(const Constant('active'))();
+
+  /// What starts or switches this track ("a sponsored offer at £41,700").
+  TextColumn get trigger => text().withDefault(const Constant(''))();
+
+  /// JSON list of {id, title, due (yyyy-MM-dd or null), done (yyyy-MM-dd or null), todo (row id or null)}.
+  TextColumn get milestones => text().withDefault(const Constant('[]'))();
+  TextColumn get notes => text().withDefault(const Constant(''))();
+  TextColumn get added => text()();
+}
+
 /// An interview practice round.
 @DataClassName('PracticeSession')
 class CareerPractice extends Table with SyncedRow {

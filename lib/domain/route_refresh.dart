@@ -135,7 +135,7 @@ List<ExpressEntryRound> parseExpressEntryRounds(String body) {
   for (final r in objs(obj(j)['rounds'])) {
     final n = intOf(r['drawNumber']);
     final date = str(r['drawDate']);
-    if (n == null || !isDayText(date)) continue;
+    if (n == null || !isDay(date)) continue;
     out.add(
       ExpressEntryRound(
         number: n,

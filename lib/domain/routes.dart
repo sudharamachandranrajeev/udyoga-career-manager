@@ -281,7 +281,7 @@ class UkRules {
     newEntrantFloor: intOf(j['newEntrantFloor']) ?? shippedUkRules.newEntrantFloor,
     careFloor: intOf(j['careFloor']) ?? shippedUkRules.careFloor,
     careNewEntrantFloor: intOf(j['careNewEntrantFloor']) ?? shippedUkRules.careNewEntrantFloor,
-    tslCutoff: isDayText(str(j['tslCutoff'])) ? str(j['tslCutoff']) : shippedUkRules.tslCutoff,
+    tslCutoff: isDay(str(j['tslCutoff'])) ? str(j['tslCutoff']) : shippedUkRules.tslCutoff,
     occupations: {
       for (final o in objs(j['occupations']).map(UkOccupation.fromJson))
         if (o.soc.isNotEmpty) o.soc: o,
@@ -290,8 +290,6 @@ class UkRules {
     live: true,
   );
 }
-
-bool isDayText(String s) => RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(s);
 
 // ---- the shipped tables ----
 

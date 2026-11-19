@@ -28,6 +28,7 @@ part 'database.g.dart';
     Conversations,
     Messages,
     CareerPosts,
+    CareerTracks,
     BridgeStudyPlans,
     BridgeStudyProgress,
     Prefs,
@@ -63,13 +64,14 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     'career_conversations',
     'career_messages',
     'career_posts',
+    'career_tracks',
     'bridge_study_plans',
     'bridge_study_progress',
     'prefs',
   ];
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -140,6 +142,13 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
         if (!have.contains(jobListings.fitBy.name)) await m.addColumn(jobListings, jobListings.fitBy);
         await customStatement("UPDATE job_listings SET fit_by = 'ai' WHERE assessment != ''");
       }
+      if (from < 8) {
+        // Route tracks (Explore). CREATE TABLE IF NOT EXISTS, so it can run again.
+        await m.createTable(careerTracks);
+        for (final sql in _v8Indexes) {
+          await customStatement(sql);
+        }
+      }
     },
   );
 
@@ -152,7 +161,11 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     ..._v3Indexes,
     ..._v4Indexes,
     ..._v5Indexes,
+    ..._v8Indexes,
   ];
+
+  /// Added in schema 8 (route tracks).
+  static const _v8Indexes = ['CREATE INDEX IF NOT EXISTS career_tracks_country ON career_tracks (country)'];
 
   /// Added in schema 2 (pre-employment checks and the archive).
   static const _v2Indexes = [
