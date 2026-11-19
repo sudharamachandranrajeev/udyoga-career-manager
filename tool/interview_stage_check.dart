@@ -7,6 +7,12 @@
 //   flutter build linux --release -t tool/interview_stage_check.dart
 //   PULSE_SOURCE=<sink>.monitor build/linux/x64/release/bundle/udyoga --sink <sink>
 //
+// --offline runs it as offline interview practice (I6): the app's
+// OfflineGuard holds for the whole run, a model download is tried and must
+// be refused, the debrief is built with no AI (the matcher on the device),
+// and Ollama is asked at its default address on this machine. The counts
+// of refused connections and of HTTP clients made are printed.
+//
 // Make the sink first: pactl load-module module-null-sink sink_name=<sink>.
 // Without --sink the answers play through the speakers. Every answer is
 // fictional. Recordings and the made answers go to temporary folders that
@@ -23,6 +29,9 @@ import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 import 'package:udyoga/domain/insights.dart';
 import 'package:udyoga/domain/interview_plan.dart';
 import 'package:udyoga/domain/interview_process.dart';
+import 'package:udyoga/domain/interview_scoring.dart';
+import 'package:udyoga/domain/offline_guard.dart';
+import 'package:udyoga/domain/ollama.dart';
 import 'package:udyoga/voice/lab.dart' show Pcm;
 import 'package:udyoga/voice/lexicon.dart';
 import 'package:udyoga/voice/models.dart';
@@ -125,18 +134,65 @@ Future<Map<String, String>> _makeAnswers(String folder, Directory into) async {
   return out;
 }
 
+/// Offline practice's checks before the round: a download must be refused,
+/// and a request to another machine must be refused without a packet.
+Future<Map<String, Object?>> _offlineBefore(ModelManager mm) async {
+  final out = <String, Object?>{'guardActive': OfflineGuard.instance.active};
+  try {
+    await mm.download(speechModel(vadModelId));
+    out['download'] = 'NOT refused';
+  } on ModelException catch (e) {
+    out['download'] = 'refused: ${e.message}';
+  }
+  final client = HttpClient();
+  try {
+    await client.getUrl(Uri.parse('https://example.com/'));
+    out['httpToAnotherMachine'] = 'NOT refused';
+  } on SocketException catch (e) {
+    out['httpToAnotherMachine'] = 'refused: ${e.message}';
+  } finally {
+    client.close(force: true);
+  }
+  return out;
+}
+
+/// After the round: the debrief with no AI, and the local model's state.
+Future<Map<String, Object?>> _offlineAfter(List<PracticeQuestion> questions, Map<int, String> saved) async {
+  final d = Debrief.build(
+    framework: Framework.of('private'),
+    round: DebriefRound.of(questions: questions, answers: saved),
+  );
+  final ollama = await Ollama(host: ollamaDefaultHost, model: ollamaDefaultModel).check();
+  return {
+    'debrief': {
+      'aiScored': d.aiScored,
+      'coverage': [for (final c in d.coverage) '${c.criterion.text}: ${c.status.label}'],
+      'notes': [
+        for (final n in d.notes) {'question': n.question, 'strength': n.strength, 'fix': n.fix},
+      ],
+    },
+    'ollama': {'host': ollamaDefaultHost, 'state': ollama.state.name, 'message': ollama.message},
+    'refused': OfflineGuard.instance.refused,
+    'refusedHosts': OfflineGuard.instance.refusedHosts,
+    'httpClientsMade': OfflineGuard.instance.clients,
+  };
+}
+
 Future<Map<String, Object?>> _run(List<String> args) async {
+  final offline = args.contains('--offline');
+  if (offline) OfflineGuard.instance.hold();
   final base = await getApplicationSupportDirectory();
   final mm = ModelManager(Directory('${base.path}/models'));
   for (final id in [voiceModelId, vadModelId, defaultTranscriber]) {
     if (!await mm.installed(speechModel(id))) throw StateError('Missing model $id');
   }
+  final before = offline ? await _offlineBefore(mm) : null;
   final sinkAt = args.indexOf('--sink');
   final sinkName = sinkAt >= 0 && sinkAt + 1 < args.length ? args[sinkAt + 1] : null;
   final voiceFolder = mm.folder(speechModel(voiceModelId));
   final clips = await Directory.systemTemp.createTemp('udyoga-stage-answers-');
   final temp = await Directory.systemTemp.createTemp('udyoga-stage-check-');
-  final out = <String, Object?>{};
+  final out = <String, Object?>{'offlineBefore': ?before};
   try {
     final wavs = await _makeAnswers(voiceFolder, clips);
 
@@ -286,6 +342,7 @@ Future<Map<String, Object?>> _run(List<String> args) async {
       'focus': carry.focus.map((e) => e.name).toList(),
     };
     out['savedTranscripts'] = sink.saved.map((k, v) => MapEntry('$k', v));
+    if (offline) out['offlineAfter'] = await _offlineAfter(questions, sink.saved);
     out['takeFiles'] = temp.listSync().length;
     await round.deleteRecordings();
     out['takeFolderAfterDelete'] = await temp.exists();

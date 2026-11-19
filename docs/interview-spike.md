@@ -752,3 +752,126 @@ showed at seconds 4 and 5 and was gone at 6.
 
 **Nothing written.** Both runs listed the app support folder and the
 system temp folder before and after: no file was added.
+
+## I6: local model, live captions, offline practice
+
+### I5 follow-up: the camera coach's switches
+
+Self-view, the round hints and the lens hint are now remembered on this
+device, in a local setting (`udyoga.interview.coach`). Local settings are
+never synced. Only the three switches are stored, never a frame or
+anything the camera saw. The camera itself still starts off in every
+session and every round. Tests check all three points.
+
+### The interview AI on Ollama
+
+The **On this device** card on the Interview page has a switch: "Use a
+local model (Ollama) for the interview AI". With it on, every interview
+AI task goes to Ollama on this computer. That covers the question plan,
+reading an advert into criteria, scoring, the round review and the
+follow-up wording. The cloud AI is not used.
+
+- **Where Ollama is.** If Settings → Ask AI already points at a local
+  server (brahma_core's `HelpAi.local`), that host and model are used.
+  Otherwise Udyoga has its own host and model fields. The default host is
+  `http://localhost:11434`.
+- **Structured answers.** Each call goes to `/api/chat` with the task's
+  JSON schema in Ollama's `format` field, `stream: false` and
+  temperature 0. A reply that breaks the schema is asked again once. The
+  scores then go through the same `verifyScores` check as cloud scores: a
+  score stands only when its quote is in the transcript.
+- **Suggested models.** `qwen2.5:7b` (about 4.7 GB, needs about 8 GB of
+  free memory) and `llama3.2:3b` (about 2 GB). The card says plainly that
+  a small model plans and scores less reliably than a large cloud model.
+- **Problems are said plainly.** "Ollama is not running at …" and "the
+  model … is not on this computer. To get it, run: ollama pull …".
+  While the local model is chosen but not ready, the built-in follow-ups
+  and checks are used. There is no silent fall-back to the cloud.
+  Udyoga never installs Ollama, starts it or pulls a model.
+
+### Live captions
+
+The transcript now grows while you speak. While the speech detector hears
+speech, the open stretch is transcribed again every 1.2 s, up to its last
+20 s. The text appears under the closed stretches already transcribed.
+When the stretch closes, its final text replaces the partial one. The
+panel's spoken lines are captioned as they are said.
+
+Captions are on by default. They have their own switch in the round's app
+bar and on the Interview page. The text size goes from 100% to 200%
+(default 125%), with a preview. The newest four lines stay in view, and
+screen readers hear the caption as a live region.
+
+### Offline interview practice
+
+One switch on the Interview page: **Offline interview practice**. With it
+on:
+
+- Only what is on the device is used: Kokoro, Silero, Moonshine and
+  BlazeFace, plus Ollama when it runs on this computer. Without Ollama,
+  the built-in plans and the matcher are used. A local model on another
+  machine is refused. The cloud AI is never chosen.
+- Every interview screen shows an **Offline** badge in its app bar. While
+  the badge shows, the screen holds the app's network guard. This is the
+  I0 hook, moved into the app (`lib/domain/offline_guard.dart`):
+  - every dart:io HTTP client made while it holds can reach this machine
+    only, with no proxy;
+  - plain sockets to another machine are refused;
+  - each refusal is counted.
+  Leaving the last interview screen, or turning the switch off, releases
+  it.
+- Model downloads are turned off with a message, on the round page, in
+  the lab and for the face finder. The model manager also refuses on its
+  own.
+
+**A limit.** An HTTPS client made *before* the guard held, and kept
+across screens, is not covered by the hook. Dart's TLS sockets do not go
+through `IOOverrides`. The interview path does not use such a client
+while offline is on, because the cloud adviser and downloads are not
+chosen. The hook is the check behind that, not the only barrier.
+
+### Network-off proof, again
+
+`tool/interview_stage_check.dart --offline` runs the I2 stage as offline
+practice:
+
+- the guard holds for the whole run;
+- a download is tried and must be refused;
+- a request to another machine is tried and must be refused;
+- after the stage, the debrief is built with no AI;
+- Ollama is checked at its default address.
+
+The release build ran inside `unshare -rnm`, set up as in I0 (loopback,
+a dummy uplink with both default routes, IPv6 chatter off, the host's
+resolver sockets hidden). The answers came from a second Kokoro voice
+through a null sink. The packet counts come from the namespace's
+`/proc/net/dev`. An idle namespace sent 0 packets, and a test `curl` to
+another address was counted on the uplink.
+
+Ollama 0.40.7 (installed here) ran inside the namespace on
+`127.0.0.1:11434`, with no model pulled.
+
+**Result:** exit code 0, and **0 packets on the uplink**.
+- The stage ran in full: a settler, then question 1 with 2 follow-ups,
+  then question 2, which the panel cut off with a wrap-up. Every answer
+  ended by the speech detector, except the one cut off.
+- The no-AI debrief showed both criteria as Evidenced, with a strength
+  and a fix for each answer.
+- The download was refused with the message.
+- The request to example.com was refused before any packet: 1 refusal.
+- 2 HTTP clients were made, both limited to this machine.
+- Ollama answered on loopback: "Ollama is running, but the model
+  qwen2.5:7b is not on this computer. To get it, run: ollama pull
+  qwen2.5:7b". Loopback carried 12 packets during the run, which was the
+  `/api/tags` check.
+- The recordings were deleted.
+
+**Ollama itself.** At start-up, Ollama's server tried to reach
+ollama.com 3 times (a cloud model cache). The namespace stopped it at the
+name lookup. That is Ollama's own process, not Udyoga, and the guard
+cannot reach it. Someone who wants Ollama fully offline should check
+Ollama's own settings.
+
+**Not tried.** No model was pulled (several GB), so local planning and
+scoring were not run against a real model. Fake-server tests cover the
+request and reply format.
