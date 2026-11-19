@@ -90,8 +90,8 @@ const udyogaHints = <String, String>{
       'after six weeks of silence.',
   'page.spoken':
       'The interviewer reads each question aloud; answer by voice or type. Before each answer you see what the '
-      'question tests. After it: your transcript, how you said it against usual ranges, and with an AI one '
-      'strength and one fix.',
+      'question tests. The interviewer follows up on what your answer leaves out. After it: your transcript, '
+      'how you said it against usual ranges, and with an AI one strength and one fix.',
   'page.interview':
       'Questions a real panel would ask for the role, then a strict review of each answer on seven '
       'dimensions, with a better answer and the follow-up to expect.',

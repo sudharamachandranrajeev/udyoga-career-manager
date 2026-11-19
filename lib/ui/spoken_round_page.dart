@@ -1,8 +1,10 @@
-/// A spoken practice round (interview plan I1): the interviewer reads each
-/// question aloud, you answer by voice or by typing, and each answer shows
-/// its transcript, how it was delivered and, with an AI, one strength and
-/// one fix. Recordings stay on this device and are deleted when you leave;
-/// only the transcript is saved with the round.
+/// A spoken practice round (interview plan I1 and I2): the interviewer reads
+/// each question aloud, you answer by voice or by typing, and each answer
+/// shows its transcript, how it was delivered and, with an AI, one strength
+/// and one fix. The interviewer follows up on what an answer leaves out, in
+/// the manner of the chosen panel and level, and may stop an answer that
+/// runs over time. Recordings stay on this device and are deleted when you
+/// leave; only the transcript is saved with the round.
 library;
 
 import 'dart:async';
@@ -17,6 +19,8 @@ import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/delivery.dart';
 import '../domain/insights.dart';
+import '../domain/interview_plan.dart';
+import '../domain/interview_process.dart';
 import '../domain/json.dart';
 import '../voice/models.dart';
 import '../voice/round.dart';
@@ -70,13 +74,60 @@ class _AdvisorCoach implements ContentCoach {
   }
 }
 
-/// Opens the spoken round for [roundId].
-Future<void> openSpokenRound(BuildContext context, String roundId) =>
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => SpokenRoundPage(roundId)));
+/// Opens the spoken round for [roundId]. As a [stage] of a process it
+/// returns what each answer covered, for the next stage.
+Future<List<QuestionOutcome>?> openSpokenRound(
+  BuildContext context,
+  String roundId, {
+  InterviewStage? stage,
+  CarryForward carry = CarryForward.none,
+  String notes = '',
+}) => Navigator.of(context).push<List<QuestionOutcome>>(
+  MaterialPageRoute(
+    builder: (_) => SpokenRoundPage(roundId, stage: stage, carry: carry, notes: notes),
+  ),
+);
+
+/// The question plans for a round: the templates, or the user's AI when
+/// there is one and they want it (checked, with the templates filling any
+/// gap). Returns the plans and where they came from.
+Future<(List<QuestionPlan>, String)> planRound(
+  WidgetRef ref, {
+  required String role,
+  required List<PracticeQuestion> questions,
+  required bool useAi,
+}) async {
+  final templates = [for (final q in questions) templatePlan(q)];
+  if (!useAi) return (templates, 'Built-in follow-ups');
+  try {
+    final advisor = await requireAdvisor(ref);
+    final fromAi = await advisor
+        .questionPlan(role: role, questions: questions)
+        .timeout(const Duration(seconds: 120));
+    return (mergePlans(questions, fromAi), 'Follow-ups planned by your AI');
+  } on Object catch (e) {
+    return (templates, 'Built-in follow-ups (your AI did not answer: ${describeError(e)})');
+  }
+}
 
 class SpokenRoundPage extends ConsumerStatefulWidget {
-  const SpokenRoundPage(this.roundId, {super.key});
+  const SpokenRoundPage(
+    this.roundId, {
+    super.key,
+    this.stage,
+    this.carry = CarryForward.none,
+    this.notes = '',
+  });
   final String roundId;
+
+  /// Set when the round is a stage of a process.
+  final InterviewStage? stage;
+
+  /// What the earlier stages missed.
+  final CarryForward carry;
+
+  /// Presentation notes, kept in memory only.
+  final String notes;
 
   @override
   ConsumerState<SpokenRoundPage> createState() => _SpokenRoundPageState();
@@ -89,7 +140,10 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
   double _micLevel = -160;
   bool _checkingMic = false;
   bool _opening = false;
+  String _openingStep = '';
   String? _openError;
+  RoundSettings _settings = const RoundSettings();
+  String _planSource = '';
 
   SpokenEngines? _engines;
   SpokenRound? _round;
@@ -101,6 +155,18 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
   void initState() {
     super.initState();
     _refreshModels();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final saved = await ref.read(sessionProvider).book.roundSettings();
+    final stage = widget.stage;
+    if (mounted) setState(() => _settings = stage == null ? saved : saved.copyWith(persona: stage.persona));
+  }
+
+  void _setSettings(RoundSettings r) {
+    setState(() => _settings = r);
+    unawaited(ref.read(sessionProvider).book.setRoundSettings(r));
   }
 
   @override
@@ -175,14 +241,45 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
   }
 
   Future<void> _start(PracticeSession session, List<PracticeQuestion> questions) async {
+    final hasAi = ref.read(advisorProvider).value != null;
+    final settings = _settings;
     setState(() {
       _opening = true;
+      _openingStep = hasAi && settings.aiPlan ? 'Planning the follow-ups…' : 'Loading the voice…';
       _openError = null;
     });
     try {
       final e = _engines!;
-      final (voice, listener) = await e.open([for (final q in questions) q.question]);
-      final hasAi = ref.read(advisorProvider).value != null;
+      final (plans, source) = await planRound(
+        ref,
+        role: session.role,
+        questions: questions,
+        useAi: hasAi && settings.aiPlan,
+      );
+      if (mounted) setState(() => _openingStep = 'Loading the voice…');
+      final persona = Persona.of(settings.persona);
+      final level = Ladder.of(settings.level);
+      final opening =
+          widget.stage?.opening(persona) ??
+          (level.interrupts ? '${persona.greeting} $mayInterruptScript' : persona.greeting);
+      final interviewer = Interviewer(
+        persona: persona,
+        level: level,
+        plans: plans,
+        budgets: [for (final q in questions) answerBudget(q, level)],
+        focus: widget.carry.focus,
+        opening: opening,
+      );
+      // Everything the voice may say, so its word list covers every word.
+      final (voice, listener) = await e.open([
+        opening,
+        for (final q in questions) q.question,
+        for (final p in plans) ...p.probes.map((x) => x.text),
+        for (final list in builtInProbes.values) ...list,
+        ...persona.acknowledgements,
+        persona.probeLead,
+        interruptLine,
+      ]);
       final round = SpokenRound(
         questions: [for (final q in questions) RoundQuestion(q.question, tests: q.why, lookFor: q.lookFor)],
         voice: voice,
@@ -190,7 +287,10 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
         takes: await e.takes(session.id),
         sink: _BookSink(ref, session.id),
         coach: hasAi ? _AdvisorCoach(ref, session, questions) : null,
+        interviewer: interviewer,
+        endSilence: settings.endSilence,
       );
+      _planSource = source;
       if (!mounted) {
         await round.close();
         return;
@@ -273,7 +373,12 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 12),
-        if (round == null) _before(session, questions) else ..._during(round),
+        if (round == null) ...[
+          if (widget.stage case final st?) _stageNote(st),
+          _settingsCard(),
+          _before(session, questions),
+        ] else
+          ..._during(round),
       ],
     );
   }
@@ -350,7 +455,7 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
               icon: _opening
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.play_arrow),
-              label: Text(_opening ? 'Loading the voice…' : 'Start the round'),
+              label: Text(_opening ? _openingStep : 'Start the round'),
             ),
           ),
           if (!ready && missing != null)
@@ -363,14 +468,111 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
     );
   }
 
+  /// What this stage is, and what the last stage left to fix.
+  Widget _stageNote(InterviewStage st) {
+    final carry = widget.carry;
+    return SectionCard(
+      title: st.title,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(st.about),
+          if (!carry.isEmpty) ...[
+            const Subhead('From the last stage'),
+            if (carry.keep.isNotEmpty) Bullets(carry.keep, icon: Icons.check, color: Status.good.color),
+            if (carry.fixes.isNotEmpty) Bullets(carry.fixes, icon: Icons.arrow_upward),
+            if (carry.focus.isNotEmpty)
+              Text(
+                'The follow-ups in this stage look for ${carry.focus.first.meaning} first.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// The panel's manner, the level and when an answer ends.
+  Widget _settingsCard() {
+    final r = _settings;
+    final persona = Persona.of(r.persona);
+    final level = Ladder.of(r.level);
+    final hasAi = ref.watch(advisorProvider).value != null;
+    final muted = Theme.of(context).textTheme.bodySmall
+        ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
+    return SectionCard(
+      title: 'Round settings',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Choice<PersonaKind>(
+            key: ValueKey('persona-${r.persona.name}'),
+            label: 'Panel',
+            value: r.persona,
+            options: {for (final p in personas.values) p.kind: p.label},
+            onChanged: (v) => _setSettings(r.copyWith(persona: v)),
+          ),
+          Text(persona.about, style: muted),
+          if (persona.silenceNote.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            StatusLabel(Status.info, 'Silence is normal'),
+            Text(persona.silenceNote),
+          ],
+          const SizedBox(height: 12),
+          Choice<int>(
+            key: ValueKey('level-${r.level}'),
+            label: 'Level',
+            value: r.level,
+            options: {for (final l in ladder) l.level: '${l.level} · ${l.label}'},
+            onChanged: (v) => _setSettings(r.copyWith(level: v)),
+          ),
+          Text(level.about, style: muted),
+          const SizedBox(height: 12),
+          Text('End an answer after ${r.endSilence.inSeconds} s of silence'),
+          Slider(
+            value: r.endSilence.inSeconds.toDouble(),
+            min: RoundSettings.minSilence.inSeconds.toDouble(),
+            max: RoundSettings.maxSilence.inSeconds.toDouble(),
+            divisions: RoundSettings.maxSilence.inSeconds - RoundSettings.minSilence.inSeconds,
+            label: '${r.endSilence.inSeconds} s',
+            semanticFormatterCallback: (v) => '${v.round()} seconds of silence',
+            onChanged: (v) => _setSettings(r.copyWith(endSilence: Duration(seconds: v.round()))),
+          ),
+          Text(
+            'Pauses to think that are shorter than this never end your answer. You can always press Done.',
+            style: muted,
+          ),
+          if (hasAi)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Plan the follow-ups with my AI'),
+              subtitle: const Text(
+                'Only the questions are sent. The follow-up itself is chosen on this device from what your '
+                'answer leaves out. Off: built-in follow-ups.',
+              ),
+              value: r.aiPlan,
+              onChanged: (v) => _setSettings(r.copyWith(aiPlan: v)),
+            ),
+        ],
+      ),
+    );
+  }
+
   static double _levelShare(double dbfs) => ((dbfs + 60) / 60).clamp(0.0, 1.0);
 
   List<Widget> _during(SpokenRound r) {
     if (r.phase == RoundPhase.finished) return [_finished(r)];
     final q = r.question;
     final t = Theme.of(context).textTheme;
+    final iv = r.interviewer;
     return [
       Text('Question ${r.index + 1} of ${r.questions.length}', style: t.labelLarge),
+      if (iv != null)
+        Text(
+          '${iv.persona.label} panel · Level ${iv.level.level}, ${iv.level.label}'
+          '${_planSource.isEmpty ? '' : ' · $_planSource'}',
+          style: t.bodySmall,
+        ),
       const SizedBox(height: 4),
       LinearProgressIndicator(value: (r.index + 1) / r.questions.length),
       const SizedBox(height: 12),
@@ -400,6 +602,12 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
           ],
         ),
       ),
+      if (widget.notes.trim().isNotEmpty)
+        ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          title: const Text('Your presentation notes'),
+          children: [SelectableText(widget.notes)],
+        ),
       if (r.phase == RoundPhase.review && r.state.latest != null) ..._review(r),
     ];
   }
@@ -412,6 +620,17 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
       label: const Text('Type instead'),
     );
     final skip = TextButton(onPressed: r.skip, child: const Text('Skip'));
+    final moveOn = TextButton(onPressed: r.moveOn, child: const Text('Move on'));
+    final muted = Theme.of(context).textTheme.bodySmall;
+    // The follow-up being answered, above the microphone or the box.
+    final followUp = [
+      if (r.followingUp) ...[
+        Text(r.wrappingUp ? 'Wrap-up' : 'Follow-up', style: Theme.of(context).textTheme.labelLarge),
+        SelectableText(r.followUpQuestion, style: Theme.of(context).textTheme.titleSmall),
+        if (r.wrappingUp) Text('One sentence: the result, and what it shows about you.', style: muted),
+        const SizedBox(height: 8),
+      ],
+    ];
     switch (r.phase) {
       case RoundPhase.ready:
         return [
@@ -431,27 +650,55 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
           ]),
         ];
       case RoundPhase.asking:
+        final said = r.saying;
         return [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.volume_up_outlined),
-              SizedBox(width: 8),
+              const Icon(Icons.volume_up_outlined),
+              const SizedBox(width: 8),
               Expanded(
-                child: Text('The interviewer is asking… the microphone opens when the question ends.'),
+                child: Text(
+                  said != null && said != r.question.text
+                      ? '"$said"'
+                      : 'The interviewer is asking… the microphone opens when the question ends.',
+                ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          row([typeInstead, skip]),
+          row([typeInstead, if (r.followingUp) moveOn, skip]),
+        ];
+      case RoundPhase.pausing:
+        final quiet = r.interviewer?.persona.kind == PersonaKind.quiet;
+        return [
+          Row(
+            children: [
+              const Icon(Icons.edit_note),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  quiet ? 'The panel is writing notes. Silence is normal.' : 'The panel is making a note…',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          row([skip]),
         ];
       case RoundPhase.answering:
         final live = r.live;
+        final budget = r.budget;
+        final elapsed = live?.elapsed ?? Duration.zero;
         return [
+          ...followUp,
           Row(
             children: [
               const Icon(Icons.fiber_manual_record, color: Colors.red, size: 16),
               const SizedBox(width: 8),
-              Text('Listening · ${DeliveryMetrics.clock(live?.elapsed ?? Duration.zero)}'),
+              Text(
+                'Listening · ${DeliveryMetrics.clock(elapsed)}'
+                '${budget == null ? '' : ' of about ${DeliveryMetrics.clock(budget)}'}',
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -463,19 +710,23 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
           Text(
             live == null || !live.heardSpeech
                 ? 'Take a moment if you need it; start when you are ready.'
-                : 'Stops by itself after a few seconds of silence, or press Done.',
-            style: Theme.of(context).textTheme.bodySmall,
+                : 'Stops by itself after ${r.endSilence.inSeconds} s of silence, or press Done.',
+            style: muted,
           ),
+          if (budget != null && elapsed > budget)
+            Text('Over the time: sum up and finish.', style: TextStyle(color: Status.warning.color)),
           const SizedBox(height: 8),
           row([
             FilledButton.icon(onPressed: r.done, icon: const Icon(Icons.stop), label: const Text('Done')),
             typeInstead,
+            if (r.followingUp) moveOn,
           ]),
         ];
       case RoundPhase.transcribing:
         return [const LinearProgressIndicator(), const SizedBox(height: 4), const Text('Writing it down…')];
       case RoundPhase.typing:
         return [
+          ...followUp,
           TextField(
             controller: _typed,
             minLines: 4,
@@ -498,7 +749,7 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
               icon: const Icon(Icons.mic_none),
               label: const Text('Answer by voice instead'),
             ),
-            skip,
+            if (r.followingUp) moveOn else skip,
           ]),
         ];
       case RoundPhase.review:
@@ -568,6 +819,59 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
           ],
         ),
       ),
+      if (s.followUps.isNotEmpty || s.interrupted)
+        SectionCard(
+          title: s.interrupted ? 'Stopped to keep to time' : 'Follow-ups',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (s.interrupted)
+                const Text(
+                  'The interviewer stopped the answer at the time limit, as real panels do. The wrap-up is '
+                  'the skill: one sentence with the result.',
+                ),
+              for (final f in s.followUps) ...[
+                const SizedBox(height: 8),
+                Text(
+                  f.kind == FollowUpKind.wrapUp ? 'Wrap-up: ${f.asked}' : f.asked,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                if (f.probe case final p?)
+                  Text(
+                    'Asked because the answer did not yet say ${p.element.meaning}.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                SelectableText(f.take.transcript),
+              ],
+            ],
+          ),
+        ),
+      if (r.coverage(r.index) case final c? when c.expected.isNotEmpty)
+        SectionCard(
+          title: 'What your answer covered',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Found in your words on this device, including the follow-ups. Approximate: it reads words, '
+                'not meaning.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final e in c.expected)
+                    StatusPill(
+                      c.heard.contains(e) ? '${e.label}: heard' : '${e.label}: not heard',
+                      status: c.heard.contains(e) ? Status.good : Status.warning,
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
       if (take.delivery case final d?)
         DeliveryPanel(d, before: identical(first, take) ? null : first.delivery),
       SectionCard(
@@ -610,8 +914,11 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
   Widget _finished(SpokenRound r) {
     final answered = r.states.where((s) => s.latest != null).length;
     final skipped = r.states.where((s) => s.skipped).length;
+    final outcomes = r.outcomes();
+    final next = CarryForward.from([outcomes]);
+    final stage = widget.stage;
     return SectionCard(
-      title: 'Round finished',
+      title: stage == null ? 'Round finished' : '${stage.title} finished',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -620,12 +927,17 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
             '${skipped > 0 ? ' and skipped $skipped' : ''}. The transcripts are saved with the round, where you '
             'can edit them or ask for a full review.',
           ),
+          if (!next.isEmpty) ...[
+            const Subhead('For next time'),
+            if (next.keep.isNotEmpty) Bullets(next.keep, icon: Icons.check, color: Status.good.color),
+            if (next.fixes.isNotEmpty) Bullets(next.fixes, icon: Icons.arrow_upward),
+          ],
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerLeft,
             child: FilledButton(
-              onPressed: () => Navigator.of(context).maybePop(),
-              child: const Text('Back to the round'),
+              onPressed: () => Navigator.of(context).pop(outcomes),
+              child: Text(stage == null ? 'Back to the round' : 'Back to the process'),
             ),
           ),
         ],

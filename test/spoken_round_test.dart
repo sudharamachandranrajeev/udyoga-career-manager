@@ -84,10 +84,12 @@ class FakeListener implements AnswerListener {
   FakeListener(this.answers);
   final List<CapturedAnswer> answers;
   final captures = <FakeCapture>[];
+  final endSilences = <Duration?>[];
   var fail = false;
 
   @override
-  Future<AnswerCapture> listen() async {
+  Future<AnswerCapture> listen({Duration? endSilence}) async {
+    endSilences.add(endSilence);
     if (fail) throw StateError('no microphone');
     final c = FakeCapture(answers[captures.length.clamp(0, answers.length - 1)]);
     captures.add(c);

@@ -80,9 +80,10 @@ class KokoroVoice implements InterviewerVoice {
 
   List<Future<_Clip>> _make(String text) {
     final have = _made.remove(text);
-    // Most recent last; keep a few (the current, the next, a re-ask).
+    // Most recent last; keep a few (the current, the next, a re-ask, a
+    // follow-up and an acknowledgement).
     final clips = _made[text] = have ?? [for (final s in sentencesOf(text)) _worker.call<_Clip>(s)];
-    while (_made.length > 3) {
+    while (_made.length > 5) {
       _made.remove(_made.keys.first);
     }
     for (final c in clips) {
@@ -145,6 +146,20 @@ class KokoroVoice implements InterviewerVoice {
     if (await _temp.exists()) await _temp.delete(recursive: true);
   }
 }
+
+/// Whether an answer is over: something was said (at least 1.5 s from the
+/// first speech to the last), then [endSilence] of silence. A pause to
+/// think shorter than [endSilence], however many, never ends it. Times are
+/// milliseconds from the microphone opening; -1 is no speech yet.
+bool answerEnded({
+  required int heardMs,
+  required int firstSpeechMs,
+  required int lastSpeechMs,
+  required Duration endSilence,
+}) =>
+    firstSpeechMs >= 0 &&
+    lastSpeechMs - firstSpeechMs >= 1500 &&
+    heardMs - lastSpeechMs >= endSilence.inMilliseconds;
 
 /// What the listening isolate reports after each piece of audio.
 typedef _Heard = (int totalMs, int firstVoiceMs, int lastVoiceMs, List<(int, int, String)> segments);
@@ -236,11 +251,12 @@ class LiveListener implements AnswerListener {
 
   /// Loads the speech detector from [vadModel] and Moonshine from
   /// [transcriberFolder]. An answer ends by itself after [endSilence] of
-  /// silence once something was said, or at [maxLength].
+  /// silence once something was said (each [listen] may set its own), or
+  /// at [maxLength].
   static Future<LiveListener> open({
     required String vadModel,
     required String transcriberFolder,
-    Duration endSilence = const Duration(seconds: 4),
+    Duration endSilence = SpokenRound.defaultEndSilence,
     Duration maxLength = const Duration(minutes: 5),
   }) async => LiveListener._(
     await EngineWorker.start(() => _openEars(vadModel, transcriberFolder)),
@@ -252,7 +268,7 @@ class LiveListener implements AnswerListener {
   final Duration endSilence, maxLength;
 
   @override
-  Future<AnswerCapture> listen() async {
+  Future<AnswerCapture> listen({Duration? endSilence}) async {
     await _worker.call<void>('reset');
     final rec = AudioRecorder();
     try {
@@ -262,7 +278,7 @@ class LiveListener implements AnswerListener {
       final stream = await rec.startStream(
         const RecordConfig(encoder: AudioEncoder.pcm16bits, sampleRate: 16000, numChannels: 1),
       );
-      return _LiveCapture(rec, stream, _worker, endSilence, maxLength);
+      return _LiveCapture(rec, stream, _worker, endSilence ?? this.endSilence, maxLength);
     } on Object {
       await rec.dispose();
       rethrow;
@@ -333,9 +349,9 @@ class _LiveCapture implements AnswerCapture {
     }
     _emit();
     final (total, first, last, _) = h;
-    final spoke = first >= 0 && last - first >= 1500;
     if (!_end.isCompleted &&
-        ((spoke && total - last >= _endSilence.inMilliseconds) || _watch.elapsed >= _maxLength)) {
+        (answerEnded(heardMs: total, firstSpeechMs: first, lastSpeechMs: last, endSilence: _endSilence) ||
+            _watch.elapsed >= _maxLength)) {
       _end.complete();
     }
   }

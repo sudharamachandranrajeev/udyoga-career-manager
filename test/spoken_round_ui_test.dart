@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:udyoga/domain/common_questions.dart';
+import 'package:udyoga/domain/interview_plan.dart';
 import 'package:udyoga/domain/delivery.dart';
 import 'package:udyoga/ui/spoken_round_page.dart';
 import 'package:udyoga/voice/lab.dart' show Pcm;
@@ -89,12 +90,18 @@ void main() {
     );
     await app.tapText('Check the microphone');
     expect(find.textContaining('We can hear you'), findsOneWidget);
+    // Thinking pauses: the end-of-answer silence is a setting, 5 s by default.
+    expect(find.text('End an answer after 5 s of silence'), findsOneWidget);
+    expect(find.text('Panel'), findsOneWidget);
     await app.tapText('Start the round');
     // What the question tests comes before the answer.
     expect(find.text('What this question tests'), findsOneWidget);
     expect(find.text(commonQuestions.first.why), findsOneWidget);
     await app.tapText('Ask me');
-    expect(engines.voice.said, [commonQuestions.first.question]);
+    // The panel greets once, then asks.
+    expect(engines.voice.said, [
+      allOf(startsWith(Persona.of(PersonaKind.neutral).greeting), endsWith(commonQuestions.first.question)),
+    ]);
     expect(find.text('Done'), findsOneWidget);
     await app.tapText('Done');
     expect(find.text('What you said (take 1)'), findsOneWidget);
@@ -110,10 +117,20 @@ void main() {
     await app.tapText('Type instead');
     await app.enter('Your answer', 'I list what is due and agree the order with my manager.');
     await app.tapText('Save answer');
+    // An example question with no own action in it: the panel follows up, in writing too.
+    expect(find.text('Follow-up'), findsOneWidget);
+    expect(engines.voice.said.last, 'What did you yourself do?');
+    await app.enter('Your answer', 'I rang the supplier and I moved the deadline with my manager.');
+    await app.tapText('Save answer');
+    expect(find.text('Follow-up'), findsOneWidget);
+    await app.tapText('Move on');
     expect(find.text('Your answer (typed)'), findsOneWidget);
+    expect(find.text('Follow-ups'), findsOneWidget);
+    expect(find.text('What your answer covered'), findsOneWidget);
     expect(find.text('How you said it'), findsNothing);
     await app.tapText('Finish');
     expect(find.textContaining('You answered 2 of 2'), findsOneWidget);
+    expect(find.text('For next time'), findsOneWidget);
     await app.close();
   });
 }
