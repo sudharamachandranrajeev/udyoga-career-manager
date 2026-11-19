@@ -17,6 +17,7 @@ import 'package:workmanager/workmanager.dart';
 import '../domain/advisor.dart';
 import '../domain/ats.dart';
 import '../domain/background.dart';
+import '../domain/recipes.dart';
 import '../domain/refresh.dart';
 import '../domain/route_refresh.dart';
 import '../domain/sponsors.dart';
@@ -65,6 +66,7 @@ Future<int> refreshOnce() async {
         sponsors: SponsorStore(Directory('$dir${Platform.pathSeparator}sponsors'), client, session.db),
         secrets: session.keys.store,
         watch: EmployerWatch(book, client),
+        recipes: () => recipeFetchFor(session.db, client),
         routes: RouteRefresh(client, session.db),
         leaseOnly: true,
       ),

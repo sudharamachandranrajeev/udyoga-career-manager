@@ -36,6 +36,11 @@ enum AiProvider {
   /// Run through a CLI the user has signed in to their plan, not a key.
   final bool subscription;
 
+  /// Reads images (a screenshot) in [Ai.ask]'s content: the Claude API and
+  /// Gemini natively, Claude Code through its Read tool. Codex in Udyoga
+  /// takes text only.
+  bool get images => this != codex;
+
   static AiProvider of(String model) => model.startsWith(ClaudeCodeModels.prefix)
       ? claudeCode
       : model.startsWith(CodexModels.prefix)
@@ -132,7 +137,8 @@ abstract interface class Ai {
   /// Asks for JSON matching [schema].
   ///
   /// [content] is the user turn's content blocks in the Claude Messages
-  /// format (text, a base64 PDF document). With [web], the model may search
+  /// format (text, a base64 PDF document, a base64 image where
+  /// [AiProvider.images] says so). With [web], the model may search
   /// and read about [searches] web pages first. [effort] is low, medium or
   /// high. [onProgress] hears what it is doing ("Searching: ...").
   Future<AiResult> ask({

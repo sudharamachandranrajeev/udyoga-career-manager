@@ -11,6 +11,7 @@ import 'explore.dart';
 import 'insights.dart';
 import 'json.dart';
 import 'occupations.dart';
+import 'page_reader.dart';
 import 'profile.dart';
 import 'resume.dart';
 import 'schema.dart';
@@ -379,6 +380,31 @@ Return up to 20, best fit first.'''),
       web: url.isNotEmpty && text.isEmpty,
       searches: 3,
       effort: 'low',
+      onProgress: onProgress,
+    );
+    return r.data;
+  }
+
+  /// Reads a screenshot of a page (a PNG) into job, person and employer
+  /// records, as they are written there. Only offered when the model reads
+  /// images ([AiProvider.images]).
+  Future<Json> readScreenshot(Uint8List png, {String url = '', Progress? onProgress}) async {
+    final r = await ai.ask(
+      system:
+          'You read screenshots of web pages into records exactly as written: a job advert (job), people named '
+          'with their role and contact details as shown (person), and the employer (company). Copy the words on '
+          'the page; never guess or add anything that is not visible. Leave a field empty when the page does not '
+          'show it. Dates as yyyy-MM-dd. Today is $today.',
+      content: [
+        {
+          'type': 'image',
+          'source': {'type': 'base64', 'media_type': 'image/png', 'data': base64Encode(png)},
+        },
+        _text('This is a screenshot of ${url.isEmpty ? 'a web page' : url}. List the records on it.'),
+      ],
+      schema: visionRecordsSchema,
+      effort: 'low',
+      maxTokens: 8000,
       onProgress: onProgress,
     );
     return r.data;

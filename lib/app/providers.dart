@@ -30,6 +30,7 @@ import '../domain/mail_sync.dart';
 import '../domain/mail_transport.dart';
 import '../domain/pay.dart';
 import '../domain/profile.dart';
+import '../domain/recipes.dart';
 import '../domain/refresh.dart';
 import '../domain/route_refresh.dart';
 import '../domain/sponsors.dart';
@@ -471,6 +472,7 @@ class RefreshController extends Notifier<RefreshState> {
             sponsors: await ref.read(sponsorStoreProvider.future),
             secrets: s.keys.store,
             watch: EmployerWatch(s.book, client),
+            recipes: () => recipeFetchFor(s.db, client),
             routes: RouteRefresh(client, s.db),
           ).run(
             today: today(),

@@ -131,6 +131,13 @@ class ClaudeCode implements Ai {
             await File('${dir.path}${Platform.pathSeparator}$name')
                 .writeAsBytes(base64Decode(str(obj(b['source'])['data'])));
             prompt.writeln('<document file="$name">Read this PDF with the Read tool.</document>');
+          case 'image':
+            final source = obj(b['source']);
+            final ext = str(source['media_type']).endsWith('jpeg') ? 'jpg' : 'png';
+            final name = 'image-${++documents}.$ext';
+            await File('${dir.path}${Platform.pathSeparator}$name')
+                .writeAsBytes(base64Decode(str(source['data'])));
+            prompt.writeln('<image file="$name">Look at this image with the Read tool.</image>');
         }
       }
       final tools = [

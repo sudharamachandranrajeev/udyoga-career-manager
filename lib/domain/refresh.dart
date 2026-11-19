@@ -11,6 +11,7 @@ import 'feeds.dart';
 import 'insights.dart';
 import 'json.dart';
 import 'profile.dart';
+import 'recipes.dart';
 import 'route_refresh.dart';
 import 'sponsors.dart';
 
@@ -86,6 +87,7 @@ class Refresher {
     this.sponsors,
     this.secrets,
     this.watch,
+    this.recipes,
     this.routes,
     this.leaseOnly = false,
   });
@@ -98,6 +100,9 @@ class Refresher {
 
   /// The employer watch, run with the feeds; null leaves it out.
   final EmployerWatch? watch;
+
+  /// The user's fetch recipes, run with the feeds; null leaves them out.
+  final Future<RecipeFetch?> Function()? recipes;
 
   /// The UK sponsor register, refreshed when the UK is a target; null
   /// leaves it alone.
@@ -151,6 +156,15 @@ class Refresher {
           // The feeds count as checked when either part answered.
           if (!answered && w.asked > w.failed) answered = true;
         }
+      }
+      final fetch = await recipes?.call();
+      if (fetch != null && fetch.recipes.any((r) => r.mode == RecipeMode.fetch)) {
+        final r = await fetch.run(p, onProgress: onProgress);
+        report
+          ..found += r.postings.length
+          ..problems.addAll(r.problems);
+        added = [...added, ...await book.importPostings(r.postings, p, today: today)];
+        if (!answered && r.asked > r.failed) answered = true;
       }
       report.added += added.length;
       if (answered) {
