@@ -24,6 +24,8 @@ const udyogaHints = <String, String>{
   'jobs.refresh': 'Check the job sites now.',
   'jobs.ai': 'Ask the AI to search LinkedIn, Indeed, national and public-sector boards for you.',
   'jobs.add': 'Paste a job link or the advert text.',
+  'jobs.employers': 'Their new openings, from NHS Jobs, their job board or careers page, show on Today.',
+  'today.watched': 'New openings at the employers you watch.',
   'jobs.portals': 'Open searches for your roles on the main job sites, in your browser.',
   'jobs.fit': 'How well the job fits you, 0 to 100. A star means the AI assessed it.',
   'job.n8n': 'Sends this job (not your name or contact details) to your n8n workflow and adds the contacts it finds.',

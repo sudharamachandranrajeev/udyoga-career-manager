@@ -7,6 +7,7 @@ import '../app/explore_providers.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/conversations.dart';
+import '../domain/employers.dart';
 import '../domain/pipeline.dart';
 import '../domain/profile.dart';
 import '../domain/visa_clock.dart';
@@ -15,6 +16,7 @@ import 'coach_page.dart';
 import 'common.dart';
 import 'contacts_page.dart';
 import 'eligibility_view.dart';
+import 'employers_page.dart';
 import 'job_page.dart';
 import 'jobs_page.dart';
 import 'kit/kit.dart';
@@ -120,6 +122,11 @@ class TodayPage extends ConsumerWidget {
             )
             .toList()
           ..sort((a, b) => a.at.compareTo(b.at));
+    // New openings at the employers the user watches.
+    final watched = watchedNewJobs(
+      jobs,
+      ref.watch(watchedEmployersProvider).value ?? const <WatchedEmployer>[],
+    );
     final fresh = jobs.where((j) => j.status == 'new').toList()
       ..sort((a, b) => (b.fit ?? -1).compareTo(a.fit ?? -1));
     // Saved jobs, and jobs with an application still being written.
@@ -347,6 +354,16 @@ class TodayPage extends ConsumerWidget {
                   onTap: () => goToPage(ref, 'profile'),
                 ),
               ),
+            if (watched.isNotEmpty)
+              SectionCard(
+                title: 'From employers you watch',
+                hint: 'today.watched',
+                child: _FirstFew(
+                  [for (final w in watched) JobTile(w.job, list: 'watched')],
+                  onMore: () =>
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EmployersPage())),
+                ),
+              ),
             if (closing.isNotEmpty)
               SectionCard(
                 title: 'Closing this week',
@@ -355,7 +372,14 @@ class TodayPage extends ConsumerWidget {
                 ], onMore: () => goToPage(ref, 'jobs')),
               ),
           ],
-          count: replies.length + followUps + checks.length + closing.length + dueTodos + visas.length,
+          count:
+              replies.length +
+              followUps +
+              checks.length +
+              closing.length +
+              dueTodos +
+              visas.length +
+              watched.length,
           pace: pace == null || pace.level == PaceLevel.calm ? null : pace,
           nothingLabel: fresh.isEmpty ? 'Open Jobs' : 'See new matches',
           onNothing: () => goToPage(ref, 'jobs'),

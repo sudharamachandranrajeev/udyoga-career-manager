@@ -443,7 +443,7 @@ class _Header extends StatelessWidget {
                   icon: Icons.event_outlined,
                 ),
               StatusPill('Found ${niceDate(j.found)} via ${sourceName(j.source)}'),
-              if (j.source == 'adzuna') const AdzunaCredit(),
+              if (SourceCredit.needed(j.source)) SourceCredit(j.source),
               SponsorBadge(j.company, country: j.country),
             ],
           ),

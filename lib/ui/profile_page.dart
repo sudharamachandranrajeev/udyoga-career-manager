@@ -11,6 +11,7 @@ import '../domain/advisor.dart';
 import '../domain/countries.dart';
 import '../domain/profile.dart';
 import '../domain/resume.dart';
+import '../domain/world.dart';
 import 'common.dart';
 import 'kit/kit.dart';
 import 'resume_page.dart';
@@ -125,7 +126,8 @@ class ProfilePage extends ConsumerWidget {
                     'Roles: ${p.targets.roles.join(', ').ifEmpty('not set')}',
                     'Search terms: ${p.searchTerms.join(', ').ifEmpty('not set')}',
                     'Countries: ${p.searchCountries.map(Country.nameOf).join(', ').ifEmpty('not set')}',
-                    if (p.targets.locations.isNotEmpty) 'Places: ${p.targets.locations.join(', ')}',
+                    if (p.targets.homeAreas.isNotEmpty)
+                      'Home areas: ${p.targets.homeAreas.map((a) => [a.place, if (a.radiusMiles != null) '${a.radiusMiles} miles', if (a.commuteTowns.isNotEmpty) 'commute ${a.commuteTowns.join(', ')}'].join(', ')).join('; ')}',
                     if (p.targets.workModes.isNotEmpty)
                       'Work: ${p.targets.workModes.map((m) => _workModes[m] ?? m).join(', ')}',
                     if (p.targets.salaryMin != null)
@@ -430,7 +432,7 @@ class ProfilePage extends ConsumerWidget {
     final t = p.targets;
     final roles = TextEditingController(text: t.roles.join('\n'));
     final keywords = TextEditingController(text: t.keywords.join('\n'));
-    final locations = TextEditingController(text: t.locations.join(', '));
+    final areas = TextEditingController(text: t.homeAreas.map((a) => a.line).join('\n'));
     final salary = TextEditingController(text: t.salaryMin?.toString() ?? '');
     final currency = TextEditingController(text: t.salaryCurrency);
     final notes = TextEditingController(text: t.notes);
@@ -462,13 +464,24 @@ class ProfilePage extends ConsumerWidget {
                 selected: picked.contains(c.code),
                 onSelected: (v) => setState(() => v ? picked.add(c.code) : picked.remove(c.code)),
               ),
+            // Countries added from Explore that have no job sites listed here.
+            for (final code in [...picked])
+              if (!countries.any((c) => c.code == code))
+                FilterChip(
+                  label: Text(worldCountry(code)?.name ?? code),
+                  selected: true,
+                  onSelected: (_) => setState(() => picked.remove(code)),
+                ),
           ],
         ),
         const SizedBox(height: 12),
         Field(
-          locations,
-          'Towns or regions',
-          helper: 'In your home country; comma-separated. Empty: anywhere.',
+          areas,
+          'Home areas',
+          lines: 3,
+          helper:
+              'One per line: town | miles around it | towns you could commute to, such as '
+              '"Exampleton | 20 | Sampleby, Testford". Each area is searched on its own. Empty: anywhere.',
         ),
         const Subhead('Work'),
         Wrap(
@@ -501,6 +514,9 @@ class ProfilePage extends ConsumerWidget {
         ),
       ],
       onSave: () async {
+        final parsedAreas = [
+          for (final l in areas.text.split('\n')) ?HomeArea.parse(l),
+        ];
         await ref.mutate(
           (s) => s.book.saveProfile(
             p.copyWith(
@@ -508,7 +524,9 @@ class ProfilePage extends ConsumerWidget {
                 roles: linesIn(roles),
                 keywords: linesIn(keywords),
                 countries: picked,
-                locations: linesIn(locations),
+                locations: [for (final a in parsedAreas) a.place],
+                areas: parsedAreas,
+                radiusMiles: t.radiusMiles,
                 workModes: [
                   for (final m in _workModes.keys)
                     if (modes.contains(m)) m,

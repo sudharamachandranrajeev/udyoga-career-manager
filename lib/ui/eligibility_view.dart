@@ -169,22 +169,30 @@ class SponsorBadge extends ConsumerWidget {
   }
 }
 
-/// The credit Adzuna's terms ask for on each of its ads.
-class AdzunaCredit extends StatelessWidget {
-  const AdzunaCredit({super.key});
+/// The credit a job source's terms ask for on each of its ads (Adzuna,
+/// Jooble, USAJOBS, the Swedish and Norwegian services, unvacancies.org),
+/// as a link to the source.
+class SourceCredit extends StatelessWidget {
+  const SourceCredit(this.source, {super.key});
+  final String source;
+
+  /// True when [source] has a credit to show.
+  static bool needed(String source) => feedCredits.containsKey(source);
 
   @override
   Widget build(BuildContext context) {
+    final credit = feedCredits[source];
+    if (credit == null) return const SizedBox.shrink();
     final color = Theme.of(context).colorScheme.primary;
     return Semantics(
       link: true,
       child: InkWell(
         borderRadius: BorderRadius.circular(6),
-        onTap: () => openLink(context, adzunaHome),
+        onTap: () => openLink(context, credit.url),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           child: Text(
-            'Jobs by Adzuna',
+            credit.label,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,

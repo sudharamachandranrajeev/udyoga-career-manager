@@ -1,9 +1,8 @@
-import 'dart:ui';
-
 import 'package:brahma_core/brahma_core.dart' show today, addMonths;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:udyoga/domain/book.dart';
+import 'package:udyoga/domain/employers.dart';
 import 'package:udyoga/domain/profile.dart';
 import 'package:udyoga/domain/todos.dart';
 import 'package:udyoga/domain/tracks.dart';
@@ -79,6 +78,50 @@ void main() {
     expect(find.text('With route data'), findsOneWidget);
     await app.tap(find.text('With route data'));
     expect(find.text('Fiji'), findsNothing);
+    await app.close();
+  });
+
+  testWidgets('a country page adds the country to the targets', (tester) async {
+    final app = AppHarness(tester)..desktop();
+    await app.open(seed: seed);
+    await app.run();
+    await app.go('Explore');
+    await app.enter('Search countries', 'new zea');
+    await app.tapText('New Zealand');
+    await app.tap(find.text('Add to targets'));
+    final p = (await tester.runAsync(app.book.profile))!;
+    expect(p.searchCountries, containsAll(['GB', 'IE', 'NZ']));
+    expect(find.text('Add to targets'), findsNothing);
+    expect(find.byTooltip('In your target countries'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await app.close();
+  });
+
+  testWidgets('employers you watch: added from the Jobs page, their new jobs on Today', (tester) async {
+    final app = AppHarness(tester)..desktop();
+    await app.open(
+      seed: (b) async {
+        await seed(b);
+        await b.importPostings([samplePosting()], sampleProfile, today: now);
+      },
+    );
+    await app.run();
+    await app.go('Jobs');
+    await app.tap(find.byIcon(Icons.apartment_outlined));
+    expect(find.text('No employers yet'), findsOneWidget);
+    await app.tap(find.text('Watch an employer').last);
+    await app.enter('Name', 'Example Health Trust');
+    await app.enter('Where its jobs are', 'nhs');
+    await app.tapText('Save');
+    final watched = (await tester.runAsync(app.book.watchedEmployers))!;
+    expect(watched.single.nhs, isTrue);
+    expect(find.text('Clinical Informatics Nurse'), findsWidgets);
+
+    await tester.pageBack();
+    await app.settle();
+    await app.go('Today');
+    expect(find.text('From employers you watch'), findsOneWidget);
+    expect(tester.takeException(), isNull);
     await app.close();
   });
 }

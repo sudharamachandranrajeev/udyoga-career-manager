@@ -13,11 +13,14 @@ import '../domain/advisor.dart';
 import '../domain/bluesky.dart';
 import '../domain/book.dart';
 import '../domain/ai.dart';
+import '../domain/ats.dart';
 import '../domain/claude.dart';
 import '../domain/claude_code.dart';
 import '../domain/codex.dart';
 import '../domain/companion_service.dart';
 import '../domain/conversations.dart';
+import '../domain/employers.dart';
+import '../domain/feeds.dart';
 import '../domain/gemini.dart';
 import '../domain/insights.dart';
 import '../domain/linkedin_messages.dart';
@@ -244,6 +247,19 @@ final knownAtTargetsProvider = FutureProvider<List<KnownAt>>((ref) {
   return ref.watch(sessionProvider).book.knownAtTargets();
 });
 
+/// The employers the user watches, by name.
+final watchedEmployersProvider = FutureProvider<List<WatchedEmployer>>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.watchedEmployers();
+});
+
+/// The job-feed keys, the device-only ones (USAJOBS, Jooble) included.
+final feedKeysProvider = FutureProvider<FeedKeys>((ref) async {
+  ref.watch(revisionProvider);
+  final s = ref.watch(sessionProvider);
+  return (await s.book.feedKeys()).withSecrets(s.keys.store);
+});
+
 final targetEmployersProvider = FutureProvider<List<String>>((ref) {
   ref.watch(revisionProvider);
   return ref.watch(sessionProvider).book.targetEmployers();
@@ -437,6 +453,8 @@ class RefreshController extends Notifier<RefreshState> {
             ref.read(httpClientProvider),
             advisor: await ref.read(advisorProvider.future),
             sponsors: await ref.read(sponsorStoreProvider.future),
+            secrets: s.keys.store,
+            watch: EmployerWatch(s.book, ref.read(httpClientProvider)),
           ).run(
             today: today(),
             force: force,

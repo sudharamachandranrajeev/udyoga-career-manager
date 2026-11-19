@@ -22,7 +22,7 @@ final _aiSettingsProvider = FutureProvider((ref) async {
     keys: await book.aiKeys(),
     model: await book.pref<String>(PrefKeys.aiModel, ''),
     routine: await book.pref<String>(PrefKeys.aiRoutine, 'off'),
-    feeds: await book.feedKeys(),
+    feeds: await ref.watch(feedKeysProvider.future),
     n8n: await book.n8nLink(),
     spend: await book.spend(today().substring(0, 7)),
   );
@@ -143,13 +143,21 @@ class SettingsPage extends ConsumerWidget {
           ),
           child: Text(
             [
-              'NHS Jobs, Remotive, Jobicy and Arbeitnow need no key.',
+              'NHS Jobs, Remotive, Jobicy, Arbeitnow, Platsbanken (Sweden), arbeidsplassen.no (Norway, with '
+                  "NAV's public token) and UN jobs from unvacancies.org need no key.",
               (s?.feeds.adzunaId.isNotEmpty ?? false)
                   ? 'Adzuna is on.'
                   : 'Adzuna (UK, US, India, Australia, Canada, much of Europe) needs a free key.',
               "Adzuna's free tier is for evaluating its API, under Adzuna's current terms; its ads show a "
                   '"Jobs by Adzuna" link.',
               (s?.feeds.reed.isNotEmpty ?? false) ? 'Reed is on.' : 'Reed (UK) needs a free key.',
+              (s?.feeds.usajobsKey.isNotEmpty ?? false)
+                  ? 'USAJOBS is on.'
+                  : 'USAJOBS (US federal jobs) needs a free key and the e-mail you registered with.',
+              (s?.feeds.jooble.isNotEmpty ?? false)
+                  ? 'Jooble is on for ${s!.feeds.jooble.keys.join(', ')}.'
+                  : 'Jooble needs a free key for each country.',
+              'The USAJOBS and Jooble keys stay on this device.',
               'Sites without an open feed, such as LinkedIn and Indeed, are searched by the AI or opened '
                   'from the Jobs page.',
             ].join(' '),
@@ -293,6 +301,11 @@ class SettingsPage extends ConsumerWidget {
     final adzunaId = TextEditingController(text: k.adzunaId);
     final adzunaKey = TextEditingController(text: k.adzunaKey);
     final reed = TextEditingController(text: k.reed);
+    final usajobsKey = TextEditingController(text: k.usajobsKey);
+    final usajobsEmail = TextEditingController(text: k.usajobsEmail);
+    final jooble = TextEditingController(
+      text: [for (final e in k.jooble.entries) '${e.key}: ${e.value}'].join('\n'),
+    );
     return showFormDialog(
       context,
       title: 'Job site keys',
@@ -304,8 +317,43 @@ class SettingsPage extends ConsumerWidget {
         ),
         Field(adzunaKey, 'Adzuna app key', obscure: true),
         Field(reed, 'Reed API key', obscure: true, helper: 'Free at reed.co.uk/developers/jobseeker'),
+        const Subhead('Kept on this device only'),
+        Field(
+          usajobsKey,
+          'USAJOBS API key',
+          obscure: true,
+          helper: 'Free at developer.usajobs.gov. Udyoga is not endorsed by OPM.',
+        ),
+        Field(
+          usajobsEmail,
+          'E-mail you registered with USAJOBS',
+          helper: 'USAJOBS asks for it with each search',
+        ),
+        Field(
+          jooble,
+          'Jooble keys',
+          lines: 3,
+          obscure: false,
+          helper:
+              'One per line, "GB: your-key". Each country has its own Jooble site and key '
+              '(jooble.org is the US, uk.jooble.org the UK), 100 searches a day each.',
+        ),
       ],
       onSave: () async {
+        final email = usajobsEmail.text.trim();
+        if (usajobsKey.text.trim().isNotEmpty && !email.contains('@')) {
+          return 'USAJOBS needs the e-mail address its key was registered with.';
+        }
+        final joobleKeys = joobleKeysIn(jooble.text);
+        if (jooble.text.trim().isNotEmpty && joobleKeys.isEmpty) {
+          return 'Write each Jooble key as "GB: your-key", one per line.';
+        }
+        await FeedKeys.saveSecrets(
+          ref.read(sessionProvider).keys.store,
+          usajobsKey: usajobsKey.text,
+          usajobsEmail: email,
+          jooble: joobleKeys,
+        );
         await ref.mutate(
           (s) => s.book.setPref(
             PrefKeys.feedKeys,

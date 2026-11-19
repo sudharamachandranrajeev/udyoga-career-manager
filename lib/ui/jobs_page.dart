@@ -13,6 +13,7 @@ import '../domain/pipeline.dart';
 import '../domain/profile.dart';
 import 'common.dart';
 import 'eligibility_view.dart';
+import 'employers_page.dart';
 import 'job_page.dart';
 import 'kit/kit.dart';
 import 'look.dart';
@@ -49,6 +50,13 @@ class _JobsPageState extends ConsumerState<JobsPage> {
           icon: Icons.travel_explore,
           label: 'Search job sites',
           onPressed: () => showPortals(context, ref),
+        ),
+        HintIconButton(
+          'jobs.employers',
+          icon: Icons.apartment_outlined,
+          label: 'Employers you watch',
+          onPressed: () =>
+              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EmployersPage())),
         ),
         HintIconButton(
           'jobs.ai',
@@ -268,8 +276,8 @@ class JobTile extends StatelessWidget {
                       children: [
                         if (j.remote) const StatusPill('Remote', icon: Icons.public),
                         if (j.country.isNotEmpty) StatusPill(Country.nameOf(j.country)),
-                        if (j.source == 'adzuna')
-                          const AdzunaCredit()
+                        if (SourceCredit.needed(j.source))
+                          SourceCredit(j.source)
                         else
                           StatusPill('via ${sourceName(j.source)}'),
                         EligibilityPill(j),
@@ -387,6 +395,17 @@ String sourceName(String source) => switch (source) {
   'remotive' => 'Remotive',
   'jobicy' => 'Jobicy',
   'arbeitnow' => 'Arbeitnow',
+  'jobtech' => 'Platsbanken',
+  'nav' => 'arbeidsplassen.no',
+  'usajobs' => 'USAJOBS',
+  'jooble' => 'Jooble',
+  'unvacancies' => 'unvacancies.org',
+  'greenhouse' => 'Greenhouse',
+  'lever' => 'Lever',
+  'ashby' => 'Ashby',
+  'smartrecruiters' => 'SmartRecruiters',
+  'workday' => 'Workday',
+  'careers' => 'the careers page',
   'ai' => 'AI search',
   _ => 'you',
 };

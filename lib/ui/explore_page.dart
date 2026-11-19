@@ -244,10 +244,27 @@ class CountryPage extends ConsumerWidget {
         SectionCard(
           title: 'Live jobs',
           hint: 'explore.jobs',
+          trailing: p.searchCountries.contains(code)
+              ? const Tooltip(message: 'In your target countries', child: Icon(Icons.check_circle_outline))
+              : TextButton.icon(
+                  onPressed: () async {
+                    await ref.mutate((x) => x.book.addTargetCountry(code));
+                    if (context.mounted) {
+                      showMessage(
+                        context,
+                        '${country.name} added to your targets. Its jobs come on the next refresh.',
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add to targets'),
+                ),
           child: jobs.isEmpty
               ? Text(
-                  'No saved openings in ${country.name} yet. Add it to your target countries on the Profile '
-                  'page and the job sites search it on the next refresh.',
+                  p.searchCountries.contains(code)
+                      ? 'No saved openings in ${country.name} yet. The job sites search it on each refresh.'
+                      : 'No saved openings in ${country.name} yet. Add it to your targets and the job sites '
+                            'search it on the next refresh.',
                 )
               : Column(
                   children: [
