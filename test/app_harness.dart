@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +12,7 @@ import 'package:udyoga/app/providers.dart';
 import 'package:udyoga/app/session.dart';
 import 'package:udyoga/domain/background.dart';
 import 'package:udyoga/domain/book.dart';
+import 'package:udyoga/domain/page_reader.dart';
 import 'package:udyoga/ui/site_browser.dart';
 
 import 'support.dart';
@@ -142,6 +145,29 @@ class FakeSiteBrowser implements SiteBrowser {
 
   @override
   Future<({String url, String title, String text})?> page() async => opened.isEmpty ? null : current;
+
+  /// What the page reader sees; built from [current] when not set.
+  PageSnapshot? snap;
+  Uint8List? canvas;
+
+  /// Each fill asked for, as (selector, text).
+  final fills = <(String, String)>[];
+
+  @override
+  Future<PageSnapshot?> snapshot() async {
+    if (opened.isEmpty) return null;
+    final c = current;
+    return snap ?? (c == null ? null : PageSnapshot(url: c.url, title: c.title, text: c.text));
+  }
+
+  @override
+  Future<Uint8List?> canvasImage() async => canvas;
+
+  @override
+  Future<Object?> fillTextBox(String selector, String text) async {
+    fills.add((selector, text));
+    return '{"ok": true}';
+  }
 
   @override
   Future<void> close() async {}

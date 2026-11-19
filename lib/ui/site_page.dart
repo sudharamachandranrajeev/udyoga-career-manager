@@ -2,15 +2,18 @@ import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, che
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/page_tools.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/answer_pack.dart';
 import '../domain/insights.dart';
 import '../domain/json.dart';
 import '../domain/pipeline.dart';
+import '../domain/recipes.dart';
 import 'common.dart';
 import 'kit/kit.dart';
 import 'jobs_page.dart';
+import 'page_reader_sheet.dart';
 import 'site_browser.dart';
 
 /// Opens [url] inside Udyoga. With [applicationId] it is the application's
@@ -170,6 +173,17 @@ class _SitePageState extends ConsumerState<SitePage> {
           icon: const Icon(Icons.bookmark_add_outlined),
           tooltip: 'Save this job',
           onPressed: _opened ? _saveJob : null,
+        ),
+      IconButton(
+        icon: const Icon(Icons.document_scanner_outlined),
+        tooltip: 'Read this page',
+        onPressed: _opened && _browser != null ? () => readOpenPage(context, ref, _browser!) : null,
+      ),
+      if (ref.watch(recipesProvider).value?.ofMode(RecipeMode.assistFill).isNotEmpty ?? false)
+        IconButton(
+          icon: const Icon(Icons.edit_note),
+          tooltip: 'Fill a text box',
+          onPressed: _opened && _browser != null ? () => fillOnPage(context, ref, _browser!) : null,
         ),
       IconButton(icon: const Icon(Icons.refresh), tooltip: 'Open the site again', onPressed: _open),
     ];

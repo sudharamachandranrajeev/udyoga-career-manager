@@ -406,6 +406,8 @@ String sourceName(String source) => switch (source) {
   'smartrecruiters' => 'SmartRecruiters',
   'workday' => 'Workday',
   'careers' => 'the careers page',
+  'page' => 'a page you read',
+  'recipe' => 'a site recipe',
   'ai' => 'AI search',
   _ => 'you',
 };

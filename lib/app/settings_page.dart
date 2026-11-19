@@ -1,4 +1,5 @@
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -9,12 +10,14 @@ import '../domain/background.dart';
 import '../domain/feeds.dart';
 import '../domain/gemini.dart';
 import '../domain/n8n.dart';
+import '../domain/recipes.dart';
 import '../domain/subscription.dart';
 import '../domain/update.dart';
 import '../ui/accounts_page.dart';
 import '../ui/common.dart';
 import 'background.dart';
 import 'check_in_reminder.dart';
+import 'page_tools.dart';
 import 'providers.dart';
 
 /// Settings for the AI and the job sites, read together.
@@ -200,6 +203,7 @@ class SettingsPage extends ConsumerWidget {
         ),
         const _CheckInCard(),
         if (ref.watch(backgroundSchedulerProvider).supported) const _BackgroundCard(),
+        const _RecipesCard(),
         if (ref.watch(updaterProvider) case final updater?) _UpdateCard(updater),
         const AppLockCard(),
         const HintsCard(),
@@ -504,6 +508,76 @@ class _BackgroundCard extends ConsumerWidget {
           ),
           if (status?.next case final next?)
             Text(next.isBefore(DateTime.now()) ? 'Next run: due now.' : 'Next run: about ${_when(next)}.'),
+        ],
+      ),
+    );
+  }
+}
+
+/// Site recipes: the folder they are read from, each one with its mode and
+/// today's use against its cap, and any file that was refused.
+class _RecipesCard extends ConsumerWidget {
+  const _RecipesCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final folder = ref.watch(recipesFolderProvider).value ?? '';
+    final set = ref.watch(recipesProvider).value ?? const RecipeSet();
+    final usage = ref.watch(recipeUsageProvider).value ?? const <String, int>{};
+    Future<void> pick() async {
+      final dir = await FilePicker.getDirectoryPath(dialogTitle: 'Recipes folder');
+      if (dir != null) await ref.setRecipesFolder(dir);
+    }
+
+    final muted = TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant);
+    return SectionCard(
+      title: 'Recipes',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Recipes teach Udyoga one site each: how to read its jobs politely in the background, how to read a '
+            'page you open, or which text box to fill with a draft you approve. Udyoga never presses Send or '
+            'Submit. They are JSON files in a folder you choose, such as your career file\'s recipes folder.',
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.folder_open),
+            title: const Text('Recipes folder'),
+            subtitle: Text(folder.isEmpty ? 'None chosen' : folder),
+            trailing: Wrap(
+              spacing: 4,
+              children: [
+                if (folder.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear),
+                    tooltip: 'Stop using this folder',
+                    onPressed: () => ref.setRecipesFolder(''),
+                  ),
+                TextButton(onPressed: pick, child: Text(folder.isEmpty ? 'Choose' : 'Change')),
+              ],
+            ),
+          ),
+          if (folder.isNotEmpty && set.recipes.isEmpty && set.problems.isEmpty)
+            Text('No recipes in this folder.', style: muted),
+          for (final r in set.recipes)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              leading: Icon(switch (r.mode) {
+                RecipeMode.fetch => Icons.cloud_download_outlined,
+                RecipeMode.browserRead => Icons.document_scanner_outlined,
+                RecipeMode.assistFill => Icons.edit_note,
+              }),
+              title: Text(r.title),
+              subtitle: Text('${r.mode.label} · ${r.site} · one every ${r.rate} s'),
+              trailing: Text('${usage[r.id] ?? 0} of ${r.effectiveCap} today'),
+            ),
+          for (final p in set.problems)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('Not loaded: $p', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ),
         ],
       ),
     );

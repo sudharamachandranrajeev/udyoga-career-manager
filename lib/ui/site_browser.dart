@@ -1,11 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:desktop_webview_window/desktop_webview_window.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+
+import '../domain/assist_fill.dart';
+import '../domain/ocr.dart';
+import '../domain/page_reader.dart';
 
 /// An employer's or job board's site opened inside Udyoga, so the candidate
 /// applies there (signing in and pressing submit themselves) while Udyoga
@@ -19,7 +24,32 @@ abstract class SiteBrowser {
   /// when nothing is open.
   Future<({String url, String title, String text})?> page();
 
+  /// The page read in full for the page reader (text, JSON-LD, HTML), or
+  /// null when nothing is open.
+  Future<PageSnapshot?> snapshot();
+
+  /// The page's largest canvas as a PNG, or null when there is none or the
+  /// page does not allow it to be read.
+  Future<Uint8List?> canvasImage();
+
+  /// Puts [text] into the text box at [selector] and nothing more: the only
+  /// way Udyoga changes a page. It runs [fillScript], which presses nothing.
+  Future<Object?> fillTextBox(String selector, String text);
+
   Future<void> close();
+}
+
+/// [canvasImageScript]'s reply as bytes.
+Uint8List? _decodeImage(Object? raw) {
+  var v = raw;
+  if (v is String && v.startsWith('"')) {
+    try {
+      v = jsonDecode(v);
+    } on FormatException {
+      return null;
+    }
+  }
+  return v is String ? dataUrlBytes(v) : null;
 }
 
 /// A new browser for each site page, or null on devices without one (the
@@ -86,6 +116,24 @@ class _DesktopSiteBrowser implements SiteBrowser {
   }
 
   @override
+  Future<PageSnapshot?> snapshot() async {
+    final view = _view;
+    if (view == null) return null;
+    return PageSnapshot.decode(await view.evaluateJavaScript(readPageScript));
+  }
+
+  @override
+  Future<Uint8List?> canvasImage() async {
+    final view = _view;
+    if (view == null) return null;
+    return _decodeImage(await view.evaluateJavaScript(canvasImageScript));
+  }
+
+  @override
+  Future<Object?> fillTextBox(String selector, String text) async =>
+      _view?.evaluateJavaScript(fillScript(selector, text));
+
+  @override
   Future<void> close() async {
     _view?.close();
     _view = null;
@@ -109,6 +157,24 @@ class _AndroidSiteBrowser implements SiteBrowser {
     if (c == null) return null;
     return _decodePage(await c.runJavaScriptReturningResult(_readPage));
   }
+
+  @override
+  Future<PageSnapshot?> snapshot() async {
+    final c = _controller;
+    if (c == null) return null;
+    return PageSnapshot.decode(await c.runJavaScriptReturningResult(readPageScript));
+  }
+
+  @override
+  Future<Uint8List?> canvasImage() async {
+    final c = _controller;
+    if (c == null) return null;
+    return _decodeImage(await c.runJavaScriptReturningResult(canvasImageScript));
+  }
+
+  @override
+  Future<Object?> fillTextBox(String selector, String text) async =>
+      _controller?.runJavaScriptReturningResult(fillScript(selector, text));
 
   @override
   Future<void> close() async => _controller = null;
