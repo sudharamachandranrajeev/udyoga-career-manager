@@ -438,3 +438,85 @@ results, within 0.5 s:
 - Transcription slip: "We counted the complaints" came out as "100%
   accounted the complaints". The measure was still found (from "6 to 1").
 - The three take files were deleted with the take folder at the end.
+
+## I3: panel scoring and the debrief
+
+### Role profiles and frameworks
+
+A role profile holds the criteria a panel agrees before it meets anyone
+(`lib/domain/interview_scoring.dart`). The user's AI reads a pasted advert
+and person specification into criteria (text, essential or desirable,
+kind, how assessed, a question); only the advert is sent. The reply is
+parsed strictly: blank and repeated criteria are dropped, unknown kinds
+read as experience, and nothing missing is invented. Without an AI the
+criteria are typed in. Every criterion stays editable.
+
+The round asks the essential criteria assessed at interview first, then
+the desirable ones (at most eight). Criteria assessed only by the
+application or a test are not asked aloud and never count against the
+candidate. Each question is tagged with its criterion, and its follow-up
+plan gains a probe worded for the criterion.
+
+Five frameworks carry their own scale and anchor text, written for
+practice and marked "How panels commonly score", each with a short public
+source note: NHS values (N/O, then 1 to 4), NI HSC values-based and HSE
+Ireland competencies (0 to 3 against agreed key elements), Civil Service
+Success Profiles (1 to 7, commonly 4 or more on every behaviour) and a
+private-sector rubric (1 to 4). Their example values, behaviours and
+competencies are generic; the employer's own list wins.
+
+### Scoring only what was said
+
+The AI scores each answer per criterion with a quote from the transcript;
+only transcripts and criteria are sent, never the profile. A deterministic
+check backs it up: the quote must appear in that answer's transcript
+(ignoring case, punctuation and fillers, three words or more, parts
+separated by an ellipsis in order). A score with a missing quote, a level
+off the scale or a criterion the question does not test is dropped, and
+the criterion reads as not observed. The raw scoring is saved with the
+round and checked again each time the debrief opens.
+
+### The debrief
+
+Coverage comes first: each criterion is evidenced, thin or missing, and a
+missing essential assessed at interview is flagged as likely to make the
+candidate unappointable. Then each scored criterion with its level, the
+anchor text and the quoted line; one strength and one task-level fix per
+answer (no percentages, no confidence score); and recovery lines for weak
+moments. Without an AI, coverage comes from the I2 element matcher: an
+example with the speaker's own actions and how it ended is evidence; some
+of the parts is thin; nothing, or a bare claim, is missing. A round with no
+profile uses each question's aim as a desirable criterion.
+
+A good answer can be saved to the story bank as a draft, source
+"practice", with the criteria it evidenced (a new `criteria` column).
+
+### I2 follow-ups
+
+- **Process progress** is saved in `career_processes` (schema 9): the
+  edited process, each stage's round, what it covered and the carry-forward
+  as it stood. Text only; it syncs like the rounds. A stage started and left
+  unfinished goes on in the same round.
+- **Spoken follow-ups** keep their transcript and delivery; the review now
+  shows delivery for each one. Audio handling is unchanged.
+- **Speaking sooner.** The opening is already made and played a sentence
+  at a time. `tool/voice_timing_check.dart` timed the screening call's
+  opening and settler (14.8 s of speech) on this laptop: the first audio is
+  ready after 2.7 s and the microphone would open at 20.6 s, because Kokoro
+  makes speech about 1.4 times slower than it plays. Splitting sentences
+  into clauses did not bring the first audio forward (the first sentence is
+  already short) and added about 0.6 s overall. Six threads (22.9 s) and
+  eight (25.7 s) were slower than four, and two engines making alternate
+  sentences gave 4.7 s to first audio and 21.9 s overall. No change was
+  made. The opening is made from the moment the round opens, so time spent
+  on the "Ask me" screen comes off the wait.
+
+### Live check
+
+With Claude Code (Sonnet), a fictional advert gave six criteria with the
+right essential and desirable split and how each is assessed, and the NHS
+values framework, in about 4 s. A fictional two-answer round was scored in
+about 4 s: the diary answer scored 2 (Good) with an exact quote; the bare
+"good team player" claim scored N/O. No quote was dropped. The first run
+showed that criteria assessed only by the application were asked and a
+test-only essential was flagged; both were fixed.
