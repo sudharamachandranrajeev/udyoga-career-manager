@@ -182,9 +182,13 @@ String formatBytes(int bytes) {
 /// file holding the SHA-256 it was checked against. A download in progress
 /// is `<root>/<id>.part`; it is deleted if it fails or does not match.
 class ModelManager {
-  ModelManager(this.root, {this.client});
+  ModelManager(this.root, {this.client, this.voiceCache});
 
   final Directory root;
+
+  /// The interviewer voice's ready-made clips (see voice_cache.dart), made
+  /// by the voice model: deleting the voice deletes them too.
+  final Directory? voiceCache;
 
   /// The HTTP client to use; null means a fresh one per download.
   final http.Client? client;
@@ -312,13 +316,32 @@ class ModelManager {
     }
   }
 
-  /// Deletes [m] and any half-finished download of it.
+  /// Deletes [m] and any half-finished download of it. Deleting a voice
+  /// also deletes the clips it made.
   Future<void> delete(SpeechModel m) async {
     for (final e in [_dir(m), Directory('${root.path}/${m.id}.new')]) {
       if (await e.exists()) await e.delete(recursive: true);
     }
     final part = File('${root.path}/${m.id}.part');
     if (await part.exists()) await part.delete();
+    if (m.role == ModelRole.voice) await clearVoiceCache();
+  }
+
+  /// Bytes the voice's ready-made clips take (0 with none).
+  Future<int> voiceCacheBytes() async {
+    final d = voiceCache;
+    if (d == null || !await d.exists()) return 0;
+    var n = 0;
+    await for (final e in d.list(recursive: true, followLinks: false)) {
+      if (e is File) n += await e.length();
+    }
+    return n;
+  }
+
+  /// Deletes the voice's ready-made clips; they are made again as needed.
+  Future<void> clearVoiceCache() async {
+    final d = voiceCache;
+    if (d != null && await d.exists()) await d.delete(recursive: true);
   }
 }
 

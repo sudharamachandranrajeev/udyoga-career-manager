@@ -29,7 +29,11 @@ final devToolsProvider = FutureProvider<bool>((ref) async {
 /// Where downloaded models live: the app's own data folder, never synced.
 final modelManagerProvider = FutureProvider<ModelManager>((ref) async {
   final base = await getApplicationSupportDirectory();
-  return ModelManager(Directory('${base.path}/models'), client: ref.watch(httpClientProvider));
+  return ModelManager(
+    Directory('${base.path}/models'),
+    client: ref.watch(httpClientProvider),
+    voiceCache: Directory('${base.path}/voice-cache'),
+  );
 });
 
 class InterviewLabPage extends ConsumerStatefulWidget {
@@ -44,7 +48,7 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
   final _onDisk = <String, int>{};
   final _progress = <String, double>{};
   String _transcriber = defaultTranscriber;
-  int _retired = 0;
+  int _retired = 0, _cached = 0;
   InterviewLab? _lab;
   LabResult? _result;
   FaceCamera? _camera;
@@ -70,6 +74,7 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
       _onDisk[m.id] = await mm.sizeOnDisk(m);
     }
     _retired = await mm.retiredBytes();
+    _cached = await mm.voiceCacheBytes();
     if (mounted) setState(() {});
   }
 
@@ -188,6 +193,22 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
                       : _has(m.id)
                       ? TextButton(onPressed: () => _delete(m), child: const Text('Delete'))
                       : TextButton(onPressed: () => _download(m), child: const Text('Download')),
+                ),
+              if (_cached > 0)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Voice cache'),
+                  subtitle: Text(
+                    'The interviewer\'s fixed lines, made once so a round starts sooner: '
+                    '${formatBytes(_cached)}. Made again when needed.',
+                  ),
+                  trailing: TextButton(
+                    onPressed: () async {
+                      await (await ref.read(modelManagerProvider.future)).clearVoiceCache();
+                      await _refresh();
+                    },
+                    child: const Text('Clear voice cache'),
+                  ),
                 ),
               if (_retired > 0)
                 ListTile(

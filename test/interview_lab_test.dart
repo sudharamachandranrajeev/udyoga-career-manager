@@ -8,6 +8,7 @@ import 'package:http/testing.dart';
 import 'package:udyoga/vision/blazeface.dart';
 import 'package:udyoga/voice/lab.dart';
 import 'package:udyoga/voice/models.dart';
+import 'package:udyoga/voice/voice_cache.dart';
 
 class FakeRecorder implements MicRecorder {
   int calls = 0;
@@ -54,19 +55,25 @@ class FakeSpeaker implements Speaker {
 }
 
 /// A fictional model for the manager tests.
-SpeechModel fakeModel(List<int> body, {String? hash, bool archive = false, String entry = 'model.bin'}) =>
-    SpeechModel(
-      id: 'example-model',
-      label: 'Example model',
-      role: ModelRole.vad,
-      url: 'https://models.example.org/model.bin',
-      sha256: hash ?? sha256.convert(body).toString(),
-      bytes: body.length,
-      entry: entry,
-      source: 'Example',
-      licence: 'MIT',
-      archive: archive,
-    );
+SpeechModel fakeModel(
+  List<int> body, {
+  String? hash,
+  bool archive = false,
+  String entry = 'model.bin',
+  String id = 'example-model',
+  ModelRole role = ModelRole.vad,
+}) => SpeechModel(
+  id: id,
+  label: 'Example model',
+  role: role,
+  url: 'https://models.example.org/model.bin',
+  sha256: hash ?? sha256.convert(body).toString(),
+  bytes: body.length,
+  entry: entry,
+  source: 'Example',
+  licence: 'MIT',
+  archive: archive,
+);
 
 void main() {
   group('lab state machine', () {
@@ -187,6 +194,41 @@ void main() {
       expect(await mm.installed(m), isFalse);
       expect(await mm.sizeOnDisk(m), 0);
       expect(root.listSync(), isEmpty);
+    });
+
+    test('deleting the voice deletes its cached clips; the cache can be cleared alone', () async {
+      final body = List<int>.generate(3000, (i) => i % 13);
+      final cache = Directory('${root.path}/voice-cache');
+      final voice = fakeModel(body, id: 'example-voice', role: ModelRole.voice);
+      final vad = fakeModel(body);
+      final mm = ModelManager(Directory('${root.path}/models'), client: serving(body), voiceCache: cache);
+      Future<void> fill() async {
+        await VoiceCache(cache, voice: 21).write(
+          VoiceCache(cache, voice: 21).keyFor(fixedVoiceSentences.first)!,
+          Float32List.fromList([0.1, 0.2, 0.3]),
+          24000,
+        );
+      }
+
+      await mm.download(voice);
+      await mm.download(vad);
+      expect(await mm.voiceCacheBytes(), 0);
+      await fill();
+      expect(await mm.voiceCacheBytes(), 4 + 3 * 4);
+
+      // Another kind of model leaves the clips alone.
+      await mm.delete(vad);
+      expect(await mm.voiceCacheBytes(), 16);
+
+      await mm.delete(voice);
+      expect(await mm.installed(voice), isFalse);
+      expect(cache.existsSync(), isFalse, reason: 'clips made by a deleted voice go with it');
+
+      await fill();
+      await mm.clearVoiceCache();
+      expect(await mm.voiceCacheBytes(), 0);
+      expect(cache.existsSync(), isFalse);
+      await mm.clearVoiceCache(); // nothing there: fine
     });
 
     test('a SHA-256 mismatch is refused and leaves nothing behind', () async {
