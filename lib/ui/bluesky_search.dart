@@ -110,7 +110,7 @@ class _BlueskySearchState extends ConsumerState<BlueskySearch> {
                         controller: query,
                         decoration: const InputDecoration(
                           labelText: 'Topic',
-                          hintText: 'health informatics Leeds',
+                          hintText: 'health informatics <your city>',
                         ),
                         onSubmitted: (_) => _search(),
                       ),

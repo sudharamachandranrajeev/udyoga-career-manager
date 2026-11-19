@@ -242,7 +242,7 @@ void main() {
     tearDown(() => book.db.close());
 
     test('work and personal e-mail addresses', () {
-      for (final a in ['a@nhs.net', 'b@leedsth.nhs.uk', 'c@dhsc.gov.uk', 'd@example-health.co.uk']) {
+      for (final a in ['a@nhs.net', 'b@exampletonth.nhs.uk', 'c@dhsc.gov.uk', 'd@example-health.co.uk']) {
         expect(emailKind(a), 'work', reason: a);
       }
       for (final a in [

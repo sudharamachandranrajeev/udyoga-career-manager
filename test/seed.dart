@@ -738,5 +738,5 @@ Future<void> seedSocial(CareerBook book) async {
         'What I learned training night staff on e-observations: start with the why, keep sessions short, '
         'and let the ward champions lead.',
   );
-  await book.addPost(channel: 'bluesky', at: at(4, '12:00'), topic: 'Digital nursing meet-up in Leeds');
+  await book.addPost(channel: 'bluesky', at: at(4, '12:00'), topic: 'Digital nursing meet-up in Exampleton');
 }

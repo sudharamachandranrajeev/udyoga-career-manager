@@ -1,5 +1,5 @@
 // Local capability check (2026-11-12): follow-up and tracking for a made-up
-// health-sector clerical candidate aiming at Leeds, with Northern Ireland as
+// health-sector clerical candidate aiming at Exampleton, with Northern Ireland as
 // a backup. Each test states what the candidate needs; a failure is a gap.
 import 'dart:async';
 import 'dart:io';
@@ -28,7 +28,7 @@ const clerk = CandidateProfile(
   name: 'Jordan Example',
   headline: 'Ward clerk and medical receptionist',
   country: 'GB',
-  location: 'Leeds',
+  location: 'Exampleton',
   currentRole: 'Ward Clerk',
   currentEmployer: 'Example Hospital',
   yearsExperience: 7,
@@ -76,13 +76,19 @@ void main() {
   Future<String> job(Posting p) async => (await book.importPostings([p], clerk, today: '2026-11-02')).single;
 
   test('finds the clerical role as a good local fit', () async {
-    final id = await job(nhs('a', 'Ward Clerk', 'Example Leeds Hospitals Trust', 'Leeds'));
+    final id = await job(nhs('a', 'Ward Clerk', 'Example Exampleton Hospitals Trust', 'Exampleton'));
     expect((await book.job(id)).fit, greaterThan(50));
   });
 
   test('a started (unsent) application keeps its closing-date reminder', () async {
     final id = await job(
-      nhs('a', 'Medical Secretary', 'Example Leeds Hospitals Trust', 'Leeds', closing: '2026-11-06'),
+      nhs(
+        'a',
+        'Medical Secretary',
+        'Example Exampleton Hospitals Trust',
+        'Exampleton',
+        closing: '2026-11-06',
+      ),
     );
     final app = await book.applyFor(await book.job(id), today: '2026-11-03');
     final a = await book.application(app);
@@ -99,8 +105,8 @@ void main() {
     );
   });
 
-  test('the full Leeds journey: apply, chase, shortlist, interview, offer, accept', () async {
-    final id = await job(nhs('a', 'Ward Clerk', 'Example Leeds Hospitals Trust', 'Leeds'));
+  test('the full Exampleton journey: apply, chase, shortlist, interview, offer, accept', () async {
+    final id = await job(nhs('a', 'Ward Clerk', 'Example Exampleton Hospitals Trust', 'Exampleton'));
     final app = await book.applyFor(await book.job(id), today: '2026-11-03', sent: true);
     var a = await book.application(app);
     expect((a.stage, a.applied, a.followUp), ('applied', '2026-11-03', '2026-11-13'));
@@ -112,7 +118,7 @@ void main() {
     a = await book.application(app);
     expect((a.stage, a.followUp), ('screening', '2026-11-25'));
 
-    await book.logEvent(app, 'interview', at: '2026-11-27T14:30', summary: 'Panel interview, Leeds');
+    await book.logEvent(app, 'interview', at: '2026-11-27T14:30', summary: 'Panel interview, Exampleton');
     a = await book.application(app);
     expect((a.stage, a.followUp), ('interview', '2026-12-02'));
 
@@ -132,7 +138,7 @@ void main() {
   });
 
   test('an interview keeps the time it was booked for', () async {
-    final id = await job(nhs('a', 'Ward Clerk', 'Example Leeds Hospitals Trust', 'Leeds'));
+    final id = await job(nhs('a', 'Ward Clerk', 'Example Exampleton Hospitals Trust', 'Exampleton'));
     final app = await book.applyFor(await book.job(id), today: '2026-11-03', sent: true);
     await book.logEvent(app, 'interview', at: '2026-11-27T14:30');
     final e = (await (book.db.select(
@@ -157,7 +163,7 @@ void main() {
   });
 
   test('a rejection after interview keeps a reminder to ask for feedback', () async {
-    final id = await job(nhs('a', 'Ward Clerk', 'Example Leeds Hospitals Trust', 'Leeds'));
+    final id = await job(nhs('a', 'Ward Clerk', 'Example Exampleton Hospitals Trust', 'Exampleton'));
     final app = await book.applyFor(await book.job(id), today: '2026-11-03', sent: true);
     await book.logEvent(app, 'interview', at: '2026-11-20T10:00');
     await book.logEvent(app, 'rejected', at: '2026-11-25T10:00');
@@ -167,9 +173,9 @@ void main() {
   });
 
   test('accepting one offer flags the other open applications', () async {
-    final leeds = await job(nhs('a', 'Ward Clerk', 'Example Leeds Hospitals Trust', 'Leeds'));
+    final local = await job(nhs('a', 'Ward Clerk', 'Example Exampleton Hospitals Trust', 'Exampleton'));
     final belfast = await job(nhs('b', 'Admin Officer', 'Example HSC Trust', 'Belfast'));
-    final won = await book.applyFor(await book.job(leeds), today: '2026-11-03', sent: true);
+    final won = await book.applyFor(await book.job(local), today: '2026-11-03', sent: true);
     final other = await book.applyFor(await book.job(belfast), today: '2026-11-03', sent: true);
     await book.logEvent(won, 'offer', at: '2026-11-20T10:00');
     await book.logEvent(won, 'accepted', at: '2026-11-21T10:00');
@@ -185,7 +191,7 @@ void main() {
     await book.importLeads([
       const LeadSuggestion({
         'name': 'Sam Recruiter',
-        'company': 'Example Leeds Hospitals Trust',
+        'company': 'Example Exampleton Hospitals Trust',
         'kind': 'recruiter',
       }),
     ], today: '2026-11-03');
@@ -212,7 +218,7 @@ void main() {
   });
 
   test('accepting a conditional offer starts the pre-employment checklist', () async {
-    final id = await job(nhs('a', 'Ward Clerk', 'Example Leeds Hospitals Trust', 'Leeds'));
+    final id = await job(nhs('a', 'Ward Clerk', 'Example Exampleton Hospitals Trust', 'Exampleton'));
     final app = await book.applyFor(await book.job(id), today: '2026-11-03', sent: true);
     await book.logEvent(app, 'offer', at: '2026-11-20T10:00');
     await book.logEvent(app, 'checks', at: '2026-11-20T12:00');
@@ -229,7 +235,7 @@ void main() {
 
   test('the advert and the sent application are kept', () async {
     final id = await job(
-      nhs('a', 'Ward Clerk', 'Example Leeds Hospitals Trust', 'Leeds', closing: '2026-11-20'),
+      nhs('a', 'Ward Clerk', 'Example Exampleton Hospitals Trust', 'Exampleton', closing: '2026-11-20'),
     );
     final app = await book.applyFor(await book.job(id), today: '2026-11-03');
     await book.markSent(app, today: '2026-11-05', sent: 'Supporting statement: ...');
@@ -266,7 +272,15 @@ void main() {
     await h.open(
       seed: (b) async {
         final id = (await b.importPostings(
-          [nhs('c', 'Medical Secretary', 'Example Leeds Hospitals Trust', 'Leeds', closing: addDays(now, 3))],
+          [
+            nhs(
+              'c',
+              'Medical Secretary',
+              'Example Exampleton Hospitals Trust',
+              'Exampleton',
+              closing: addDays(now, 3),
+            ),
+          ],
           clerk,
           today: now,
         )).single;
@@ -339,7 +353,15 @@ void main() {
       seed: (b) async {
         await b.saveProfile(clerk);
         final id = (await b.importPostings(
-          [nhs('d', 'Ward Clerk', 'Example Leeds Hospitals Trust', 'Leeds', closing: addDays(today(), 10))],
+          [
+            nhs(
+              'd',
+              'Ward Clerk',
+              'Example Exampleton Hospitals Trust',
+              'Exampleton',
+              closing: addDays(today(), 10),
+            ),
+          ],
           clerk,
           today: today(),
         )).single;
@@ -431,7 +453,15 @@ void main() {
       seed: (b) async {
         await b.saveProfile(clerk);
         final id = (await b.importPostings(
-          [nhs('e', 'Ward Clerk', 'Example Leeds Hospitals Trust', 'Leeds', closing: addDays(now, 10))],
+          [
+            nhs(
+              'e',
+              'Ward Clerk',
+              'Example Exampleton Hospitals Trust',
+              'Exampleton',
+              closing: addDays(now, 10),
+            ),
+          ],
           clerk,
           today: now,
         )).single;
@@ -475,7 +505,7 @@ void main() {
     await h.open(
       seed: (b) async {
         final id = (await b.importPostings(
-          [nhs('f', 'Medical Secretary', 'Example Leeds Hospitals Trust', 'Leeds')],
+          [nhs('f', 'Medical Secretary', 'Example Exampleton Hospitals Trust', 'Exampleton')],
           clerk,
           today: now,
         )).single;
@@ -501,14 +531,16 @@ void main() {
     Future<Job> add(Posting p) async => book.job(await job(p));
 
     final live = checkListing(
-      await add(nhs('g', 'Ward Clerk', 'Example Leeds Hospitals Trust', 'Leeds', closing: '2026-11-20')),
+      await add(
+        nhs('g', 'Ward Clerk', 'Example Exampleton Hospitals Trust', 'Exampleton', closing: '2026-11-20'),
+      ),
       today: '2026-11-12',
     );
     expect(live.official, isTrue);
     expect(live.clear, isTrue);
 
     final closed = checkListing(
-      await add(nhs('h', 'Medical Secretary', 'Example Trust', 'Leeds', closing: '2026-11-10')),
+      await add(nhs('h', 'Medical Secretary', 'Example Trust', 'Exampleton', closing: '2026-11-10')),
       today: '2026-11-12',
     );
     expect(closed.problems.single, contains('Closed'));

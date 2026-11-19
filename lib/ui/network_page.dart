@@ -479,7 +479,10 @@ class CommunityDirectory extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 6),
-              StatusPill(communityKinds[c.kind] ?? c.kind, icon: _communityIcons[c.kind]),
+              StatusPill(
+                [communityKinds[c.kind] ?? c.kind, if (c.region.isNotEmpty) c.region].join(' · '),
+                icon: _communityIcons[c.kind],
+              ),
               const SizedBox(height: 6),
               Text(
                 c.why,

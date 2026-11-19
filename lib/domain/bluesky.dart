@@ -34,8 +34,8 @@ const blueskyTopics = [
   'NHS digital',
   'health informatics',
   'clinical informatics',
-  'NHS Leeds',
-  'digital health Yorkshire',
+  'digital health UK',
+  'NHS jobs',
 ];
 
 /// Bluesky app passwords look like `abcd-efgh-ijkl-mnop`.

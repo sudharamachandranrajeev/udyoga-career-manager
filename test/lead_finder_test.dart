@@ -14,7 +14,7 @@ import 'support.dart';
 
 void main() {
   test('role, employer and place build the searches the user opens', () {
-    final s = leadSearches(role: 'Practice Manager', employer: 'Example Health Trust', place: 'Leeds');
+    final s = leadSearches(role: 'Practice Manager', employer: 'Example Health Trust', place: 'Exampleton');
     expect(s.map((s) => s.label), [
       'LinkedIn people search',
       'Google X-ray of LinkedIn',
@@ -22,20 +22,20 @@ void main() {
       'NHS Jobs adverts',
     ]);
     expect(s[0].uri.queryParameters, {
-      'keywords': 'Practice Manager Leeds',
+      'keywords': 'Practice Manager Exampleton',
       'company': 'Example Health Trust',
     });
     expect(s[1].uri.host, 'www.google.com');
     expect(
       s[1].uri.queryParameters['q'],
-      'site:linkedin.com/in "Practice Manager" "Example Health Trust" "Leeds"',
+      'site:linkedin.com/in "Practice Manager" "Example Health Trust" "Exampleton"',
     );
     expect(s[2].uri.queryParameters['q'], startsWith('"Example Health Trust" ("meet the team"'));
     expect(s[2].sourceKind, 'team_page');
     expect(s[3].uri.host, 'www.jobs.nhs.uk');
     expect(s[3].uri.queryParameters, {
       'keyword': 'Practice Manager Example Health Trust',
-      'location': 'Leeds',
+      'location': 'Exampleton',
     });
     expect(s[3].sourceKind, 'advert');
 
@@ -203,5 +203,9 @@ void main() {
         'FEDIP',
       ]),
     );
+    // Regional events span the UK, not one city.
+    final regions = {for (final c in communities) c.region}..remove('');
+    expect(regions.length, greaterThanOrEqualTo(5));
+    expect(regions, containsAll(['London', 'Scotland', 'Wales']));
   });
 }
