@@ -8,16 +8,19 @@ import '../db/database.dart';
 import '../domain/conversations.dart';
 import '../domain/pipeline.dart';
 import '../domain/profile.dart';
+import '../domain/visa_clock.dart';
 import 'applications_page.dart';
 import 'coach_page.dart';
 import 'common.dart';
 import 'contacts_page.dart';
+import 'eligibility_view.dart';
 import 'job_page.dart';
 import 'jobs_page.dart';
 import 'kit/kit.dart';
 import 'look.dart' hide Pace;
 import 'offer_checks.dart';
 import 'today_hero.dart';
+import 'todos.dart';
 
 /// Next steps, from setting up to the day's chasing.
 List<({IconData icon, String text})> nextSteps({
@@ -63,7 +66,19 @@ class TodayPage extends ConsumerWidget {
     final now = today();
     final profile = ref.watch(profileProvider).value ?? const CandidateProfile();
     final hasAi = ref.watch(advisorProvider).value != null;
-    final jobs = ref.watch(jobsProvider).value ?? const <Job>[];
+    // Jobs the user's exclusions rule out never show.
+    final jobs = notExcluded(
+      ref.watch(jobsProvider).value ?? const <Job>[],
+      ref.watch(profileProvider).value,
+    );
+    final todos = todosIn(ref.watch(growthProvider).value ?? const <GrowthItem>[]);
+    final openTodos = todos.where((t) => t.status != 'done').toList();
+    final dueTodos = openTodos.where((t) => isDue(t, now)).length;
+    // A right to work that ends: its reminder at 18, 12, 6 and 3 months.
+    final visas = [
+      for (final c in visaClocks(profile.rights, today: now))
+        if (c.current case final m?) (clock: c, milestone: m),
+    ];
     final apps = ref.watch(applicationsProvider).value ?? const <JobApplication>[];
     final leads = ref.watch(leadsProvider).value ?? const <Lead>[];
     final events = ref.watch(eventsProvider).value ?? const <JobEvent>[];
@@ -143,6 +158,23 @@ class TodayPage extends ConsumerWidget {
           when: relativeDay(c.due!, now),
           open: () =>
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => ApplicationPage(c.applicationId))),
+        ),
+      for (final t in openTodos)
+        if (t.target != null && t.target!.compareTo(now) >= 0 && t.target!.compareTo(addDays(now, 7)) <= 0)
+          (
+            title: t.title,
+            detail: 'To-do',
+            date: t.target!,
+            when: relativeDay(t.target!, now),
+            open: () => goToPage(ref, 'growth'),
+          ),
+      for (final v in visas)
+        (
+          title: v.milestone.title,
+          detail: v.milestone.detail,
+          date: v.clock.right.until!,
+          when: v.clock.label,
+          open: () => goToPage(ref, 'profile'),
         ),
     ]..sort((a, b) => a.date.compareTo(b.date));
     final next = deadlines.firstOrNull;
@@ -284,6 +316,23 @@ class TodayPage extends ConsumerWidget {
                   ],
                 ),
               ),
+            if (dueTodos > 0) TodoCard(openTodos, limit: 5, onMore: () => goToPage(ref, 'growth')),
+            for (final v in visas)
+              SectionCard(
+                title: 'Visa clock',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.hourglass_bottom),
+                  title: Text('${v.milestone.title} (${v.clock.label})'),
+                  subtitle: Text(
+                    [
+                      v.milestone.detail,
+                      if (v.clock.next case final n?) 'Next reminder ${niceDate(n.date)}',
+                    ].join('\n'),
+                  ),
+                  onTap: () => goToPage(ref, 'profile'),
+                ),
+              ),
             if (closing.isNotEmpty)
               SectionCard(
                 title: 'Closing this week',
@@ -292,7 +341,7 @@ class TodayPage extends ConsumerWidget {
                 ], onMore: () => goToPage(ref, 'jobs')),
               ),
           ],
-          count: replies.length + followUps + checks.length + closing.length,
+          count: replies.length + followUps + checks.length + closing.length + dueTodos + visas.length,
           pace: pace == null || pace.level == PaceLevel.calm ? null : pace,
           nothingLabel: fresh.isEmpty ? 'Open Jobs' : 'See new matches',
           onNothing: () => goToPage(ref, 'jobs'),
@@ -325,6 +374,8 @@ class TodayPage extends ConsumerWidget {
               ],
             ),
           ),
+        if (dueTodos == 0 && openTodos.isNotEmpty)
+          TodoCard(openTodos, limit: 5, onMore: () => goToPage(ref, 'growth')),
         if (steps.isNotEmpty)
           SectionCard(
             title: 'Next steps',

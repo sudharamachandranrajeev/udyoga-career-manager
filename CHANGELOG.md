@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Fit scores rebuilt: whole-word matching, skills counted as a share, pay compared only in the same currency, and location, seniority and eligibility now count. Scores update when your profile changes; the job page shows why.
+- Who can apply: Udyoga reads adverts for no sponsorship, nationals only, right to work or residence, security clearance, required languages and essential local experience, quotes the line, and weighs it against your rights to work. Exclusions you set hide jobs entirely.
+- Right to work and languages on the Profile page, with a countdown for any visa that ends and Today reminders 18, 12, 6 and 3 months before.
+- UK licensed sponsors: a badge on jobs and employers on the GOV.UK register of licensed sponsors, refreshed at most once a day.
+- To-do list: add, edit and tick off to-dos with due dates on the Growth page; due ones show on Today.
+- A settings/udyoga.json file in your document folders sets targets, rights to work, passports, languages and to-dos.
+- Refresh: a failed check no longer counts as checked; only changed jobs are rewritten, and your status and dismissals are never overwritten; the AI search runs on one device at a time.
+- Adzuna jobs show "Jobs by Adzuna"; Settings explains that the free tier is for evaluation under Adzuna's terms.
+- Saved reports are pruned past a cap; a bad reply from a job site is told apart from "not reachable".
+
 - Send to Vidya (Coach page): when Udyoga and Vidya sync with the same account, the study plan goes straight into Vidya, and what you finish there shows on the Coach card with *Add to my profile*. Saving or copying the plan still works without sync.
 - Sync: *Change server address* follows your sync server to another computer without signing in again; edits that clashed with another device's are kept for you to bring back; the Sync card shows changes waiting to send.
 

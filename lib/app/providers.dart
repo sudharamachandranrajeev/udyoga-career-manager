@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
 import '../db/database.dart';
 import '../domain/advisor.dart';
@@ -25,6 +27,7 @@ import '../domain/mail_transport.dart';
 import '../domain/pay.dart';
 import '../domain/profile.dart';
 import '../domain/refresh.dart';
+import '../domain/sponsors.dart';
 import '../domain/n8n.dart';
 import '../domain/subscription.dart';
 import '../domain/update.dart';
@@ -433,6 +436,7 @@ class RefreshController extends Notifier<RefreshState> {
             s.book,
             ref.read(httpClientProvider),
             advisor: await ref.read(advisorProvider.future),
+            sponsors: await ref.read(sponsorStoreProvider.future),
           ).run(
             today: today(),
             force: force,
@@ -450,6 +454,34 @@ class RefreshController extends Notifier<RefreshState> {
 }
 
 final refreshProvider = NotifierProvider<RefreshController, RefreshState>(RefreshController.new);
+
+/// The UK sponsor register's store on this device, or null where there is
+/// no app folder (tests).
+final sponsorStoreProvider = FutureProvider<SponsorStore?>((ref) async {
+  final s = ref.watch(sessionProvider);
+  try {
+    final dir = await getApplicationSupportDirectory();
+    return SponsorStore(
+      Directory('${dir.path}${Platform.pathSeparator}sponsors'),
+      ref.watch(httpClientProvider),
+      s.db,
+    );
+  } on Object {
+    return null;
+  }
+});
+
+/// The cached register (null before its first download). Re-read after a
+/// refresh; the store keeps it in memory until the file changes.
+final sponsorRegisterProvider = FutureProvider<SponsorRegister?>((ref) async {
+  ref.watch(revisionProvider);
+  final store = await ref.watch(sponsorStoreProvider.future);
+  try {
+    return await store?.load();
+  } on Object {
+    return null;
+  }
+});
 
 /// Runs the routine refresh and the mail check now and then hourly while
 /// the app is open; each run does only what is due. Read once at start-up.

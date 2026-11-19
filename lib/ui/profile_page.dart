@@ -14,6 +14,7 @@ import '../domain/resume.dart';
 import 'common.dart';
 import 'kit/kit.dart';
 import 'resume_page.dart';
+import 'rights_card.dart';
 
 /// The most CV versions read together.
 const _maxCvs = 8;
@@ -129,10 +130,12 @@ class ProfilePage extends ConsumerWidget {
                       'Work: ${p.targets.workModes.map((m) => _workModes[m] ?? m).join(', ')}',
                     if (p.targets.salaryMin != null)
                       'Minimum pay: ${p.targets.salaryCurrency} ${p.targets.salaryMin} a year'.trim(),
+                    if (p.targets.exclusions.isNotEmpty) 'Never show: ${p.targets.exclusions.join(', ')}',
                     if (p.targets.notes.isNotEmpty) p.targets.notes,
                   ].join('\n'),
                 ),
               ),
+              RightsCard(p),
               SectionCard(
                 title: 'Experience',
                 trailing: TextButton(
@@ -431,6 +434,7 @@ class ProfilePage extends ConsumerWidget {
     final salary = TextEditingController(text: t.salaryMin?.toString() ?? '');
     final currency = TextEditingController(text: t.salaryCurrency);
     final notes = TextEditingController(text: t.notes);
+    final exclusions = TextEditingController(text: t.exclusions.join('\n'));
     final picked = [
       ...t.countries.isEmpty && p.country.isNotEmpty ? [p.country] : t.countries,
     ];
@@ -487,6 +491,14 @@ class ProfilePage extends ConsumerWidget {
           lines: 3,
           hint: 'Right to work, notice period, hours, relocation, driving licence',
         ),
+        Field(
+          exclusions,
+          'Never show jobs that say',
+          lines: 3,
+          helper:
+              'One per line: a word or phrase in the title or employer (whole words), such as "night shift" '
+              'or an agency name. Those jobs are hidden and scored 0.',
+        ),
       ],
       onSave: () async {
         await ref.mutate(
@@ -504,6 +516,7 @@ class ProfilePage extends ConsumerWidget {
                 salaryMin: intIn(salary),
                 salaryCurrency: currency.text.trim().toUpperCase(),
                 notes: notes.text.trim(),
+                exclusions: linesIn(exclusions),
               ),
             ),
           ),

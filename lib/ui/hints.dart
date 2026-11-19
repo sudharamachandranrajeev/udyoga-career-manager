@@ -28,6 +28,11 @@ const udyogaHints = <String, String>{
   'job.assess': 'The AI reads the advert, researches the employer and scores your fit honestly.',
   'job.tailor': 'A CV and cover letter for this job, from your real experience only.',
   'job.leads': 'Find the recruiter, hiring manager and agencies for this job.',
+  'job.eligibility':
+      'Lines in the advert that limit who can apply (visa, nationality, residence, vetting, language, local '
+      'experience), checked against the rights and languages on your profile.',
+  'profile.rights': 'Passports, rights to work and languages. Udyoga checks every advert against them.',
+  'todos': 'Your own to-do list. Due and overdue ones show on Today.',
   // Applications
   'apps.followup': 'When to chase this up. Add it to your calendar so it reminds you.',
   'apps.calendar': 'Download every follow-up as a calendar file with 9 am alerts.',

@@ -7,6 +7,7 @@ import '../db/database.dart';
 import '../domain/insights.dart';
 import '../domain/pay.dart';
 import 'common.dart';
+import 'eligibility_view.dart';
 import 'kit/kit.dart';
 
 String _pounds(int n) {
@@ -150,6 +151,7 @@ class EmployerCard extends ConsumerWidget {
     if (job.company.isEmpty) return const SizedBox.shrink();
     final hasAi = ref.watch(advisorProvider).value != null;
     final brief = ref.watch(employerBriefProvider(job.company)).value;
+    final sponsor = job.country.isEmpty || job.country == 'GB' ? sponsorOf(ref, job.company) : null;
     return SectionCard(
       title: 'Working at ${job.company}',
       trailing: hasAi
@@ -158,14 +160,28 @@ class EmployerCard extends ConsumerWidget {
               child: Text(brief == null ? 'Research' : 'Redo'),
             )
           : null,
-      child: brief == null
-          ? Text(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (sponsor != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: SponsorBadge(job.company, country: job.country),
+              ),
+            ),
+          if (brief == null)
+            Text(
               hasAi
                   ? 'The systems its staff use, staff survey and inspection results with their sources, and '
                         'anything to watch, such as a restructure.'
                   : 'Add a free Gemini key or a Claude API key in Settings to research the employer.',
             )
-          : EmployerView(brief),
+          else
+            EmployerView(brief),
+        ],
+      ),
     );
   }
 

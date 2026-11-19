@@ -147,6 +147,8 @@ class SettingsPage extends ConsumerWidget {
               (s?.feeds.adzunaId.isNotEmpty ?? false)
                   ? 'Adzuna is on.'
                   : 'Adzuna (UK, US, India, Australia, Canada, much of Europe) needs a free key.',
+              "Adzuna's free tier is for evaluating its API, under Adzuna's current terms; its ads show a "
+                  '"Jobs by Adzuna" link.',
               (s?.feeds.reed.isNotEmpty ?? false) ? 'Reed is on.' : 'Reed (UK) needs a free key.',
               'Sites without an open feed, such as LinkedIn and Indeed, are searched by the AI or opened '
                   'from the Jobs page.',
@@ -295,7 +297,11 @@ class SettingsPage extends ConsumerWidget {
       context,
       title: 'Job site keys',
       fields: (_) => [
-        Field(adzunaId, 'Adzuna app ID', helper: 'Free at developer.adzuna.com'),
+        Field(
+          adzunaId,
+          'Adzuna app ID',
+          helper: "Free at developer.adzuna.com, for evaluation under Adzuna's current terms",
+        ),
         Field(adzunaKey, 'Adzuna app key', obscure: true),
         Field(reed, 'Reed API key', obscure: true, helper: 'Free at reed.co.uk/developers/jobseeker'),
       ],

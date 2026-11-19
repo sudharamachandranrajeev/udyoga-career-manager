@@ -12,6 +12,7 @@ import '../domain/listing_check.dart';
 import '../domain/pipeline.dart';
 import '../domain/profile.dart';
 import 'common.dart';
+import 'eligibility_view.dart';
 import 'job_page.dart';
 import 'kit/kit.dart';
 import 'look.dart';
@@ -125,8 +126,13 @@ class _JobsPageState extends ConsumerState<JobsPage> {
         const SizedBox(height: 12),
         AsyncList(
           ref.watch(jobsProvider),
-          builder: (all) {
+          builder: (everything) {
             final q = search.text.trim().toLowerCase();
+            // The user's exclusions are a hard rule: those jobs never show.
+            final all = notExcluded(everything, ref.watch(profileProvider).value);
+            final hidden =
+                everything.where((j) => j.status == status).length -
+                all.where((j) => j.status == status).length;
             final jobs = all
                 .where((j) => j.status == status)
                 .where((j) => q.isEmpty || '${j.title} ${j.company} ${j.location}'.toLowerCase().contains(q))
@@ -167,7 +173,10 @@ class _JobsPageState extends ConsumerState<JobsPage> {
                 ],
               );
             }
-            return Column(children: [for (final j in jobs) JobTile(j)]);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [for (final j in jobs) JobTile(j), if (hidden > 0) _HiddenNote(hidden)],
+            );
           },
         ),
       ],
@@ -259,7 +268,12 @@ class JobTile extends StatelessWidget {
                       children: [
                         if (j.remote) const StatusPill('Remote', icon: Icons.public),
                         if (j.country.isNotEmpty) StatusPill(Country.nameOf(j.country)),
-                        StatusPill('via ${sourceName(j.source)}'),
+                        if (j.source == 'adzuna')
+                          const AdzunaCredit()
+                        else
+                          StatusPill('via ${sourceName(j.source)}'),
+                        EligibilityPill(j),
+                        SponsorBadge(j.company, country: j.country, short: true),
                         if (check.official)
                           const StatusPill(
                             'Official site',
@@ -324,6 +338,23 @@ class JobTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// How many jobs the user's exclusions keep off the list.
+class _HiddenNote extends StatelessWidget {
+  const _HiddenNote(this.count);
+  final int count;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Text(
+      '$count ${count == 1 ? 'job' : 'jobs'} hidden by your exclusions (Profile, Targets).',
+      textAlign: TextAlign.center,
+      style: Theme.of(context).textTheme.bodySmall
+          ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+    ),
+  );
 }
 
 /// Pay in a few characters ("£32k–38k"), else the advert's own short wording.

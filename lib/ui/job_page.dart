@@ -10,12 +10,14 @@ import '../domain/countries.dart';
 import '../domain/insights.dart';
 import '../domain/json.dart';
 import '../domain/listing_check.dart';
+import '../domain/matching.dart';
 import '../domain/n8n.dart';
 import '../domain/pipeline.dart';
 import '../domain/resume.dart';
 import 'applications_page.dart';
 import 'common.dart';
 import 'contacts_page.dart';
+import 'eligibility_view.dart';
 import 'employer_cards.dart';
 import 'interview_page.dart';
 import 'jobs_page.dart';
@@ -120,6 +122,7 @@ class JobPage extends ConsumerWidget {
               ],
             ),
           ),
+        EligibilityCard(j),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -164,6 +167,8 @@ class JobPage extends ConsumerWidget {
                 )
               : FitView(fit),
         ),
+        if (ref.watch(profileProvider).value case final p? when fit == null && j.fitBy == 'local')
+          SectionCard(title: 'Why ${j.fit ?? 0}%', child: QuickMatchView(fitOf(j, p))),
         PayChangeCard(j),
         EmployerCard(j),
         SectionCard(
@@ -438,10 +443,53 @@ class _Header extends StatelessWidget {
                   icon: Icons.event_outlined,
                 ),
               StatusPill('Found ${niceDate(j.found)} via ${sourceName(j.source)}'),
+              if (j.source == 'adzuna') const AdzunaCredit(),
+              SponsorBadge(j.company, country: j.country),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The offline match's factors, one line each.
+class QuickMatchView extends StatelessWidget {
+  const QuickMatchView(this.result, {super.key});
+  final FitResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final f in result.factors)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 92,
+                  child: Text(f.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                ),
+                SizedBox(
+                  width: 44,
+                  child: Text(f.known ? '${(f.score! * 100).round()}%' : '–', style: TextStyle(color: muted)),
+                ),
+                Expanded(
+                  child: Text(f.why, style: TextStyle(color: muted)),
+                ),
+              ],
+            ),
+          ),
+        Text(
+          'A quick offline match. Unknown parts are left out; an eligibility blocker caps the score at '
+          '$blockedCap%. Assess it with the AI for a full judgement.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: muted),
+        ),
+      ],
     );
   }
 }

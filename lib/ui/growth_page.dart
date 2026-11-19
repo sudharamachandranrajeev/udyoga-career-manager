@@ -13,8 +13,10 @@ import '../domain/insights.dart';
 import '../domain/json.dart';
 import '../domain/linkedin_export.dart';
 import '../domain/pipeline.dart';
+import '../domain/todos.dart';
 import 'common.dart';
 import 'kit/kit.dart';
+import 'todos.dart';
 
 const _kindIcons = {
   'certification': Icons.verified_outlined,
@@ -83,12 +85,18 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
         AsyncList(
           ref.watch(growthProvider),
           builder: (items) {
-            final all = items.where((g) => !noteKinds.containsKey(g.kind)).toList();
+            final all = items.where((g) => !noteKinds.containsKey(g.kind) && g.kind != todoKind).toList();
             final notes = items.where((g) => noteKinds.containsKey(g.kind)).toList()
               ..sort((a, b) => b.added.compareTo(a.added));
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [_plan(all), const SizedBox(height: 12), _NotesCard(notes), const _LinkedInCard()],
+              children: [
+                TodoCard(todosIn(items), showDone: showDone),
+                _plan(all),
+                const SizedBox(height: 12),
+                _NotesCard(notes),
+                const _LinkedInCard(),
+              ],
             );
           },
         ),
