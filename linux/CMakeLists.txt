@@ -72,6 +72,9 @@ set_target_properties(${BINARY_NAME}
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
+# The interview lab uses LiteRT's Interpreter only (TensorFlow Lite C), so
+# flutter_litert's CompiledModel runtime and WebGPU accelerator are left out.
+set(FLUTTER_LITERT_BUNDLE_DESKTOP_RUNTIME OFF)
 include(flutter/generated_plugins.cmake)
 
 
