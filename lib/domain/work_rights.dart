@@ -1,5 +1,6 @@
 import 'countries.dart';
 import 'json.dart';
+import 'world.dart';
 
 /// EU and EEA members plus Switzerland: a passport from one gives the right
 /// to work in all of them.
@@ -18,9 +19,12 @@ String countryCode(String s) {
   if (t.isEmpty) return '';
   final up = t.toUpperCase();
   if (_aliases[up] case final c?) return c;
-  if (up.length == 2 && Country.of(up) != null) return up;
+  if (up.length == 2 && (Country.of(up) != null || worldCountry(up) != null)) return up;
   for (final c in countries) {
     if (c.name.toUpperCase() == up) return c.code;
+  }
+  for (final c in worldCountries) {
+    if (c.name.toUpperCase() == up || c.name.replaceAll('&', 'and').toUpperCase() == up) return c.code;
   }
   return up.length == 2 && RegExp(r'^[A-Z]{2}$').hasMatch(up) ? up : '';
 }
