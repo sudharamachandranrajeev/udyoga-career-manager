@@ -1,5 +1,10 @@
 # Interview simulator: I0 spike
 
+> **Updated for I1 (2026-11-19).** The transcriber is now Moonshine through
+> sherpa-onnx, and `whisper_ggml` and its FFmpeg are gone. See
+> [I1: speech-to-text without FFmpeg](#i1-speech-to-text-without-ffmpeg) at
+> the end. The I0 figures below are kept as measured.
+
 This page records what the I0 spike found. The spike puts every plugin the
 interview simulator needs into one build. It then measures how fast and how
 big the result is, and checks that nothing goes to the network.
@@ -206,12 +211,129 @@ created.** The run finished with exit code 0.
    voices for 2.0 are US English only.
 2. **The plan said Piper.** Piper cannot run on sherpa-onnx 2.0 without a
    GPL phonemizer. Is Kokoro (Apache-2.0, 132 MB download) acceptable as
-   the default voice?
+   the default voice? *Answered in I1: yes, Kokoro is the default.*
 3. **ffmpeg.** `whisper_ggml` needs the `ffmpeg` program on Linux and adds
    about 15 MB of FFmpegKit (LGPL-3.0) per Android ABI. It is used only to
    convert audio we already have as 16 kHz PCM. Should I1 call whisper.cpp
    with PCM directly, through a small fork or a different binding?
+   *Answered in I1: Moonshine through sherpa-onnx replaced it; see below.*
 4. **Windows.** The LiteRT CompiledModel runtime is turned off in
    `windows/CMakeLists.txt` too. The Windows build was not tested.
 5. **Phones.** No timing was taken on Android. The first phone run should
    repeat the lab and record the same figures.
+
+## I1: speech-to-text without FFmpeg
+
+Decided after the I0 review: drop FFmpeg. First try sherpa-onnx's own
+offline recognizer, fed 16 kHz samples straight from memory. Keep it only
+if fillers survive and 10 s of speech is written down in under about 2 s.
+
+**Result: both checks pass, so `whisper_ggml` is removed.** The transcriber
+is Moonshine base (English, quantized, 2026-02-27 release) through
+sherpa-onnx 2.0.2, which was already a dependency. No temporary WAV, no
+converter, no new native library.
+
+Same laptop as above, 4 threads, the model kept loaded (load time shown
+apart). Two 10 s clips spoken by the Kokoro voice: clip A is the I0 answer,
+clip B is dense with fillers ("Uh, so, um, the main thing was the rota. Um,
+we had, uh, three people off sick, and I, like, rang round the bank staff.
+Uh, by lunchtime we were, um, fully covered again.": 3 "um", 3 "uh",
+1 "like").
+
+| Model | Download | Load | 10 s, clip A | 10 s, clip B | Fillers kept in clip B |
+| --- | --- | --- | --- | --- | --- |
+| Moonshine base, sherpa-onnx (chosen) | 111.3 MB | 566 ms | 349–457 ms | 331–429 ms | 3 of 3 "um", "like"; "uh" as "er" or lost |
+| Moonshine tiny, sherpa-onnx (lighter option) | 29.9 MB | 353 ms | 200–292 ms | 193–286 ms | 3 of 3 "um", "like"; "uh" lost |
+| Whisper base.en int8, sherpa-onnx | 208.6 MB archive | 487 ms | 1,170–1,192 ms | 1,252–1,473 ms | 1 of 3 "um", "like" |
+| Whisper tiny.en int8, sherpa-onnx | 118.1 MB archive | 264 ms | 641–706 ms | 620–634 ms | 3 of 3 "um", 1 of 3 "uh", "like" |
+| whisper.cpp base.en via FFmpeg (I0) | 148.0 MB | – | 1,538–1,760 ms | not run | "Umm", "like" (clip A) |
+
+Ranges are 2 to 3 runs; the Moonshine rows include runs inside the release
+app (`tool/interview_spike.dart`). Moonshine base is 20 to 30 times faster
+than real time here and keeps "um" and "like" without a prompt (sherpa's
+Whisper takes no initial prompt, which is why it tidies fillers away).
+Kokoro's "uh" is an odd sound, so its loss may be the voice more than the
+transcriber; real speech should be checked. The filler count is labelled
+approximate in the app for this reason. The English Moonshine models are
+MIT; Moonshine's other languages are under a non-commercial licence and are
+not offered.
+
+Clip A, Moonshine base: "In my last role, I led the morning handover on a
+busy ward. Um, we were missing key details. So I brought in a short
+checklist and, like each nurse to read back the plan, with the". The gap
+after "like" is the voice: Kokoro skipped "asked", which is not in its word
+list (see below).
+
+### What changed with it
+
+- `whisper_ggml` is removed, with FFmpegKit (about 15 MB of LGPL-3.0
+  libraries per Android ABI) and the NDK 29 override in
+  `android/build.gradle.kts`. Linux no longer needs the `ffmpeg` program.
+- Linux release bundle: 73.6 MB, down from 87.2 MB in I0 (whisper.cpp and
+  its helpers are gone).
+- Model sizes: the lightest working set for a spoken round (Kokoro, Silero,
+  Moonshine base) is 290.7 MB on disk, against 297.6 MB with whisper.cpp
+  base.en. With Moonshine tiny it is 193.7 MB.
+- The lab offers to delete the old Whisper models if they are still on the
+  device.
+
+### Kokoro's missing words
+
+Kokoro's word list has "task" and "ask" but not "tasks" or "asked", and a
+missing word is skipped. A spoken round now builds the missing forms of
+every question's words from their base word and the English suffix rules
+(plural and third-person "-s", "-ed", "-ing"; `lib/voice/lexicon.dart`),
+and loads them as a second word list. Checked by writing the voice down
+again with Moonshine:
+
+- Without: "Tell us about a time you were to take on extra, and how you,
+  thus."
+- With: "Tell us about a time you were asked to take on extra tasks, and
+  how you prioritize the stakeholders."
+
+### The spoken round on this laptop
+
+`tool/spoken_round_check.dart` runs a two-question round with the real
+engines and the real microphone path (`record`, live Silero VAD, Moonshine
+on each stretch as it ends, Kokoro kept loaded):
+
+| Step | Time |
+| --- | --- |
+| Load the voice (with the extra word list) | 1,405–1,646 ms |
+| Load the speech detector and transcriber | 528–725 ms |
+| Make question 1 (5.5 s of speech, 2 sentences) | 5.9 s |
+| Question 2 ready after 3 s of the answer to question 1 | 0 ms wait |
+| From the end of the answer to the transcript | 14–15 ms |
+
+The transcript is ready almost at once because each stretch of speech is
+written down while the candidate is still talking. The speech detector
+ended each answer itself after 4 s of silence.
+
+Two runs:
+
+1. **Room microphone, nobody speaking.** The laptop's own speakers were too
+   quiet for the mic to pick up a played answer (peak about -50 dBFS, room
+   noise). The round handled it: no speech found, nothing saved, "No speech
+   was heard. Try again, or type your answer." Re-run with a person
+   speaking before a release.
+2. **The answer played into a PipeWire null sink**, read by the app as its
+   microphone (`PULSE_SOURCE`): a 22.5 s answer, clips A and B with a 2.5 s
+   gap. The transcript kept 4 "um", "like" twice and three "uh" (as "ah").
+   Delivery: 190 words a minute (above the usual range: the voice is fast),
+   1 pause, longest 2.4 s, 8 fillers (approximate), 1.7 s before starting,
+   0:22 long. Both takes were written to the take folder and deleted with
+   it.
+
+Making question 1 takes longer than reading it, so the app starts making it
+as soon as the round opens; the "Ask me" button follows the "what this
+question tests" text, which gives it time. Later questions are always made
+during the previous answer.
+
+### Android builds
+
+Release APKs are now split per ABI (`--split-per-abi`), so each carries one
+copy of ONNX Runtime and sherpa-onnx instead of three. The 64-bit ARM APK
+keeps the `-android.apk` name, so older versions' updaters still find it;
+`-android-armeabi-v7a.apk` and `-android-x86_64.apk` are the others, and the
+updater fetches the one for the phone. No phone timing yet (open question 5
+stands).

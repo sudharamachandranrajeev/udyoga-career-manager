@@ -46,6 +46,10 @@ or a Claude or ChatGPT plan.
   Follow-ups come round by themselves, and the AI drafts the chaser.
 - 🎤 **Interview practice** – type your answer and see how long it would take to say. Get scores,
   red flags and a stronger answer in your own voice.
+- 🗣️ **Answer aloud** – the interviewer reads each question aloud and you answer by voice (or
+  type). You see what each question tests first, then your transcript, your pace, pauses and
+  fillers against usual ranges (never a score), and can re-take and compare. It runs on your
+  device; recordings never leave it.
 - 🧭 **A career map** – a blunt view of where you stand, and five to eight paths from here with
   steps, pay and how AI is changing each one.
 - 💼 **LinkedIn helper** – profile score, posts, comments and connection notes, all drafted for
@@ -72,7 +76,7 @@ or a Claude or ChatGPT plan.
 | E-mail | Gmail, iCloud, Yahoo, Fastmail or any IMAP server with an app password; only mail with people you saved is kept; send and reply from a thread |
 | Find people | Connections at your target employers (from the LinkedIn ZIP), search links by role, employer and place, named contacts from adverts, Bluesky search, a list of NHS and digital-health communities |
 | Posts | A weekly post plan with reminders; you post on LinkedIn yourself, and on Bluesky when you press Post |
-| Interview | Mixed, competency (STAR), technical, toughest panel, and AI and change rounds; live measures of length, speaking time, filler words, "I" against "we", figures and STAR coverage; seven-part AI review |
+| Interview | Mixed, competency (STAR), technical, toughest panel, and AI and change rounds; live measures of length, speaking time, filler words, "I" against "we", figures and STAR coverage; seven-part AI review; spoken rounds with on-device voice and transcripts |
 | Career | Assessment, career map of five to eight paths, redone monthly when the AI routine is on |
 | Growth | Certifications, courses and experience to get; *Ideas and wins* notes the AI reads in every request; LinkedIn data import (the ZIP LinkedIn sends you) |
 | LinkedIn studio | Eleven tools: profile score and rewrite, posts, comments, connection notes and follow-ups, inbox triage, replies, week plan, post audit, carousel PDF, repurposing; a five-check "sounds human" score |
@@ -114,7 +118,8 @@ the newest release, pick the file for your device:
 | --- | --- | --- |
 | 🐧 Linux computer | `Udyoga-<version>-linux-x64.tar.gz` | Ubuntu 24.04, Fedora, Arch and similar (64-bit x86) |
 | 🪟 Windows computer | `Udyoga-<version>-windows-x64-setup.exe` | Windows 10 and 11 |
-| 🤖 Android phone | `Udyoga-<version>-android.apk` | Android 7 and newer |
+| 🤖 Android phone | `Udyoga-<version>-android.apk` | Android 7 and newer, 64-bit (most phones) |
+| 🤖 Older 32-bit Android phone | `Udyoga-<version>-android-armeabi-v7a.apk` | Android 7 and newer |
 
 Each release also has `SHA256SUMS.txt`, a list of fingerprints to check the files are genuine.
 
@@ -304,6 +309,13 @@ scripts/make-icons.sh                                               # app icons 
 - Tests use made-up people and companies only. CI runs analyse and test on each push. A `v*` tag
   builds, smoke-tests and publishes the Android, Windows and Linux builds
   (`.github/workflows/release.yml`).
+- Android release builds are split per ABI (`flutter build apk --release --split-per-abi`), so each
+  APK carries one copy of the native speech engines. The 64-bit ARM APK is published as
+  `-android.apk`; the others as `-android-armeabi-v7a.apk` and `-android-x86_64.apk`. The in-app
+  updater fetches the one for the phone's ABI.
+- Speech models are never bundled: the interview round downloads them on request. To time the
+  speech stack on a device, build `tool/interview_spike.dart` or `tool/spoken_round_check.dart`
+  with `-t` (results in [docs/interview-spike.md](docs/interview-spike.md)).
 - Changes per version: [CHANGELOG.md](CHANGELOG.md). Lead workflow and LinkedIn study:
   [docs/n8n](docs/n8n/README.md).
 
