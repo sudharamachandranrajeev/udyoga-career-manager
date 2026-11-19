@@ -88,6 +88,9 @@ void main() {
       home: SpokenRoundPage(id),
       overrides: [spokenEnginesProvider.overrideWith((ref) async => engines)],
     );
+    // Nerves before, one tap and optional.
+    expect(find.text('How nervous do you feel right now?'), findsOneWidget);
+    await app.tapText('4 Very nervous');
     await app.tapText('Check the microphone');
     expect(find.textContaining('We can hear you'), findsOneWidget);
     // Thinking pauses: the end-of-answer silence is a setting, 5 s by default.
@@ -132,6 +135,12 @@ void main() {
     await app.tapText('Finish');
     expect(find.textContaining('You answered 2 of 2'), findsOneWidget);
     expect(find.text('For next time'), findsOneWidget);
+    // And after.
+    await app.tapText('2 A little nervous');
+    final round = await tester.runAsync(
+      () => (app.book.db.select(app.book.db.careerPractice)..where((r) => r.id.equals(id))).getSingle(),
+    );
+    expect((round!.nervesBefore, round.nervesAfter), (4, 2));
     await app.close();
   });
 }

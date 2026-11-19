@@ -20,6 +20,7 @@ import '../db/database.dart';
 import '../domain/delivery.dart';
 import '../domain/insights.dart';
 import '../domain/interview_book.dart';
+import '../domain/interview_confidence.dart';
 import '../domain/interview_plan.dart';
 import '../domain/interview_process.dart';
 import '../domain/interview_scoring.dart';
@@ -28,6 +29,7 @@ import '../voice/models.dart';
 import '../voice/round.dart';
 import '../voice/spoken_engines.dart';
 import 'common.dart';
+import 'interview_confidence_ui.dart' show NervesRating;
 import 'interview_debrief_page.dart' show openDebrief;
 import 'interview_lab_page.dart' show modelManagerProvider;
 import 'kit/kit.dart';
@@ -390,7 +392,7 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
           _settingsCard(),
           _before(session, questions),
         ] else
-          ..._during(round),
+          ..._during(round, session),
       ],
     );
   }
@@ -404,6 +406,11 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          NervesRating(
+            label: 'How nervous do you feel right now?',
+            value: session.nervesBefore,
+            onChanged: (n) => ref.mutate((s) => s.book.saveNerves(session.id, before: n)),
+          ),
           const Subhead('Speech models'),
           if (missing == null)
             const LinearProgressIndicator()
@@ -572,8 +579,8 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
 
   static double _levelShare(double dbfs) => ((dbfs + 60) / 60).clamp(0.0, 1.0);
 
-  List<Widget> _during(SpokenRound r) {
-    if (r.phase == RoundPhase.finished) return [_finished(r)];
+  List<Widget> _during(SpokenRound r, PracticeSession session) {
+    if (r.phase == RoundPhase.finished) return [_finished(r, session)];
     final q = r.question;
     final t = Theme.of(context).textTheme;
     final iv = r.interviewer;
@@ -934,7 +941,7 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
     ];
   }
 
-  Widget _finished(SpokenRound r) {
+  Widget _finished(SpokenRound r, PracticeSession session) {
     final answered = r.states.where((s) => s.latest != null).length;
     final skipped = r.states.where((s) => s.skipped).length;
     final outcomes = r.outcomes();
@@ -949,6 +956,12 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
             'You answered $answered of ${r.questions.length}'
             '${skipped > 0 ? ' and skipped $skipped' : ''}. The transcripts are saved with the round, where you '
             'can edit them or ask for a full review.',
+          ),
+          const SizedBox(height: 8),
+          NervesRating(
+            label: 'And now, how nervous do you feel?',
+            value: session.nervesAfter,
+            onChanged: (n) => ref.mutate((s) => s.book.saveNerves(session.id, after: n)),
           ),
           if (!next.isEmpty) ...[
             const Subhead('For next time'),

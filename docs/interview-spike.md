@@ -520,3 +520,111 @@ about 4 s: the diary answer scored 2 (Good) with an exact quote; the bare
 "good team player" claim scored N/O. No quote was dropped. The first run
 showed that criteria assessed only by the application were asked and a
 test-only essential was flagged; both were fixed.
+
+## I4: the confidence loop with Vidya
+
+### I3 follow-ups
+
+- **Faster start.** The interrupt script is said only at levels 4 and 5,
+  the levels that interrupt. The stage's name is on the screen, not said.
+  The interviewer's fixed lines are kept in `voice-cache/` in the app
+  support folder once made:
+  - the greetings and acknowledgements;
+  - the interrupt and wrap-up lines;
+  - the built-in follow-ups;
+  - the template settlers.
+
+  Each clip is keyed by a SHA-256 of the voice, speed, model and text, so
+  only hashes are on disk. A sentence is cached only when it is one of
+  these fixed lines. Questions, answers and anything the user typed or
+  edited are never cached.
+
+  `tool/voice_timing_check.dart` timed the screening call's opening and
+  settler on this laptop, best of two runs:
+
+  | Opening | Speech | First audio | Mic opens |
+  |---|---|---|---|
+  | I3, every level (greeting, stage name, script) | 14.4 s | 2.9 s | 20.4 s |
+  | I4, level 3, cold | 5.2 s | 2.7 s | 9.1 s |
+  | I4, level 3, cached | 5.2 s | 0.01 s | 5.3 s |
+  | I4, level 5, cold | 12.8 s | 2.8 s | 18.4 s |
+  | I4, level 5, cached | 12.8 s | 0.01 s | 12.8 s |
+
+  From the second round on, the microphone opens as soon as the opening has
+  been said.
+- **Feedback wording.** The scoring and review prompts forbid talk of
+  scores, levels or the scale in a strength or fix. `taskLevelText` backs
+  them up with a deterministic check:
+  - A sentence like "Add a measure, to move toward a 3" is cut back to the
+    action before it.
+  - A sentence with nothing task-level left is dropped.
+  - An empty fix falls back to the debrief's own wording.
+
+  Counts such as "2 minutes" or "three points" are left alone.
+- **Whole-process summary.** One page per process combines every stage's
+  debrief. It lists each criterion with the stages that evidenced it or
+  touched on it, or says no stage did. It then gives the top three fixes:
+  missing essentials first, then the fixes that came up most, with later
+  stages counting more.
+
+### Nerves
+
+- Before and after each round (spoken, typed or a stage), the user can rate
+  their nerves from 1 (calm) to 5 (overwhelmed) with one tap. Rating is
+  optional, and tapping the same chip again clears it.
+- The ratings are stored with the round (`nerves_before` and
+  `nerves_after`, schema 10).
+- The Interview page shows the trend: a small chart of before (filled)
+  and after (hollow) ratings, and one line in words. The ratings are never
+  scored.
+
+### Drills (Udyoga makes them, Vidya runs them)
+
+The drills go out on their own plan row, `udyoga.interview-drills`, in
+`bridge_study_plans`. It is a vidya-curriculum v1 plan:
+
+- **Cards** in the "Interview drills" deck, each with a stable id:
+  - the settler (`udyoga.drill.settler`);
+  - each story in three bullets: the situation, what I did, the result
+    (`udyoga.drill.story.<id>`);
+  - seven recovery lines with when to use them
+    (`udyoga.drill.recovery.<key>`);
+  - the user's own questions for the panel (`udyoga.drill.questions`).
+    The set starts from a generic bank by stage and is edited on the
+    Interview page.
+- **Checklists:**
+  - the pre-interview routine (the day before, 30 minutes before,
+    5 minutes before, in the room), from methodology 4.2;
+  - the video-interview setup.
+- **The optional "I'm excited" note.** It is off by default and always
+  labelled "Small effect in studies; try it, keep it if it helps."
+
+Study-plan story cards now carry an id too (`udyoga.story.<id>`).
+
+### Vidya changes
+
+- **Updates in place.** A plan card's id is kept as the card's `ref`
+  (Vidya schema 5). When a plan comes again:
+  - the card with that ref is updated in place and keeps its schedule and
+    reviews;
+  - a card deleted in Vidya stays deleted;
+  - a card from before ids, matched by deck and front, takes the id.
+- **Results back.** The progress Vidya sends for each plan now has a
+  `drills` list:
+  - each of the plan's cards rehearsed at least once, with the day of the
+    last review, the user's rating of it and how many times;
+  - each of the plan's checklist items ticked off.
+
+  The user's own cards are never included. Readers that do not know the
+  field ignore it, so brahma_core is unchanged. Udyoga shows the results
+  on the Interview page.
+
+### Confidence first
+
+The Interview page now opens with "What you're ready for":
+
+- the criteria the user's answers evidenced in the last ten rounds;
+- the stories they have rehearsed in Vidya;
+- the nerves trend.
+
+The ways to practise, the drills and the gaps come after it.

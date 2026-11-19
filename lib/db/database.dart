@@ -75,7 +75,7 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
   ];
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -170,6 +170,15 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
 
         await add(careerPractice, 'career_practice', [careerPractice.profileId, careerPractice.debrief]);
         await add(careerStories, 'career_stories', [careerStories.criteria]);
+      }
+      if (from < 10) {
+        // Interview I4: nerves before and after a round. Only if missing.
+        final have = await customSelect('PRAGMA table_info(career_practice)')
+            .map((r) => r.read<String>('name'))
+            .get();
+        for (final c in [careerPractice.nervesBefore, careerPractice.nervesAfter]) {
+          if (!have.contains(c.name)) await m.addColumn(careerPractice, c);
+        }
       }
     },
     // The background refresh opens the same file from another process (or

@@ -396,6 +396,11 @@ class CareerPractice extends Table with SyncedRow {
   /// framework and each answer's scores with the quotes they rest on, ''
   /// until scored. Text only, like the transcripts.
   TextColumn get debrief => text().withDefault(const Constant(''))();
+
+  /// How nervous the candidate felt before and after the round, 1 (calm)
+  /// to 5 (very nervous), when they said (interview plan I4).
+  IntColumn get nervesBefore => integer().nullable()();
+  IntColumn get nervesAfter => integer().nullable()();
 }
 
 /// A role to practise for (interview plan I3): the criteria from its advert

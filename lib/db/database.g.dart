@@ -6969,6 +6969,28 @@ class $CareerPracticeTable extends CareerPractice
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _nervesBeforeMeta = const VerificationMeta(
+    'nervesBefore',
+  );
+  @override
+  late final GeneratedColumn<int> nervesBefore = GeneratedColumn<int>(
+    'nerves_before',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nervesAfterMeta = const VerificationMeta(
+    'nervesAfter',
+  );
+  @override
+  late final GeneratedColumn<int> nervesAfter = GeneratedColumn<int>(
+    'nerves_after',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -6982,6 +7004,8 @@ class $CareerPracticeTable extends CareerPractice
     score,
     profileId,
     debrief,
+    nervesBefore,
+    nervesAfter,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -7068,6 +7092,24 @@ class $CareerPracticeTable extends CareerPractice
         debrief.isAcceptableOrUnknown(data['debrief']!, _debriefMeta),
       );
     }
+    if (data.containsKey('nerves_before')) {
+      context.handle(
+        _nervesBeforeMeta,
+        nervesBefore.isAcceptableOrUnknown(
+          data['nerves_before']!,
+          _nervesBeforeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('nerves_after')) {
+      context.handle(
+        _nervesAfterMeta,
+        nervesAfter.isAcceptableOrUnknown(
+          data['nerves_after']!,
+          _nervesAfterMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -7121,6 +7163,14 @@ class $CareerPracticeTable extends CareerPractice
         DriftSqlType.string,
         data['${effectivePrefix}debrief'],
       )!,
+      nervesBefore: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}nerves_before'],
+      ),
+      nervesAfter: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}nerves_after'],
+      ),
     );
   }
 
@@ -7155,6 +7205,11 @@ class PracticeSession extends DataClass implements Insertable<PracticeSession> {
   /// framework and each answer's scores with the quotes they rest on, ''
   /// until scored. Text only, like the transcripts.
   final String debrief;
+
+  /// How nervous the candidate felt before and after the round, 1 (calm)
+  /// to 5 (very nervous), when they said (interview plan I4).
+  final int? nervesBefore;
+  final int? nervesAfter;
   const PracticeSession({
     required this.id,
     required this.hlc,
@@ -7167,6 +7222,8 @@ class PracticeSession extends DataClass implements Insertable<PracticeSession> {
     this.score,
     this.profileId,
     required this.debrief,
+    this.nervesBefore,
+    this.nervesAfter,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -7188,6 +7245,12 @@ class PracticeSession extends DataClass implements Insertable<PracticeSession> {
       map['profile_id'] = Variable<String>(profileId);
     }
     map['debrief'] = Variable<String>(debrief);
+    if (!nullToAbsent || nervesBefore != null) {
+      map['nerves_before'] = Variable<int>(nervesBefore);
+    }
+    if (!nullToAbsent || nervesAfter != null) {
+      map['nerves_after'] = Variable<int>(nervesAfter);
+    }
     return map;
   }
 
@@ -7210,6 +7273,12 @@ class PracticeSession extends DataClass implements Insertable<PracticeSession> {
           ? const Value.absent()
           : Value(profileId),
       debrief: Value(debrief),
+      nervesBefore: nervesBefore == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nervesBefore),
+      nervesAfter: nervesAfter == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nervesAfter),
     );
   }
 
@@ -7230,6 +7299,8 @@ class PracticeSession extends DataClass implements Insertable<PracticeSession> {
       score: serializer.fromJson<double?>(json['score']),
       profileId: serializer.fromJson<String?>(json['profileId']),
       debrief: serializer.fromJson<String>(json['debrief']),
+      nervesBefore: serializer.fromJson<int?>(json['nervesBefore']),
+      nervesAfter: serializer.fromJson<int?>(json['nervesAfter']),
     );
   }
   @override
@@ -7247,6 +7318,8 @@ class PracticeSession extends DataClass implements Insertable<PracticeSession> {
       'score': serializer.toJson<double?>(score),
       'profileId': serializer.toJson<String?>(profileId),
       'debrief': serializer.toJson<String>(debrief),
+      'nervesBefore': serializer.toJson<int?>(nervesBefore),
+      'nervesAfter': serializer.toJson<int?>(nervesAfter),
     };
   }
 
@@ -7262,6 +7335,8 @@ class PracticeSession extends DataClass implements Insertable<PracticeSession> {
     Value<double?> score = const Value.absent(),
     Value<String?> profileId = const Value.absent(),
     String? debrief,
+    Value<int?> nervesBefore = const Value.absent(),
+    Value<int?> nervesAfter = const Value.absent(),
   }) => PracticeSession(
     id: id ?? this.id,
     hlc: hlc ?? this.hlc,
@@ -7274,6 +7349,8 @@ class PracticeSession extends DataClass implements Insertable<PracticeSession> {
     score: score.present ? score.value : this.score,
     profileId: profileId.present ? profileId.value : this.profileId,
     debrief: debrief ?? this.debrief,
+    nervesBefore: nervesBefore.present ? nervesBefore.value : this.nervesBefore,
+    nervesAfter: nervesAfter.present ? nervesAfter.value : this.nervesAfter,
   );
   PracticeSession copyWithCompanion(CareerPracticeCompanion data) {
     return PracticeSession(
@@ -7288,6 +7365,12 @@ class PracticeSession extends DataClass implements Insertable<PracticeSession> {
       score: data.score.present ? data.score.value : this.score,
       profileId: data.profileId.present ? data.profileId.value : this.profileId,
       debrief: data.debrief.present ? data.debrief.value : this.debrief,
+      nervesBefore: data.nervesBefore.present
+          ? data.nervesBefore.value
+          : this.nervesBefore,
+      nervesAfter: data.nervesAfter.present
+          ? data.nervesAfter.value
+          : this.nervesAfter,
     );
   }
 
@@ -7304,7 +7387,9 @@ class PracticeSession extends DataClass implements Insertable<PracticeSession> {
           ..write('questions: $questions, ')
           ..write('score: $score, ')
           ..write('profileId: $profileId, ')
-          ..write('debrief: $debrief')
+          ..write('debrief: $debrief, ')
+          ..write('nervesBefore: $nervesBefore, ')
+          ..write('nervesAfter: $nervesAfter')
           ..write(')'))
         .toString();
   }
@@ -7322,6 +7407,8 @@ class PracticeSession extends DataClass implements Insertable<PracticeSession> {
     score,
     profileId,
     debrief,
+    nervesBefore,
+    nervesAfter,
   );
   @override
   bool operator ==(Object other) =>
@@ -7337,7 +7424,9 @@ class PracticeSession extends DataClass implements Insertable<PracticeSession> {
           other.questions == this.questions &&
           other.score == this.score &&
           other.profileId == this.profileId &&
-          other.debrief == this.debrief);
+          other.debrief == this.debrief &&
+          other.nervesBefore == this.nervesBefore &&
+          other.nervesAfter == this.nervesAfter);
 }
 
 class CareerPracticeCompanion extends UpdateCompanion<PracticeSession> {
@@ -7352,6 +7441,8 @@ class CareerPracticeCompanion extends UpdateCompanion<PracticeSession> {
   final Value<double?> score;
   final Value<String?> profileId;
   final Value<String> debrief;
+  final Value<int?> nervesBefore;
+  final Value<int?> nervesAfter;
   final Value<int> rowid;
   const CareerPracticeCompanion({
     this.id = const Value.absent(),
@@ -7365,6 +7456,8 @@ class CareerPracticeCompanion extends UpdateCompanion<PracticeSession> {
     this.score = const Value.absent(),
     this.profileId = const Value.absent(),
     this.debrief = const Value.absent(),
+    this.nervesBefore = const Value.absent(),
+    this.nervesAfter = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CareerPracticeCompanion.insert({
@@ -7379,6 +7472,8 @@ class CareerPracticeCompanion extends UpdateCompanion<PracticeSession> {
     this.score = const Value.absent(),
     this.profileId = const Value.absent(),
     this.debrief = const Value.absent(),
+    this.nervesBefore = const Value.absent(),
+    this.nervesAfter = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        role = Value(role),
@@ -7397,6 +7492,8 @@ class CareerPracticeCompanion extends UpdateCompanion<PracticeSession> {
     Expression<double>? score,
     Expression<String>? profileId,
     Expression<String>? debrief,
+    Expression<int>? nervesBefore,
+    Expression<int>? nervesAfter,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -7411,6 +7508,8 @@ class CareerPracticeCompanion extends UpdateCompanion<PracticeSession> {
       if (score != null) 'score': score,
       if (profileId != null) 'profile_id': profileId,
       if (debrief != null) 'debrief': debrief,
+      if (nervesBefore != null) 'nerves_before': nervesBefore,
+      if (nervesAfter != null) 'nerves_after': nervesAfter,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -7427,6 +7526,8 @@ class CareerPracticeCompanion extends UpdateCompanion<PracticeSession> {
     Value<double?>? score,
     Value<String?>? profileId,
     Value<String>? debrief,
+    Value<int?>? nervesBefore,
+    Value<int?>? nervesAfter,
     Value<int>? rowid,
   }) {
     return CareerPracticeCompanion(
@@ -7441,6 +7542,8 @@ class CareerPracticeCompanion extends UpdateCompanion<PracticeSession> {
       score: score ?? this.score,
       profileId: profileId ?? this.profileId,
       debrief: debrief ?? this.debrief,
+      nervesBefore: nervesBefore ?? this.nervesBefore,
+      nervesAfter: nervesAfter ?? this.nervesAfter,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -7481,6 +7584,12 @@ class CareerPracticeCompanion extends UpdateCompanion<PracticeSession> {
     if (debrief.present) {
       map['debrief'] = Variable<String>(debrief.value);
     }
+    if (nervesBefore.present) {
+      map['nerves_before'] = Variable<int>(nervesBefore.value);
+    }
+    if (nervesAfter.present) {
+      map['nerves_after'] = Variable<int>(nervesAfter.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -7501,6 +7610,8 @@ class CareerPracticeCompanion extends UpdateCompanion<PracticeSession> {
           ..write('score: $score, ')
           ..write('profileId: $profileId, ')
           ..write('debrief: $debrief, ')
+          ..write('nervesBefore: $nervesBefore, ')
+          ..write('nervesAfter: $nervesAfter, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -20533,6 +20644,8 @@ typedef $$CareerPracticeTableCreateCompanionBuilder =
       Value<double?> score,
       Value<String?> profileId,
       Value<String> debrief,
+      Value<int?> nervesBefore,
+      Value<int?> nervesAfter,
       Value<int> rowid,
     });
 typedef $$CareerPracticeTableUpdateCompanionBuilder =
@@ -20548,6 +20661,8 @@ typedef $$CareerPracticeTableUpdateCompanionBuilder =
       Value<double?> score,
       Value<String?> profileId,
       Value<String> debrief,
+      Value<int?> nervesBefore,
+      Value<int?> nervesAfter,
       Value<int> rowid,
     });
 
@@ -20612,6 +20727,16 @@ class $$CareerPracticeTableFilterComposer
 
   ColumnFilters<String> get debrief => $composableBuilder(
     column: $table.debrief,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get nervesBefore => $composableBuilder(
+    column: $table.nervesBefore,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get nervesAfter => $composableBuilder(
+    column: $table.nervesAfter,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -20679,6 +20804,16 @@ class $$CareerPracticeTableOrderingComposer
     column: $table.debrief,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get nervesBefore => $composableBuilder(
+    column: $table.nervesBefore,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get nervesAfter => $composableBuilder(
+    column: $table.nervesAfter,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CareerPracticeTableAnnotationComposer
@@ -20722,6 +20857,16 @@ class $$CareerPracticeTableAnnotationComposer
 
   GeneratedColumn<String> get debrief =>
       $composableBuilder(column: $table.debrief, builder: (column) => column);
+
+  GeneratedColumn<int> get nervesBefore => $composableBuilder(
+    column: $table.nervesBefore,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get nervesAfter => $composableBuilder(
+    column: $table.nervesAfter,
+    builder: (column) => column,
+  );
 }
 
 class $$CareerPracticeTableTableManager
@@ -20772,6 +20917,8 @@ class $$CareerPracticeTableTableManager
                 Value<double?> score = const Value.absent(),
                 Value<String?> profileId = const Value.absent(),
                 Value<String> debrief = const Value.absent(),
+                Value<int?> nervesBefore = const Value.absent(),
+                Value<int?> nervesAfter = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CareerPracticeCompanion(
                 id: id,
@@ -20785,6 +20932,8 @@ class $$CareerPracticeTableTableManager
                 score: score,
                 profileId: profileId,
                 debrief: debrief,
+                nervesBefore: nervesBefore,
+                nervesAfter: nervesAfter,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -20800,6 +20949,8 @@ class $$CareerPracticeTableTableManager
                 Value<double?> score = const Value.absent(),
                 Value<String?> profileId = const Value.absent(),
                 Value<String> debrief = const Value.absent(),
+                Value<int?> nervesBefore = const Value.absent(),
+                Value<int?> nervesAfter = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CareerPracticeCompanion.insert(
                 id: id,
@@ -20813,6 +20964,8 @@ class $$CareerPracticeTableTableManager
                 score: score,
                 profileId: profileId,
                 debrief: debrief,
+                nervesBefore: nervesBefore,
+                nervesAfter: nervesAfter,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

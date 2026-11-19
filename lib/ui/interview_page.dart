@@ -8,10 +8,12 @@ import '../db/database.dart';
 import '../domain/answer_metrics.dart';
 import '../domain/common_questions.dart';
 import '../domain/insights.dart';
+import '../domain/interview_confidence.dart';
 import '../domain/interview_process.dart';
 import '../domain/interview_scoring.dart' show Framework;
 import '../domain/json.dart';
 import 'common.dart';
+import 'interview_confidence_ui.dart';
 import 'interview_debrief_page.dart';
 import 'interview_process_page.dart';
 import 'kit/kit.dart';
@@ -128,6 +130,8 @@ class InterviewPage extends ConsumerWidget {
           : null,
       children: [
         if (!hasAi) const NeedsKey(what: 'Interview practice'),
+        // Confidence first (plan I4): what is ready, then what to work on.
+        const ReadyForCard(),
         SectionCard(
           title: 'Answer aloud',
           child: Column(
@@ -192,6 +196,7 @@ class InterviewPage extends ConsumerWidget {
             ],
           ),
         ),
+        const DrillsCard(),
         SectionCard(
           title: 'Role profiles',
           child: Column(
@@ -454,8 +459,22 @@ class _PracticePageState extends ConsumerState<PracticePage> {
             label: const Text('Answer these aloud'),
           ),
         ),
+        const SizedBox(height: 12),
+        NervesRating(
+          label: 'Before you start: how nervous do you feel?',
+          value: round.nervesBefore,
+          onChanged: (n) => ref.mutate((s) => s.book.saveNerves(round.id, before: n)),
+        ),
         const SizedBox(height: 16),
         for (final (i, q) in questions.indexed) _question(round, i, q, saved[i]),
+        SectionCard(
+          title: 'After the round',
+          child: NervesRating(
+            label: 'How nervous do you feel now?',
+            value: round.nervesAfter,
+            onChanged: (n) => ref.mutate((s) => s.book.saveNerves(round.id, after: n)),
+          ),
+        ),
       ],
     );
   }
