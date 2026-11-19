@@ -10,6 +10,7 @@ import 'insights.dart';
 import 'interview_process.dart';
 import 'interview_scoring.dart';
 import 'json.dart';
+import 'process_summary.dart';
 
 /// The interview records of plan I3: role profiles, saved processes, the
 /// panel scoring of a round and stories saved from practice. All of it is
@@ -109,7 +110,55 @@ extension InterviewBook on CareerBook {
     );
   }
 
+  /// The debrief of a saved round: its saved scoring checked again against
+  /// the transcripts, or coverage from the matcher when it was not scored.
+  static Debrief debriefOf(
+    PracticeSession round,
+    DebriefRound data,
+    RoleProfile? profile, {
+    bool wholeProfile = true,
+  }) {
+    final saved = decodeObject(round.debrief);
+    final framework = Framework.of(
+      str(saved['framework']).isNotEmpty ? str(saved['framework']) : profile?.frameworkId ?? 'private',
+    );
+    final verified = saved.isEmpty
+        ? null
+        : verifyScores(
+            [for (final a in objs(saved['answers'])) AnswerScore.fromJson(a)],
+            framework.scale,
+            heard: data.heard,
+            asked: data.asked,
+          );
+    return Debrief.build(framework: framework, round: data, verified: verified, wholeProfile: wholeProfile);
+  }
+
+  /// The debrief of round [roundId], or null when it is gone.
+  Future<Debrief?> roundDebrief(String roundId, {bool wholeProfile = true}) async {
+    final rec = await roundRecord(roundId);
+    if (rec == null) return null;
+    final profile = await roleProfile(rec.round.profileId);
+    final data = DebriefRound.of(questions: rec.questions, answers: rec.answers, profile: profile);
+    return debriefOf(rec.round, data, profile, wholeProfile: wholeProfile);
+  }
+
   // ---- processes ----
+
+  /// Every stage's debrief of saved process [id] in one view: each
+  /// criterion across the process and the top fixes. Stages not started
+  /// are left out. Null when the process is gone.
+  Future<ProcessSummary?> processSummary(String id) async {
+    final saved = await savedProcess(id);
+    if (saved == null) return null;
+    final stages = <({String stage, Debrief debrief})>[];
+    for (final (i, st) in saved.process.stages.indexed) {
+      final p = saved.progress.stages[i];
+      if (p == null || !st.included) continue;
+      final d = await roundDebrief(p.roundId, wholeProfile: false);
+      if (d != null) stages.add((stage: st.title, debrief: d));
+    }
+    return ProcessSummary.build(stages, profile: await roleProfile(saved.profileId));
+  }
 
   Future<List<ProcessRow>> processRows() =>
       (db.select(db.careerProcesses)

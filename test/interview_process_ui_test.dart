@@ -66,6 +66,16 @@ void main() {
     expect(find.text('From the last stage'), findsOneWidget);
     expect(find.text(elementFixes[AnswerElement.result]!), findsOneWidget);
 
+    // One page for the whole process: every criterion, then the top fixes.
+    await app.tap(find.byTooltip('Whole-process summary'));
+    expect(find.text('Summary: ${nhsStyle.name}'), findsOneWidget);
+    expect(find.textContaining('Across Screening call.'), findsOneWidget);
+    expect(find.text('Top fixes overall'), findsOneWidget);
+    expect(find.text('Every criterion across the process'), findsOneWidget);
+    expect(find.text('End the example with what happened in the end.'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
     // The optional presentation can be switched on.
     await app.tap(find.byType(Switch));
     expect(find.text('Optional: included.'), findsOneWidget);

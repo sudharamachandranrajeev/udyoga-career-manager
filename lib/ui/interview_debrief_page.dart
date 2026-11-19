@@ -431,26 +431,8 @@ class _DebriefPageState extends ConsumerState<DebriefPage> {
     if (mounted) setState(() => _loaded = (round: rec.round, data: data, profile: profile));
   }
 
-  Framework _framework(PracticeSession round, RoleProfile? p) {
-    final saved = decodeObject(round.debrief);
-    return Framework.of(
-      str(saved['framework']).isNotEmpty ? str(saved['framework']) : p?.frameworkId ?? 'private',
-    );
-  }
-
-  Debrief _debrief(PracticeSession round, DebriefRound data, RoleProfile? p) {
-    final f = _framework(round, p);
-    final saved = decodeObject(round.debrief);
-    final verified = saved.isEmpty
-        ? null
-        : verifyScores(
-            [for (final a in objs(saved['answers'])) AnswerScore.fromJson(a)],
-            f.scale,
-            heard: data.heard,
-            asked: data.asked,
-          );
-    return Debrief.build(framework: f, round: data, verified: verified);
-  }
+  Debrief _debrief(PracticeSession round, DebriefRound data, RoleProfile? p) =>
+      InterviewBook.debriefOf(round, data, p);
 
   Future<void> _score() async {
     final l = _loaded!;

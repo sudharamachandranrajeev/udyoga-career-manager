@@ -17,6 +17,7 @@ import '../domain/interview_book.dart';
 import '../domain/interview_plan.dart';
 import '../domain/interview_process.dart';
 import '../domain/interview_scoring.dart';
+import '../domain/process_summary.dart';
 import 'common.dart';
 import 'interview_debrief_page.dart' show openDebrief, openRoleProfile;
 import 'kit/kit.dart';
@@ -266,8 +267,17 @@ class _ProcessPageState extends ConsumerState<ProcessPage> {
     ];
     final profiles = ref.watch(roleProfilesProvider).value ?? const [];
     final hasPanel = stages.any((s) => s.kind == StageKind.panel && s.included);
+    final anyRun = _progress.stages.isNotEmpty && _id.isNotEmpty;
     return PageScaffold(
       title: _process.name,
+      actions: [
+        if (anyRun)
+          IconButton(
+            icon: const Icon(Icons.summarize_outlined),
+            tooltip: 'Whole-process summary',
+            onPressed: () => openProcessSummary(context, _id, _process.name),
+          ),
+      ],
       children: [
         Text(_process.about),
         const SizedBox(height: 4),
@@ -319,6 +329,15 @@ class _ProcessPageState extends ConsumerState<ProcessPage> {
                   if (c.keep.isNotEmpty) Bullets(c.keep, icon: Icons.check, color: Status.good.color),
                   if (c.fixes.isNotEmpty) Bullets(c.fixes, icon: Icons.arrow_upward),
                 ],
+                if (_id.isNotEmpty)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => openProcessSummary(context, _id, _process.name),
+                      icon: const Icon(Icons.summarize_outlined),
+                      label: const Text('Whole-process summary'),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -399,6 +418,111 @@ class _ProcessPageState extends ConsumerState<ProcessPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+Future<void> openProcessSummary(BuildContext context, String processId, String name) => Navigator.of(
+  context,
+).push(MaterialPageRoute(builder: (_) => ProcessSummaryPage(processId, name: name)));
+
+/// Every stage's debrief in one view: each criterion across the whole
+/// process (evidenced in which stage, or missing), then the top three fixes.
+class ProcessSummaryPage extends ConsumerStatefulWidget {
+  const ProcessSummaryPage(this.processId, {super.key, this.name = 'Process'});
+  final String processId;
+  final String name;
+
+  @override
+  ConsumerState<ProcessSummaryPage> createState() => _ProcessSummaryPageState();
+}
+
+class _ProcessSummaryPageState extends ConsumerState<ProcessSummaryPage> {
+  ProcessSummary? _summary;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.read(sessionProvider).book.processSummary(widget.processId).then((s) {
+      if (mounted) {
+        setState(() {
+          _summary = s;
+          _loaded = true;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded) return Scaffold(appBar: AppBar(), body: const SkeletonCards(count: 2));
+    final s = _summary;
+    if (s == null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Gone(icon: Icons.summarize_outlined, title: 'This process was removed'),
+      );
+    }
+    final muted = Theme.of(context).textTheme.bodySmall;
+    return PageScaffold(
+      title: 'Summary: ${widget.name}',
+      children: [
+        Text(
+          s.stages.isEmpty
+              ? 'No stage has been run yet.'
+              : 'Across ${s.stages.join(', ')}. Each stage\'s debrief counts; open a stage\'s own debrief for '
+                    'the scores and the lines you said.',
+          style: muted,
+        ),
+        const SizedBox(height: 8),
+        if (s.evidenced.isNotEmpty)
+          StatusLabel(
+            Status.good,
+            '${s.evidenced.length} criteri${s.evidenced.length == 1 ? 'on' : 'a'} evidenced so far.',
+          ),
+        SectionCard(
+          title: 'Top fixes overall',
+          child: s.topFixes.isEmpty
+              ? const Text('Nothing stands out to fix. Keep doing what you did.')
+              : Bullets(s.topFixes, icon: Icons.arrow_upward),
+        ),
+        SectionCard(
+          title: 'Every criterion across the process',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (s.missingEssentials.isNotEmpty)
+                StatusLabel(
+                  Status.serious,
+                  '${s.missingEssentials.length} essential criteri${s.missingEssentials.length == 1 ? 'on' : 'a'} '
+                  'with no evidence in any stage.',
+                ),
+              if (s.criteria.isEmpty) const Text('No criteria yet: run a stage first.'),
+              for (final c in s.criteria)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(c.criterion.text),
+                  subtitle: Text(
+                    [
+                      c.criterion.essential ? 'Essential' : 'Desirable',
+                      c.note,
+                      if (c.unappointable) unappointableNote,
+                    ].join(' · '),
+                  ),
+                  trailing: StatusPill(
+                    c.status.label,
+                    status: switch (c.status) {
+                      Coverage.evidenced => Status.good,
+                      Coverage.thin => Status.warning,
+                      Coverage.missing => c.unappointable ? Status.serious : Status.warning,
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
