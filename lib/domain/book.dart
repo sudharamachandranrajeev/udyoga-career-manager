@@ -1217,6 +1217,38 @@ class CareerBook {
       ),
       id,
     );
+    await _rescorePractice(sessionId);
+  });
+
+  /// Saves the text of a spoken or typed answer before it is reviewed. A
+  /// new transcript clears the old review (it was of other words). Only
+  /// text is stored here: recordings stay on the device that made them.
+  Future<void> saveTranscript(String sessionId, int question, String answer, {required String at}) =>
+      db.transaction(() async {
+        final previous =
+            await (db.select(db.careerAnswers)..where(
+                  (a) => a.sessionId.equals(sessionId) & a.question.equals(question) & a.deleted.not(),
+                ))
+                .getSingleOrNull();
+        if (previous != null && previous.answer == answer) return;
+        final id = previous?.id ?? newId();
+        await save(
+          db.careerAnswers,
+          CareerAnswersCompanion.insert(
+            id: id,
+            sessionId: sessionId,
+            question: question,
+            answer: answer,
+            at: at,
+            review: const Value(''),
+            score: const Value(null),
+          ),
+          id,
+        );
+        await _rescorePractice(sessionId);
+      });
+
+  Future<void> _rescorePractice(String sessionId) async {
     final scores =
         await (db.select(db.careerAnswers)
               ..where((a) => a.sessionId.equals(sessionId) & a.deleted.not() & a.score.isNotNull()))
@@ -1228,7 +1260,7 @@ class CareerBook {
       s.copyWith(score: Value(scores.isEmpty ? null : scores.reduce((a, b) => a + b) / scores.length)),
       s.id,
     );
-  });
+  }
 
   // ---- spend ----
 

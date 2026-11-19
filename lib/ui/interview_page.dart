@@ -6,11 +6,13 @@ import '../app/navigation.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/answer_metrics.dart';
+import '../domain/common_questions.dart';
 import '../domain/insights.dart';
 import '../domain/json.dart';
 import 'common.dart';
 import 'kit/kit.dart';
 import 'look.dart';
+import 'spoken_round_page.dart';
 
 const _ratings = {
   'outstanding': Status.good,
@@ -89,6 +91,19 @@ Future<void> startPractice(BuildContext context, WidgetRef ref, {String role = '
   if (context.mounted) await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PracticePage(id)));
 }
 
+/// A spoken round of [commonQuestions], which needs no AI.
+Future<void> startCommonRound(BuildContext context, WidgetRef ref) async {
+  final id = await ref.mutate(
+    (s) => s.book.startPractice(
+      role: 'Common questions',
+      mode: 'standard',
+      questions: commonQuestions,
+      at: nowLocal(),
+    ),
+  );
+  if (context.mounted) await openSpokenRound(context, id);
+}
+
 class InterviewPage extends ConsumerWidget {
   const InterviewPage({super.key});
 
@@ -109,6 +124,36 @@ class InterviewPage extends ConsumerWidget {
           : null,
       children: [
         if (!hasAi) const NeedsKey(what: 'Interview practice'),
+        SectionCard(
+          title: 'Answer aloud',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'The interviewer reads each question aloud and you answer by voice, or type. You see what each '
+                'question tests first, then your transcript and how you said it. It runs on this device; '
+                'recordings never leave it.',
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton.tonalIcon(
+                    onPressed: () => startCommonRound(context, ref),
+                    icon: const Icon(Icons.mic_none),
+                    label: const Text('Common questions, aloud'),
+                  ),
+                  if (hasAi)
+                    TextButton(
+                      onPressed: () => startPractice(context, ref),
+                      child: const Text('Or prepare questions for a role first'),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
         AsyncList(
           ref.watch(practiceProvider),
           builder: (rounds) {
@@ -285,6 +330,11 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       title: round.role,
       actions: [
         IconButton(
+          icon: const Icon(Icons.mic_none),
+          tooltip: 'Answer aloud',
+          onPressed: () => openSpokenRound(context, round.id),
+        ),
+        IconButton(
           icon: const Icon(Icons.delete_outline),
           tooltip: 'Delete this round',
           onPressed: () => _delete(round, saved.values.toList()),
@@ -300,6 +350,15 @@ class _PracticePageState extends ConsumerState<PracticePage> {
         const SizedBox(height: 4),
         const Text(
           'Answer as you would speak in the room. About two minutes (250 to 350 words) suits most questions.',
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton.tonalIcon(
+            onPressed: () => openSpokenRound(context, round.id),
+            icon: const Icon(Icons.mic_none),
+            label: const Text('Answer these aloud'),
+          ),
         ),
         const SizedBox(height: 16),
         for (final (i, q) in questions.indexed) _question(round, i, q, saved[i]),
