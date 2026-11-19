@@ -29,7 +29,6 @@ import 'package:udyoga/vision/face_camera.dart';
 import 'package:udyoga/voice/lab.dart';
 import 'package:udyoga/voice/models.dart';
 import 'package:udyoga/voice/native_engines.dart';
-import 'package:whisper_ggml/whisper_ggml.dart';
 
 /// Refuses and counts every dart:io HTTP client made during the run.
 class _NoNetwork extends HttpOverrides {
@@ -46,10 +45,15 @@ const _answer =
     'brought in a short checklist and, like, asked each nurse to read back the plan. Within a month the '
     'number of missed tasks fell by half.';
 
-Future<Pcm> _speechClip(String folder, Duration length) => Isolate.run(() {
+/// A second clip, dense with fillers (3 "um", 3 "uh", 1 "like").
+const _fillerAnswer =
+    'Uh, so, um, the main thing was the rota. Um, we had, uh, three people off sick, and I, like, '
+    'rang round the bank staff. Uh, by lunchtime we were, um, fully covered again.';
+
+Future<Pcm> _speechClip(String folder, Duration length, {String text = _answer}) => Isolate.run(() {
   sherpa.initBindings();
   final tts = sherpa.OfflineTts(kokoroConfig(folder));
-  final a = tts.generate(text: _answer, sid: kokoroBritishVoice);
+  final a = tts.generate(text: text, sid: kokoroBritishVoice);
   tts.free();
   // Linear resample to 16 kHz, padded or cut to [length].
   final n = length.inMilliseconds * 16;
@@ -153,15 +157,15 @@ Future<Map<String, Object?>> _run(List<String> args) async {
     ],
   };
 
+  final fillerClip = await _speechClip(mm.folder(voice), const Duration(seconds: 10), text: _fillerAnswer);
   final stt = <String, Object?>{};
-  for (final (id, wm) in [
-    ('whisper-base-en', WhisperModel.baseEn),
-    ('whisper-small-en', WhisperModel.smallEn),
-  ]) {
+  for (final id in ['moonshine-base-en', 'moonshine-tiny-en']) {
     final runs = <Map<String, Object?>>[];
-    for (var i = 0; i < 2; i++) {
-      final t = await WhisperTranscriber(mm.path(speechModel(id)), wm).transcribe(clip);
-      runs.add({'ms': _ms(t.took), 'text': t.text});
+    for (final c in [clip, fillerClip]) {
+      for (var i = 0; i < 2; i++) {
+        final t = await MoonshineTranscriber(mm.folder(speechModel(id)), id).transcribe(c);
+        runs.add({'ms': _ms(t.took), 'text': t.text});
+      }
     }
     stt[id] = runs;
   }
@@ -171,7 +175,7 @@ Future<Map<String, Object?>> _run(List<String> args) async {
   final lab = InterviewLab(
     recorder: RecordMic(),
     detector: SileroVad(mm.path(speechModel('silero-vad'))),
-    transcriber: WhisperTranscriber(mm.path(speechModel('whisper-base-en')), WhisperModel.baseEn),
+    transcriber: MoonshineTranscriber(mm.folder(speechModel(defaultTranscriber)), defaultTranscriber),
     speaker: speaker,
   );
   var peak = -160.0;

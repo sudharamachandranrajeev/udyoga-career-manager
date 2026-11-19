@@ -1,7 +1,8 @@
-/// The lab's real engines: `record` for the mic, sherpa-onnx for Silero VAD
-/// and the Kokoro voice, whisper_ggml for transcripts, audioplayers to play
-/// the voice. All run on the device from models the user downloaded; none
-/// of them is given a URL.
+/// The lab's real engines: `record` for the mic, sherpa-onnx for Silero VAD,
+/// the Kokoro voice and the Moonshine transcriber, audioplayers to play the
+/// voice. All run on the device from models the user downloaded; none of
+/// them is given a URL. Audio goes to the transcriber as 16 kHz samples in
+/// memory: no file and no converter.
 library;
 
 import 'dart:async';
@@ -12,13 +13,8 @@ import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:record/record.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
-import 'package:whisper_ggml/whisper_ggml.dart';
 
 import 'lab.dart';
-
-/// A filler-rich prompt, so Whisper keeps "um" and "like" instead of
-/// tidying them away (OpenAI's Whisper prompting guide).
-const verbatimPrompt = 'Umm, let me think like, hmm... Okay, here\'s what I\'m, like, thinking.';
 
 /// Records PCM16 16 kHz mono from the default mic into memory.
 class RecordMic implements MicRecorder {
@@ -139,42 +135,58 @@ class SileroVad implements SpeechDetector {
   }
 }
 
-/// Whisper through whisper_ggml, from a model file the user downloaded
-/// (never its own download). The audio goes through one temporary WAV,
-/// deleted when done.
-class WhisperTranscriber implements Transcriber {
-  WhisperTranscriber(this.modelPath, this.whisperModel, {this.threads = 4, Directory? temp})
-    : temp = temp ?? Directory.systemTemp;
-  final String modelPath;
-  final WhisperModel whisperModel;
-  final int threads;
-  final Directory temp;
+/// sherpa-onnx's offline recognizer with a Moonshine model, from the
+/// folder that holds `encoder_model.ort`.
+sherpa.OfflineRecognizerConfig moonshineConfig(String folder, {int threads = 4}) =>
+    sherpa.OfflineRecognizerConfig(
+      model: sherpa.OfflineModelConfig(
+        moonshine: sherpa.OfflineMoonshineModelConfig(
+          encoder: '$folder/encoder_model.ort',
+          mergedDecoder: '$folder/decoder_model_merged.ort',
+        ),
+        tokens: '$folder/tokens.txt',
+        numThreads: threads,
+        debug: false,
+      ),
+    );
 
+/// Writes down [samples] (16 kHz mono) with a loaded [recognizer].
+String recognise(sherpa.OfflineRecognizer recognizer, Float32List samples) {
+  final stream = recognizer.createStream();
+  try {
+    stream.acceptWaveform(samples: samples, sampleRate: 16000);
+    recognizer.decode(stream);
+    return recognizer.getResult(stream).text.trim();
+  } finally {
+    stream.free();
+  }
+}
+
+/// Moonshine through sherpa-onnx, loaded for each call (the lab measures one
+/// answer; a spoken round keeps it loaded, see round_engines.dart). [took]
+/// on the transcript is the transcription alone, not the loading.
+class MoonshineTranscriber implements Transcriber {
+  MoonshineTranscriber(this.folder, this.model, {this.threads = 4});
+  final String folder;
   @override
-  String get model => whisperModel.modelName;
+  final String model;
+  final int threads;
 
   @override
   Future<Transcript> transcribe(Pcm audio) async {
-    final dir = await temp.createTemp('udyoga-lab-');
-    try {
-      final wav = File('${dir.path}/answer.wav');
-      await wav.writeAsBytes(wavBytes(audio));
-      final watch = Stopwatch()..start();
-      final res = await Whisper(model: whisperModel).transcribe(
-        transcribeRequest: TranscribeRequest(
-          audio: wav.path,
-          language: 'en',
-          threads: threads,
-          isNoTimestamps: true,
-          initialPrompt: verbatimPrompt,
-        ),
-        modelPath: modelPath,
-      );
-      return Transcript(res.text.trim(), watch.elapsed);
-    } finally {
-      // The answer and any converted copy go with the folder.
-      await dir.delete(recursive: true);
-    }
+    final dir = folder, samples = audio.samples, n = threads;
+    final (text, us) = await Isolate.run(() {
+      sherpa.initBindings();
+      final rec = sherpa.OfflineRecognizer(moonshineConfig(dir, threads: n));
+      try {
+        final watch = Stopwatch()..start();
+        final text = recognise(rec, samples);
+        return (text, watch.elapsedMicroseconds);
+      } finally {
+        rec.free();
+      }
+    });
+    return Transcript(text, Duration(microseconds: us));
   }
 }
 
@@ -184,13 +196,14 @@ const kokoroBritishVoice = 21;
 /// Kokoro-82M through sherpa-onnx with its British English lexicon. Since
 /// sherpa-onnx 2.0 there is no espeak-ng inside, so words come from the
 /// lexicon only; a word missing from it is skipped or spelt out.
-sherpa.OfflineTtsConfig kokoroConfig(String folder) => sherpa.OfflineTtsConfig(
+/// [extraLexicon] is an optional second word list (see lexicon.dart).
+sherpa.OfflineTtsConfig kokoroConfig(String folder, {String? extraLexicon}) => sherpa.OfflineTtsConfig(
   model: sherpa.OfflineTtsModelConfig(
     kokoro: sherpa.OfflineTtsKokoroModelConfig(
       model: '$folder/model.int8.onnx',
       voices: '$folder/voices.bin',
       tokens: '$folder/tokens.txt',
-      lexicon: '$folder/lexicon-gb-en.txt',
+      lexicon: ['$folder/lexicon-gb-en.txt', ?extraLexicon].join(','),
     ),
     numThreads: 4,
   ),

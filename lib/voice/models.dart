@@ -62,9 +62,9 @@ class SpeechModel {
   final List<String> drop;
 }
 
-/// The models the interview lab can use. URLs are the publishers' own
-/// release links; hashes are the publishers' (GitHub release digests,
-/// Hugging Face LFS ids) or, for MediaPipe, measured on 2026-11-19.
+/// The models the interview simulator can use. URLs are the publishers' own
+/// release links; hashes are the publishers' (GitHub release digests) or,
+/// for MediaPipe, measured on 2026-11-19.
 const speechModels = <SpeechModel>[
   SpeechModel(
     id: 'kokoro-en-gb-int8',
@@ -103,26 +103,36 @@ const speechModels = <SpeechModel>[
     licence: 'MIT',
   ),
   SpeechModel(
-    id: 'whisper-base-en',
-    label: 'Transcriber (Whisper base.en)',
+    id: 'moonshine-base-en',
+    label: 'Transcriber (Moonshine base, English)',
     role: ModelRole.transcribe,
-    url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin',
-    sha256: 'a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002',
-    bytes: 147964211,
-    entry: 'ggml-base.en.bin',
-    source: 'OpenAI Whisper, ggml by ggerganov/whisper.cpp',
+    url:
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/'
+        'sherpa-onnx-moonshine-base-en-quantized-2026-02-27.tar.bz2',
+    sha256: '43232c1d13013d37317163baec3135bd771a186a4356f28c889bab453bb0e891',
+    bytes: 111266225,
+    entry: 'sherpa-onnx-moonshine-base-en-quantized-2026-02-27/encoder_model.ort',
+    source: 'moonshine-ai/moonshine via k2-fsa/sherpa-onnx',
+    // The English Moonshine models are MIT; other languages are not, so
+    // only English is offered.
     licence: 'MIT',
+    archive: true,
+    drop: ['sherpa-onnx-moonshine-base-en-quantized-2026-02-27/test_wavs'],
   ),
   SpeechModel(
-    id: 'whisper-small-en',
-    label: 'Transcriber, more accurate (Whisper small.en)',
+    id: 'moonshine-tiny-en',
+    label: 'Transcriber, lighter (Moonshine tiny, English)',
     role: ModelRole.transcribe,
-    url: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin',
-    sha256: 'c6138d6d58ecc8322097e0f987c32f1be8bb0a18532a3f88f734d1bbf9c41e5d',
-    bytes: 487614201,
-    entry: 'ggml-small.en.bin',
-    source: 'OpenAI Whisper, ggml by ggerganov/whisper.cpp',
+    url:
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/'
+        'sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27.tar.bz2',
+    sha256: '9ec31b342d8fa3240c3b81b8f82e1cf7e3ac467c93ca5a999b741d5887164f8d',
+    bytes: 29858559,
+    entry: 'sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27/encoder_model.ort',
+    source: 'moonshine-ai/moonshine via k2-fsa/sherpa-onnx',
     licence: 'MIT',
+    archive: true,
+    drop: ['sherpa-onnx-moonshine-tiny-en-quantized-2026-02-27/test_wavs'],
   ),
   SpeechModel(
     id: 'blazeface-short-range',
@@ -140,6 +150,15 @@ const speechModels = <SpeechModel>[
 ];
 
 SpeechModel speechModel(String id) => speechModels.firstWhere((m) => m.id == id);
+
+/// Folders earlier versions downloaded and no longer use (the I0 spike's
+/// whisper.cpp models). The lab offers to delete them.
+const retiredModelIds = ['whisper-base-en', 'whisper-small-en'];
+
+/// The default transcriber, voice and speech detector of a spoken round.
+const defaultTranscriber = 'moonshine-base-en';
+const voiceModelId = 'kokoro-en-gb-int8';
+const vadModelId = 'silero-vad';
 
 /// A download that failed; [message] is for the user.
 class ModelException implements Exception {
@@ -270,6 +289,27 @@ class ModelManager {
     await File('${staging.path}/$_marker').writeAsString(m.sha256);
     if (await dir.exists()) await dir.delete(recursive: true);
     await staging.rename(dir.path);
+  }
+
+  /// Bytes held by [retiredModelIds] folders still on this device.
+  Future<int> retiredBytes() async {
+    var n = 0;
+    for (final id in retiredModelIds) {
+      final d = Directory('${root.path}/$id');
+      if (!await d.exists()) continue;
+      await for (final e in d.list(recursive: true, followLinks: false)) {
+        if (e is File) n += await e.length();
+      }
+    }
+    return n;
+  }
+
+  /// Deletes every [retiredModelIds] folder.
+  Future<void> deleteRetired() async {
+    for (final id in retiredModelIds) {
+      final d = Directory('${root.path}/$id');
+      if (await d.exists()) await d.delete(recursive: true);
+    }
   }
 
   /// Deletes [m] and any half-finished download of it.

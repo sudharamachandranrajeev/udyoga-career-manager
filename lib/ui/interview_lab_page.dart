@@ -10,7 +10,6 @@ import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, che
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:whisper_ggml/whisper_ggml.dart';
 
 import '../app/providers.dart';
 import '../vision/blazeface.dart';
@@ -44,7 +43,8 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
   final _installed = <String, bool>{};
   final _onDisk = <String, int>{};
   final _progress = <String, double>{};
-  String _whisper = 'whisper-base-en';
+  String _transcriber = defaultTranscriber;
+  int _retired = 0;
   InterviewLab? _lab;
   LabResult? _result;
   FaceCamera? _camera;
@@ -69,6 +69,7 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
       _installed[m.id] = await mm.installed(m);
       _onDisk[m.id] = await mm.sizeOnDisk(m);
     }
+    _retired = await mm.retiredBytes();
     if (mounted) setState(() {});
   }
 
@@ -109,15 +110,12 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
 
   Future<void> _runSpeech() async {
     final mm = await ref.read(modelManagerProvider.future);
-    final voice = speechModel('kokoro-en-gb-int8'), vad = speechModel('silero-vad');
-    final whisper = speechModel(_whisper);
+    final voice = speechModel(voiceModelId), vad = speechModel(vadModelId);
+    final ears = speechModel(_transcriber);
     final lab = _lab ??= InterviewLab(
       recorder: RecordMic(),
       detector: SileroVad(mm.path(vad)),
-      transcriber: WhisperTranscriber(
-        mm.path(whisper),
-        _whisper == 'whisper-small-en' ? WhisperModel.smallEn : WhisperModel.baseEn,
-      ),
+      transcriber: MoonshineTranscriber(mm.folder(ears), ears.id),
       speaker: KokoroSpeaker(mm.folder(voice)),
     );
     final sub = lab.changes.listen((_) {
@@ -158,7 +156,7 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
   @override
   Widget build(BuildContext context) {
     final lab = _lab;
-    final speechReady = _has('kokoro-en-gb-int8') && _has('silero-vad') && _has(_whisper);
+    final speechReady = _has(voiceModelId) && _has(vadModelId) && _has(_transcriber);
     final r = _result;
     return PageScaffold(
       title: 'Interview lab',
@@ -191,6 +189,19 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
                       ? TextButton(onPressed: () => _delete(m), child: const Text('Delete'))
                       : TextButton(onPressed: () => _download(m), child: const Text('Download')),
                 ),
+              if (_retired > 0)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Models this version no longer uses (Whisper)'),
+                  subtitle: Text('On this device: ${formatBytes(_retired)}'),
+                  trailing: TextButton(
+                    onPressed: () async {
+                      await (await ref.read(modelManagerProvider.future)).deleteRetired();
+                      await _refresh();
+                    },
+                    child: const Text('Delete'),
+                  ),
+                ),
             ],
           ),
         ),
@@ -204,15 +215,15 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
                 'voice reads a sentence aloud.',
               ),
               DropdownButton<String>(
-                value: _whisper,
+                value: _transcriber,
                 items: const [
-                  DropdownMenuItem(value: 'whisper-base-en', child: Text('Whisper base.en')),
-                  DropdownMenuItem(value: 'whisper-small-en', child: Text('Whisper small.en')),
+                  DropdownMenuItem(value: 'moonshine-base-en', child: Text('Moonshine base')),
+                  DropdownMenuItem(value: 'moonshine-tiny-en', child: Text('Moonshine tiny (lighter)')),
                 ],
                 onChanged: lab?.busy ?? false
                     ? null
                     : (v) => setState(() {
-                        _whisper = v!;
+                        _transcriber = v!;
                         _lab = null;
                       }),
               ),

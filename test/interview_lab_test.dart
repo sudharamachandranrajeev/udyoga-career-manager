@@ -254,7 +254,8 @@ void main() {
       }
       expect(speechModels.map((m) => m.role).toSet(), ModelRole.values.toSet());
       expect(formatBytes(speechModel('kokoro-en-gb-int8').bytes), '132.4 MB');
-      expect(formatBytes(speechModel('whisper-small-en').bytes), '487.6 MB');
+      expect(formatBytes(speechModel('moonshine-base-en').bytes), '111.3 MB');
+      expect(speechModels.map((m) => m.id), isNot(contains(anyOf(retiredModelIds))));
     });
   });
 
