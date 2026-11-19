@@ -12,11 +12,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../app/providers.dart';
+import '../domain/offline_guard.dart' show offlineDownloadMessage;
 import '../vision/blazeface.dart';
 import '../vision/face_camera.dart';
 import '../voice/lab.dart';
 import '../voice/models.dart';
 import '../voice/native_engines.dart';
+import 'interview_device_ui.dart' show OfflineBadge, offlinePractice;
 
 /// Device-only: "on" shows the Developer tools (the interview lab).
 const devToolsKey = 'udyoga.dev.tools';
@@ -165,6 +167,7 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
     final r = _result;
     return PageScaffold(
       title: 'Interview lab',
+      actions: const [OfflineBadge()],
       banner:
           'For testing the interview simulator\'s speech and camera on this device. Recordings stay in memory; '
           'camera frames are looked at and dropped, never stored.',
@@ -177,6 +180,8 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
               const Text(
                 'Nothing is included with Udyoga. Download what you want to test; delete it any time.',
               ),
+              if (offlinePractice(ref))
+                Text(offlineDownloadMessage, style: TextStyle(color: Status.warning.color)),
               for (final m in speechModels)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -192,6 +197,8 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
                       ? null
                       : _has(m.id)
                       ? TextButton(onPressed: () => _delete(m), child: const Text('Delete'))
+                      : offlinePractice(ref)
+                      ? null
                       : TextButton(onPressed: () => _download(m), child: const Text('Download')),
                 ),
               if (_cached > 0)

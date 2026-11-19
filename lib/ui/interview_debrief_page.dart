@@ -20,6 +20,7 @@ import '../domain/interview_book.dart';
 import '../domain/interview_scoring.dart';
 import '../domain/json.dart';
 import 'common.dart';
+import 'interview_device_ui.dart' show OfflineBadge;
 import 'kit/kit.dart';
 import 'spoken_round_page.dart';
 
@@ -118,7 +119,8 @@ class _RoleProfilePageState extends ConsumerState<RoleProfilePage> {
       context,
       title: 'Reading the criteria',
       status: 'Only the advert is sent to your AI.',
-      task: (_) async => (await requireInterviewAdvisor(ref)).readCriteria(advert: advert, title: _title.text.trim()),
+      task: (_) async =>
+          (await requireInterviewAdvisor(ref)).readCriteria(advert: advert, title: _title.text.trim()),
     );
     if (data == null || !mounted) return;
     final criteria = parseCriteria(data);
@@ -249,7 +251,10 @@ class _RoleProfilePageState extends ConsumerState<RoleProfilePage> {
     final asked = {for (final c in askedCriteria(_profile)) c.id};
     return PageScaffold(
       title: _profile.id.isEmpty ? 'New role profile' : _profile.title,
-      actions: [IconButton(icon: const Icon(Icons.save_outlined), tooltip: 'Save', onPressed: _save)],
+      actions: [
+        const OfflineBadge(),
+        IconButton(icon: const Icon(Icons.save_outlined), tooltip: 'Save', onPressed: _save),
+      ],
       children: [
         const Text(
           'The criteria a panel agrees before it meets anyone. Each becomes a question, and the debrief scores '
@@ -501,6 +506,7 @@ class _DebriefPageState extends ConsumerState<DebriefPage> {
     final qs = {for (final q in l.data.questions) q.index: q};
     return PageScaffold(
       title: 'Debrief: ${l.round.role}',
+      actions: const [OfflineBadge()],
       children: [
         Text(
           d.aiScored

@@ -14,6 +14,8 @@ import 'package:archive/archive_io.dart';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
+import '../domain/offline_guard.dart';
+
 /// What a model is for.
 enum ModelRole { voice, vad, transcribe, face }
 
@@ -227,6 +229,8 @@ class ModelManager {
   /// mismatch deletes the download and throws [ModelException]; nothing is
   /// installed. [onProgress] gets bytes received and the expected total.
   Future<void> download(SpeechModel m, {void Function(int received, int total)? onProgress}) async {
+    // Offline interview practice: no download, whatever the screen offers.
+    if (OfflineGuard.instance.active) throw ModelException(offlineDownloadMessage);
     await root.create(recursive: true);
     final part = File('${root.path}/${m.id}.part');
     final c = client ?? http.Client();

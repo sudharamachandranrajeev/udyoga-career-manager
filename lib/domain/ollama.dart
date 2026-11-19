@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 
 import 'ai.dart';
 import 'json.dart';
+
+export 'offline_guard.dart' show isLoopbackHost;
 import 'schema.dart';
 
 /// Where Ollama listens unless the user says otherwise.
@@ -56,15 +58,6 @@ String ollamaHost(String typed) {
     if (h.endsWith(tail)) h = h.substring(0, h.length - tail.length);
   }
   return h;
-}
-
-/// True when [host] names this machine, so a request to it never leaves
-/// the device.
-bool isLoopbackHost(String host) {
-  final h = host.toLowerCase().replaceAll('[', '').replaceAll(']', '');
-  if (h == 'localhost' || h.endsWith('.localhost')) return true;
-  final ip = InternetAddress.tryParse(h);
-  return ip != null && ip.isLoopback;
 }
 
 /// The interview AI on the user's own computer, through Ollama's native

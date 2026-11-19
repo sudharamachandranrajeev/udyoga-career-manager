@@ -26,6 +26,7 @@ import '../domain/interview_plan.dart';
 import '../domain/interview_process.dart';
 import '../domain/interview_scoring.dart';
 import '../domain/json.dart';
+import '../domain/offline_guard.dart' show offlineDownloadMessage;
 import '../domain/ollama.dart' show Ollama;
 import '../vision/camera_coach.dart';
 import '../voice/models.dart';
@@ -34,7 +35,7 @@ import '../voice/spoken_engines.dart';
 import 'common.dart';
 import 'interview_confidence_ui.dart' show NervesRating;
 import 'interview_debrief_page.dart' show openDebrief;
-import 'interview_device_ui.dart' show LiveCaption;
+import 'interview_device_ui.dart' show LiveCaption, OfflineBadge, offlinePractice;
 import 'interview_lab_page.dart' show modelManagerProvider;
 import 'camera_coach_ui.dart';
 import 'kit/kit.dart';
@@ -389,6 +390,7 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
       title: 'Answer aloud',
       banner: 'page.spoken',
       actions: [
+        const OfflineBadge(),
         IconButton(
           icon: Icon(_device.captions ? Icons.closed_caption : Icons.closed_caption_disabled_outlined),
           tooltip: _device.captions ? 'Turn live captions off' : 'Turn live captions on',
@@ -447,6 +449,11 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
               'The round needs these on this device. Each downloads only when you ask, from its publisher, '
               'and runs here with no network.',
             ),
+            if (offlinePractice(ref))
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(offlineDownloadMessage, style: TextStyle(color: Status.warning.color)),
+              ),
             for (final m in missing)
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -454,7 +461,7 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
                 subtitle: _progress.containsKey(m.id)
                     ? LinearProgressIndicator(value: _progress[m.id])
                     : Text('${formatBytes(m.bytes)} · ${m.licence}'),
-                trailing: _progress.containsKey(m.id)
+                trailing: _progress.containsKey(m.id) || offlinePractice(ref)
                     ? null
                     : TextButton(
                         onPressed: () => _download(m),
@@ -952,8 +959,11 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
               Bullets([n.strength], icon: Icons.check, color: Status.good.color),
               Bullets([n.fix], icon: Icons.arrow_upward),
             ] else if (!hasAi)
-              const Text(
-                'Add an AI key in Settings for feedback on what you said. Only the transcript is sent.',
+              Text(
+                offlinePractice(ref)
+                    ? 'Offline practice: feedback on what you said needs Ollama running on this computer. What '
+                          'your answer covered and how you said it come from this device.'
+                    : 'Add an AI key in Settings for feedback on what you said. Only the transcript is sent.',
               )
             else ...[
               const Text('Only the transcript is sent to your AI, never the recording.'),

@@ -10,11 +10,14 @@ import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, che
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/interview_providers.dart';
 import '../app/providers.dart';
+import '../domain/offline_guard.dart' show offlineDownloadMessage;
 import '../vision/camera_coach.dart';
 import '../vision/setup_check.dart';
 import '../voice/models.dart';
 import 'common.dart';
+import 'interview_device_ui.dart' show OfflineBadge;
 import 'interview_lab_page.dart' show modelManagerProvider;
 
 /// The device's camera for the coach; tests override it with a fake.
@@ -137,6 +140,9 @@ class _CameraSetupCardState extends ConsumerState<CameraSetupCard> {
     if (!await cam.modelReady()) {
       final m = cam.model;
       if (!mounted) return;
+      if (ref.read(interviewDeviceProvider).value?.offline ?? false) {
+        return showMessage(context, offlineDownloadMessage);
+      }
       final ok = await confirm(
         context,
         title: 'Download ${m.label}?',
@@ -332,6 +338,7 @@ class _CameraSetupPageState extends ConsumerState<CameraSetupPage> {
   @override
   Widget build(BuildContext context) => PageScaffold(
     title: 'Camera setup',
+    actions: const [OfflineBadge()],
     children: [
       CameraSetupCard(_coach, inRound: false),
       const SectionCard(

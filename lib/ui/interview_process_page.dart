@@ -19,6 +19,7 @@ import '../domain/interview_process.dart';
 import '../domain/interview_scoring.dart';
 import '../domain/process_summary.dart';
 import 'common.dart';
+import 'interview_device_ui.dart' show OfflineBadge;
 import 'interview_debrief_page.dart' show openDebrief, openRoleProfile;
 import 'kit/kit.dart';
 import 'spoken_round_page.dart';
@@ -271,6 +272,7 @@ class _ProcessPageState extends ConsumerState<ProcessPage> {
     return PageScaffold(
       title: _process.name,
       actions: [
+        const OfflineBadge(),
         if (anyRun)
           IconButton(
             icon: const Icon(Icons.summarize_outlined),
@@ -422,9 +424,8 @@ class _ProcessPageState extends ConsumerState<ProcessPage> {
   }
 }
 
-Future<void> openProcessSummary(BuildContext context, String processId, String name) => Navigator.of(
-  context,
-).push(MaterialPageRoute(builder: (_) => ProcessSummaryPage(processId, name: name)));
+Future<void> openProcessSummary(BuildContext context, String processId, String name) =>
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProcessSummaryPage(processId, name: name)));
 
 /// Every stage's debrief in one view: each criterion across the whole
 /// process (evidenced in which stage, or missing), then the top three fixes.
@@ -467,6 +468,7 @@ class _ProcessSummaryPageState extends ConsumerState<ProcessSummaryPage> {
     final muted = Theme.of(context).textTheme.bodySmall;
     return PageScaffold(
       title: 'Summary: ${widget.name}',
+      actions: const [OfflineBadge()],
       children: [
         Text(
           s.stages.isEmpty
@@ -622,6 +624,7 @@ class _ExercisePageState extends State<ExercisePage> {
     final st = widget.stage;
     return PageScaffold(
       title: st.title,
+      actions: const [OfflineBadge()],
       children: [
         Text(st.about),
         const SizedBox(height: 8),
@@ -831,6 +834,7 @@ class _PresentationPrepPageState extends State<PresentationPrepPage> {
     final st = widget.stage;
     return PageScaffold(
       title: 'Prepare: ${st.title}',
+      actions: const [OfflineBadge()],
       children: [
         SectionCard(
           title: 'The brief',

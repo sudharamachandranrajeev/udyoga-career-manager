@@ -17,7 +17,7 @@ import 'app_harness.dart';
 import 'spoken_round_ui_test.dart' show FakeEngines;
 
 /// A cloud AI that must never be asked once the local model is chosen.
-class _Cloud implements Ai {
+class Cloud implements Ai {
   var asked = 0;
   @override
   String get model => 'cloud';
@@ -87,7 +87,7 @@ void main() {
     await app.open(
       seed: (b) => b.setInterviewDevice(const InterviewDevice(localAi: true, ollamaModel: 'llama3.2:3b')),
     );
-    final cloud = _Cloud();
+    final cloud = Cloud();
     await app.run(
       overrides: [
         advisorProvider.overrideWith((ref) async => Advisor(cloud, today: '2026-11-19')),
@@ -124,7 +124,7 @@ void main() {
         );
       },
     );
-    final cloud = _Cloud();
+    final cloud = Cloud();
     final seen = <http.Request>[];
     await app.run(
       home: SpokenRoundPage(id),

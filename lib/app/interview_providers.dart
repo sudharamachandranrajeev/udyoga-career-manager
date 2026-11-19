@@ -56,28 +56,36 @@ final ollamaFactoryProvider = Provider<Ollama Function(OllamaSetup)>(
       (s) => Ollama(host: s.host, model: s.model),
 );
 
-/// Whether the local model is ready, or null when it is not chosen.
+/// Whether the local model is ready, or null when it is not wanted: it is
+/// wanted when chosen, and in offline practice (which uses it when it is
+/// there). Offline practice allows this computer only.
 final ollamaStatusProvider = FutureProvider<OllamaStatus?>((ref) async {
   final dev = await ref.watch(interviewDeviceProvider.future);
-  if (!dev.localAi) return null;
+  if (!dev.localAi && !dev.offline) return null;
   final setup = await ref.watch(ollamaSetupProvider.future);
+  if (dev.offline && !isLoopbackHost(Uri.parse(setup.host).host)) {
+    return OllamaStatus(
+      OllamaState.failed,
+      'Offline practice uses a local model on this computer only, and ${setup.host} is another machine.',
+    );
+  }
   return ref.watch(ollamaFactoryProvider)(setup).check();
 });
 
 /// The adviser for the interview screens:
-/// - the local model, when chosen and ready;
-/// - nothing, when it is chosen but not ready, or in offline practice
-///   (the built-in plans and the matcher on the device take over);
+/// - the local model, when chosen (or in offline practice) and ready;
+/// - nothing, when it is wanted but not ready: the built-in plans and the
+///   matcher on the device take over, and offline practice never falls
+///   back to the cloud;
 /// - otherwise the app-wide adviser.
 final interviewAdvisorProvider = FutureProvider<Advisor?>((ref) async {
   final dev = await ref.watch(interviewDeviceProvider.future);
-  if (dev.localAi) {
+  if (dev.localAi || dev.offline) {
     final status = await ref.watch(ollamaStatusProvider.future);
     if (status == null || !status.ready) return null;
     final setup = await ref.watch(ollamaSetupProvider.future);
     return Advisor(ref.watch(ollamaFactoryProvider)(setup), today: today());
   }
-  if (dev.offline) return null;
   return ref.watch(advisorProvider.future);
 });
 
@@ -89,8 +97,9 @@ Future<String> interviewNoAiReason(WidgetRef ref) async {
     if (s != null && !s.ready) return s.message;
   }
   if (dev.offline) {
-    return 'Offline interview practice is on and no local model is ready, so the built-in follow-ups and '
-        'checks on this device are used.';
+    final s = await ref.read(ollamaStatusProvider.future);
+    return 'Offline interview practice: ${s == null || s.ready ? 'no local model is ready' : s.message} '
+        'The built-in follow-ups and checks on this device are used.';
   }
   return needsAiKey;
 }

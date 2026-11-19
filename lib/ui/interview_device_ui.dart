@@ -1,5 +1,5 @@
-/// The interview's device-only settings on screen (plan I6): live captions
-/// and the local model (Ollama).
+/// The interview's device-only settings on screen (plan I6): offline
+/// practice, live captions and the local model (Ollama).
 library;
 
 import 'dart:async';
@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/interview_providers.dart';
 import '../domain/interview_plan.dart';
+import '../domain/offline_guard.dart';
 import '../domain/ollama.dart';
 import 'common.dart';
 
@@ -56,6 +57,28 @@ class _InterviewDeviceCardState extends ConsumerState<InterviewDeviceCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Offline interview practice'),
+            subtitle: const Text(
+              'Uses only what is on this device: the voice, the speech detector, the transcriber, the face '
+              'finder and, when it is running here, Ollama. Without Ollama the built-in follow-ups and checks '
+              'are used. Nothing from the interview screens goes to the network, and models cannot be '
+              'downloaded while it is on.',
+            ),
+            value: dev.offline,
+            onChanged: (v) => unawaited(_save(dev.copyWith(offline: v))),
+          ),
+          if (dev.offline && !dev.localAi)
+            switch (ref.watch(ollamaStatusProvider)) {
+              AsyncData(:final value?) => StatusLabelWrap(
+                value.ready ? Status.good : Status.info,
+                value.ready
+                    ? '${value.message} It plans, scores and gives feedback offline.'
+                    : '${value.message} Until then the built-in follow-ups and checks are used.',
+              ),
+              _ => const SizedBox.shrink(),
+            },
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Live captions'),
@@ -184,13 +207,14 @@ class InterviewNoAi extends ConsumerWidget {
     final dev = ref.watch(interviewDeviceProvider).value ?? const InterviewDevice();
     if (!dev.localAi && !dev.offline) return const NeedsKey(what: 'Interview practice');
     final status = ref.watch(ollamaStatusProvider).value;
+    final why = status != null && !status.ready ? '${status.message} ' : '';
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: StatusLabelWrap(
         Status.info,
-        dev.localAi && status != null && !status.ready
-            ? '${status.message} Until then the built-in follow-ups and checks on this device are used.'
-            : 'Offline interview practice: the built-in follow-ups and checks on this device are used.',
+        dev.offline
+            ? 'Offline interview practice. ${why}The built-in follow-ups and checks on this device are used.'
+            : '${why}Until then the built-in follow-ups and checks on this device are used.',
       ),
     );
   }
@@ -244,3 +268,65 @@ class LiveCaption extends StatelessWidget {
     );
   }
 }
+
+/// The "Offline" badge for an interview screen's app bar. While it shows,
+/// the screen holds the [OfflineGuard]: nothing can leave the device.
+class OfflineBadge extends ConsumerStatefulWidget {
+  const OfflineBadge({super.key});
+
+  @override
+  ConsumerState<OfflineBadge> createState() => _OfflineBadgeState();
+}
+
+class _OfflineBadgeState extends ConsumerState<OfflineBadge> {
+  bool _held = false;
+
+  void _hold(bool on) {
+    if (on && !_held) OfflineGuard.instance.hold();
+    if (!on && _held) OfflineGuard.instance.release();
+    _held = on;
+  }
+
+  @override
+  void dispose() {
+    _hold(false);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final offline = ref.watch(interviewDeviceProvider).value?.offline ?? false;
+    _hold(offline);
+    if (!offline) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: 'Offline interview practice: nothing on this screen uses the network',
+      child: Semantics(
+        label: 'Offline interview practice is on',
+        excludeSemantics: true,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: scheme.secondaryContainer,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.cloud_off, size: 16, color: scheme.onSecondaryContainer),
+              const SizedBox(width: 6),
+              Text(
+                'Offline',
+                style: TextStyle(color: scheme.onSecondaryContainer, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// True while offline practice is on: downloads are refused.
+bool offlinePractice(WidgetRef ref) => ref.watch(interviewDeviceProvider).value?.offline ?? false;

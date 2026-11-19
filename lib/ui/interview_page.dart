@@ -123,6 +123,7 @@ class InterviewPage extends ConsumerWidget {
     return PageScaffold(
       title: 'Interview',
       banner: 'page.interview',
+      actions: const [OfflineBadge()],
       fab: hasAi
           ? FloatingActionButton.extended(
               heroTag: null,
