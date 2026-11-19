@@ -1,9 +1,11 @@
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../domain/book.dart';
 import '../domain/ai.dart';
+import '../domain/background.dart';
 import '../domain/feeds.dart';
 import '../domain/gemini.dart';
 import '../domain/n8n.dart';
@@ -11,6 +13,7 @@ import '../domain/subscription.dart';
 import '../domain/update.dart';
 import '../ui/accounts_page.dart';
 import '../ui/common.dart';
+import 'background.dart';
 import 'check_in_reminder.dart';
 import 'providers.dart';
 
@@ -196,6 +199,7 @@ class SettingsPage extends ConsumerWidget {
           ),
         ),
         const _CheckInCard(),
+        if (ref.watch(backgroundSchedulerProvider).supported) const _BackgroundCard(),
         if (ref.watch(updaterProvider) case final updater?) _UpdateCard(updater),
         const AppLockCard(),
         const HintsCard(),
@@ -430,6 +434,76 @@ class _CheckInCard extends ConsumerWidget {
                 await set(remind: on);
               },
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The refresh that runs while Udyoga is closed: on or off, how often, and
+/// what the last run did. Per device.
+class _BackgroundCard extends ConsumerWidget {
+  const _BackgroundCard();
+
+  static String _when(DateTime t) {
+    final now = DateTime.now();
+    final sameDay = t.year == now.year && t.month == now.month && t.day == now.day;
+    return sameDay ? 'today at ${DateFormat.Hm().format(t)}' : DateFormat('d MMM, HH:mm').format(t);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(backgroundStatusProvider).value;
+    final scheduler = ref.watch(backgroundSchedulerProvider);
+    final s = status?.settings;
+    Future<void> set(BackgroundSettings next) async {
+      try {
+        await ref.setBackground(next);
+      } on Object catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(describeError(e))));
+        }
+      }
+    }
+
+    final last = status?.last;
+    return SectionCard(
+      title: 'Background refresh',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Checks the job sites, the employers you watch, the route tables and the sponsor register while '
+            'Udyoga is closed, and tells you about new jobs and to-dos that are due. The AI routine runs '
+            'there only on the device that already runs it.',
+          ),
+          if (s != null) ...[
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Refresh while Udyoga is closed'),
+              subtitle: Text(scheduler.description),
+              value: s.on,
+              onChanged: (on) => set(s.copyWith(on: on)),
+            ),
+            if (s.on)
+              Choice<int>(
+                label: 'How often',
+                value: s.minutes,
+                options: backgroundIntervals,
+                onChanged: (m) => set(s.copyWith(minutes: m)),
+              ),
+            if (s.on && status != null && !status.installed)
+              const Text(
+                'The schedule is missing (removed outside Udyoga?). Turn it off and on to add it again.',
+              ),
+          ],
+          Text(
+            last == null
+                ? 'No background run yet.'
+                : 'Last run ${_when(last.at)}: ${last.ok ? '' : 'failed: '}${last.summary}',
+          ),
+          if (status?.next case final next?)
+            Text(next.isBefore(DateTime.now()) ? 'Next run: due now.' : 'Next run: about ${_when(next)}.'),
         ],
       ),
     );

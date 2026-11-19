@@ -8,6 +8,7 @@ import 'package:udyoga/app/modules.dart';
 import 'package:udyoga/app/navigation.dart';
 import 'package:udyoga/app/settings_page.dart';
 import 'package:udyoga/db/database.dart';
+import 'package:udyoga/domain/background.dart';
 import 'package:udyoga/domain/pipeline.dart';
 import 'package:udyoga/ui/applications_page.dart';
 import 'package:udyoga/ui/coach_page.dart';
@@ -217,6 +218,28 @@ void main() {
     await app.go('Settings');
     expect(find.text('Daily check-in'), findsOneWidget);
     expect(find.text('18:30'), findsOneWidget);
+    await app.close();
+  });
+
+  testWidgets('Settings turns the background refresh on and shows its last run', (tester) async {
+    final app = AppHarness(tester)..desktop();
+    await app.open(
+      seed: (book) async {
+        await seedBook(book);
+        await book.recordBackgroundRun(
+          BackgroundRun(at: DateTime(2026, 11, 18, 7, 5), ok: true, summary: '2 new jobs', added: 2),
+        );
+      },
+    );
+    await app.run();
+    await app.go('Settings');
+    expect(find.text('Background refresh'), findsOneWidget);
+    expect(find.textContaining('2 new jobs'), findsOneWidget);
+    await app.tapText('Refresh while Udyoga is closed');
+    expect(app.scheduler.applied.single.on, isTrue);
+    expect(app.scheduler.applied.single.minutes, 360);
+    expect(find.text('Every 6 hours'), findsOneWidget);
+    expect(find.textContaining('Next run'), findsOneWidget);
     await app.close();
   });
 
