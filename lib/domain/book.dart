@@ -10,6 +10,7 @@ import 'conversations.dart';
 import 'eligibility.dart';
 import 'feeds.dart';
 import 'insights.dart';
+import 'interview_plan.dart' show RoundSettings;
 import 'json.dart';
 import 'linkedin_export.dart';
 import 'linkedin_messages.dart';
@@ -84,6 +85,9 @@ abstract final class LocalKeys {
   /// The fingerprint of the career file's settings last applied here, so
   /// the profile takes the file's values only when the file changes.
   static const careerFile = 'udyoga.careerfile.applied';
+
+  /// The spoken round's settings on this device (RoundSettings as JSON).
+  static const roundSettings = 'udyoga.interview.round';
 }
 
 /// Udyoga's write path and the reads screens share.
@@ -336,6 +340,13 @@ class CareerBook {
   /// device only.
   Future<void> setGrant(AiProvider p, SubscriptionGrant? g) =>
       db.setLocalSetting(LocalKeys.grants[p]!, g == null ? '' : jsonEncode(g.toJson()));
+
+  /// The spoken round's persona, level and end-of-answer silence here.
+  Future<RoundSettings> roundSettings() async =>
+      RoundSettings.fromJson(decodeObject(await db.localSetting(LocalKeys.roundSettings) ?? ''));
+
+  Future<void> setRoundSettings(RoundSettings r) =>
+      db.setLocalSetting(LocalKeys.roundSettings, jsonEncode(r.toJson()));
 
   Future<bool> updateOnStart() async => await db.localSetting(LocalKeys.updateOnStart) != 'off';
 

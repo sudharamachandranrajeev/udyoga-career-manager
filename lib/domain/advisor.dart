@@ -9,6 +9,7 @@ import 'ai.dart';
 import 'countries.dart';
 import 'explore.dart';
 import 'insights.dart';
+import 'interview_plan.dart';
 import 'json.dart';
 import 'occupations.dart';
 import 'page_reader.dart';
@@ -476,6 +477,51 @@ Research how this employer or sector interviews now (competency frameworks, valu
     effort: 'medium',
     onProgress: onProgress,
   );
+
+  /// Writes the round's question plan (interview plan I2): for each
+  /// question, the criterion it tests, the elements a full answer has and
+  /// probes for each. Only the questions go: no profile, no answers. The
+  /// probe is later picked on the device from what the answer lacks.
+  Future<List<QuestionPlan>> questionPlan({
+    required String role,
+    required List<PracticeQuestion> questions,
+  }) async {
+    final r = await ai.ask(
+      system:
+          'You plan structured interview questions the way a trained UK panel does: each question tests one '
+          'pre-agreed criterion, and follow-up probes are chosen by what an answer leaves out. Use plain UK '
+          'English. Probes are short, neutral and open; never leading, never two questions in one.',
+      content: [
+        _text(
+          '<round role="${_attr(role)}">\n'
+          '${[for (final (i, q) in questions.indexed) '<question n="${i + 1}" kind="${_attr(q.category)}">${q.question}</question>'].join('\n')}\n'
+          '</round>',
+        ),
+        _text('''
+For each question, in order, give:
+- criterion: what it tests, in a few words.
+- expected: the elements a full answer has, from: situation (one specific example), ownAction (what the candidate did themselves), measure (how they measured it or knew it worked), result (the outcome), learning (what they learned or would do differently), others (who else was involved). Settler, motivation, strengths and "any questions for us" questions expect none.
+- probes: one or two short follow-ups for each expected element, worded for this question.'''),
+      ],
+      schema: object({
+        'questions': array(
+          object({
+            'criterion': string(),
+            'expected': array(oneOf([for (final e in AnswerElement.values) e.name])),
+            'probes': array(
+              object({
+                'element': oneOf([for (final e in AnswerElement.values) e.name]),
+                'text': string(),
+              }),
+            ),
+          }),
+        ),
+      }),
+      effort: 'low',
+      maxTokens: 6000,
+    );
+    return [for (final q in objs(r.data['questions'])) QuestionPlan.fromJson(q)];
+  }
 
   /// Scores an answer on every dimension, with a better version.
   Future<AnswerReview> review(
