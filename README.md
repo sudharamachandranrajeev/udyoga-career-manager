@@ -241,6 +241,25 @@ running and unlocked, then start Udyoga again.
 </details>
 
 <details>
+<summary><b>Can it look for jobs while it is closed?</b></summary>
+
+Yes. Open **Settings → Background refresh** and turn on **Refresh while Udyoga is closed**, then
+pick how often (every 6 hours unless you change it). A notification tells you about new jobs and
+to-dos that are due.
+
+- **Android:** on by default. The phone runs it when there is a network and the battery is not
+  low, so it can be late.
+- **Linux:** Udyoga adds two small files, `udyoga-refresh.timer` and `udyoga-refresh.service`, to
+  `~/.config/systemd/user`. Turning the option off removes them. The refresh runs
+  `udyoga --refresh-once`, which opens no window. It needs your desktop session (for the
+  keyring), so it runs while you are logged in.
+- **Windows:** Udyoga adds a Task Scheduler entry called *Udyoga\Background refresh*. Turning the
+  option off, or uninstalling, removes it.
+
+The last run, what it found and the next run show on the same card.
+</details>
+
+<details>
 <summary><b>The Jobs page is empty</b></summary>
 
 Import your CV and choose countries on **Profile** first, then tap **Refresh** on **Jobs**. Free

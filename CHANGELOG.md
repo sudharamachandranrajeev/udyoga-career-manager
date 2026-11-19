@@ -21,6 +21,9 @@
 - Local radar: several home areas, each with its own radius and the towns you could commute to; job sites that take a place search each area. The career file's places can carry a radius and commute towns.
 - Explore: *Add to targets* on a country page adds it to the countries the job sites search.
 
+- Background refresh (Settings): the job sites, the employers you watch, the route tables and the sponsor register are checked while Udyoga is closed, every 15 minutes to once a day (6 hours by default). A notification tells you about new jobs and, once a day, to-dos that are due. On Android it is on by default and waits for a network and a battery that is not low. On Linux it is a systemd user timer and on Windows a Task Scheduler entry; both are added only when you turn the option on, and removed when you turn it off. The AI routine runs there only on the device that already runs it. Settings shows the last run, what it found and the next run. A background run and the open app never refresh at the same time.
+- Find people: the communities list is UK-wide, with regional health innovation events for London, Greater Manchester, the West Midlands, Yorkshire and the Humber, the North East, Scotland and Wales.
+
 - Send to Vidya (Coach page): when Udyoga and Vidya sync with the same account, the study plan goes straight into Vidya, and what you finish there shows on the Coach card with *Add to my profile*. Saving or copying the plan still works without sync.
 - Sync: *Change server address* follows your sync server to another computer without signing in again; edits that clashed with another device's are kept for you to bring back; the Sync card shows changes waiting to send.
 
