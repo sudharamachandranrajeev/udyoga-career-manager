@@ -33,6 +33,7 @@ part 'database.g.dart';
     CareerProcesses,
     BridgeStudyPlans,
     BridgeStudyProgress,
+    CareerFileDocs,
     Prefs,
     Outbox,
     SyncCursors,
@@ -71,11 +72,12 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     'career_processes',
     'bridge_study_plans',
     'bridge_study_progress',
+    'career_file_docs',
     'prefs',
   ];
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -179,6 +181,10 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
         for (final c in [careerPractice.nervesBefore, careerPractice.nervesAfter]) {
           if (!have.contains(c.name)) await m.addColumn(careerPractice, c);
         }
+      }
+      if (from < 11) {
+        // The synced career file. CREATE TABLE IF NOT EXISTS, so it can run again.
+        await m.createTable(careerFileDocs);
       }
     },
     // The background refresh opens the same file from another process (or

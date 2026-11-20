@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../domain/book.dart';
 import '../domain/ai.dart';
 import '../domain/background.dart';
+import '../domain/career_file_sync.dart';
 import '../domain/feeds.dart';
 import '../domain/gemini.dart';
 import '../domain/n8n.dart';
@@ -204,6 +205,7 @@ class SettingsPage extends ConsumerWidget {
         ),
         const _CheckInCard(),
         if (ref.watch(backgroundSchedulerProvider).supported) const _BackgroundCard(),
+        const _CareerFileCard(),
         const _RecipesCard(),
         if (ref.watch(updaterProvider) case final updater?) _UpdateCard(updater),
         const AppLockCard(),
@@ -555,6 +557,86 @@ class _DeveloperCard extends ConsumerWidget {
   }
 }
 
+final _careerFileProvider = FutureProvider<CareerFileStatus>((ref) {
+  ref.watch(revisionProvider);
+  return CareerFileSync(ref.watch(sessionProvider).book).status();
+});
+
+/// Where the career file in force came from: this device's folder, or
+/// another device through sync. Removing it from sync tombstones every row.
+class _CareerFileCard extends ConsumerWidget {
+  const _CareerFileCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(_careerFileProvider).value;
+    if (s == null) return const SizedBox.shrink();
+    final updated = DateTime.tryParse(s.updated ?? '')?.toLocal();
+    final when = updated == null ? '' : DateFormat('d MMM y, HH:mm').format(updated);
+    final from = [
+      if (when.isNotEmpty) 'last updated $when',
+      if (s.device.isNotEmpty) 'from device ${s.device}',
+    ];
+    final line = switch (s.origin) {
+      CareerFileOrigin.folder => 'Career file: from this folder',
+      CareerFileOrigin.sync => 'Career file: from sync${from.isEmpty ? '' : ' (${from.join(', ')})'}',
+      CareerFileOrigin.none => 'Career file: none yet',
+    };
+    final muted = TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant);
+    return SectionCard(
+      title: 'Career file',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(line),
+          const SizedBox(height: 4),
+          Text(
+            s.sharing
+                ? 'The device that has your career folder shares its settings, recipes and Vidya plans with your '
+                      'other devices, end-to-end encrypted, when you tap Read now. Documents and CVs stay where they '
+                      'are. ${s.files} ${s.files == 1 ? 'file' : 'files'} shared now.'
+                : 'Not shared through sync. Each device uses only its own folder.',
+            style: muted,
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: s.sharing
+                ? TextButton.icon(
+                    icon: const Icon(Icons.cloud_off_outlined),
+                    label: const Text('Remove career file from sync'),
+                    onPressed: () async {
+                      final ok = await confirm(
+                        context,
+                        title: 'Remove career file from sync?',
+                        message:
+                            'Your other devices stop receiving it. What they already applied stays. The folder '
+                            'on this device is not touched.',
+                        action: 'Remove',
+                        destructive: true,
+                      );
+                      if (!ok) return;
+                      final n = await ref.mutate(
+                        (x) =>
+                            CareerFileSync(x.book).removeAll(now: DateTime.now().toUtc().toIso8601String()),
+                      );
+                      if (context.mounted) {
+                        showMessage(context, 'Removed $n ${n == 1 ? 'file' : 'files'} from sync.');
+                      }
+                    },
+                  )
+                : TextButton.icon(
+                    icon: const Icon(Icons.cloud_upload_outlined),
+                    label: const Text('Share it again'),
+                    onPressed: () => ref.mutate((x) => CareerFileSync(x.book).share()),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Site recipes: the folder they are read from, each one with its mode and
 /// today's use against its cap, and any file that was refused.
 class _RecipesCard extends ConsumerWidget {
@@ -585,7 +667,13 @@ class _RecipesCard extends ConsumerWidget {
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.folder_open),
             title: const Text('Recipes folder'),
-            subtitle: Text(folder.isEmpty ? 'None chosen' : folder),
+            subtitle: Text(
+              folder.isNotEmpty
+                  ? folder
+                  : set.recipes.isEmpty
+                  ? 'None chosen'
+                  : 'None chosen: using your career file\'s recipes from sync',
+            ),
             trailing: Wrap(
               spacing: 4,
               children: [

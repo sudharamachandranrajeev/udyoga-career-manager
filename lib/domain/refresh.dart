@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'advisor.dart';
 import 'ats.dart';
 import 'book.dart';
-import 'career_file.dart';
+import 'career_file_sync.dart';
 import 'employers.dart';
 import 'feeds.dart';
 import 'insights.dart';
@@ -127,7 +127,7 @@ class Refresher {
   }) async {
     final report = RefreshReport();
     try {
-      await CareerFile(book).applyFrom(await book.documentFolders(), today: today);
+      await runCareerFile(book, await book.documentFolders(), today: today);
     } on Object catch (e) {
       report.problems.add('Career file: ${describeError(e)}');
     }

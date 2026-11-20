@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import '../db/database.dart';
 import '../domain/advisor.dart';
 import '../domain/bluesky.dart';
+import '../domain/career_file_sync.dart';
 import '../domain/book.dart';
 import '../domain/ai.dart';
 import '../domain/ats.dart';
@@ -556,4 +557,32 @@ final refreshTickerProvider = Provider<void>((ref) {
   tick();
   final timer = Timer.periodic(const Duration(hours: 1), (_) => tick());
   ref.onDispose(timer.cancel);
+
+  // The career file from sync: after the screens reload (a sync that
+  // brought changes, or a write), apply what arrived. Debounced, and a
+  // no-op when nothing changed (by SHA-256), so its own reload ends it.
+  Timer? wait;
+  var running = false;
+  Future<void> apply() async {
+    if (running) return;
+    running = true;
+    try {
+      final book = ref.read(sessionProvider).book;
+      if (await applySyncedCareerFile(book, await book.documentFolders(), today: today())) {
+        ref.read(revisionProvider.notifier).bump();
+        ref.read(syncProvider.notifier).soon();
+      }
+    } on Object {
+      // A broken file is reported by the routine refresh, which applies
+      // the same file.
+    } finally {
+      running = false;
+    }
+  }
+
+  ref.listen(revisionProvider, (_, _) {
+    wait?.cancel();
+    wait = Timer(const Duration(seconds: 2), apply);
+  });
+  ref.onDispose(() => wait?.cancel());
 });

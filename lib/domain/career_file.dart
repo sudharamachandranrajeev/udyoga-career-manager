@@ -218,14 +218,25 @@ class CareerFile {
   Future<CareerFileResult?> applyFrom(List<String> folders, {required String today}) async {
     final file = find(folders);
     if (file == null) return null;
-    final text = await file.readAsString();
+    return applyText(await file.readAsString(), today: today, path: file.path);
+  }
+
+  /// Applies the file's [text] (from the folder or from sync) when it
+  /// differs from what was last applied on this device. The error for
+  /// broken JSON never quotes the file, so none of it reaches a report.
+  Future<CareerFileResult?> applyText(String text, {required String today, String path = ''}) async {
     final mark = sha256.convert(utf8.encode(text)).toString();
     if (await book.db.localSetting(LocalKeys.careerFile) == mark) return null;
-    final decoded = jsonDecode(text);
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(text);
+    } on FormatException catch (e) {
+      throw FormatException('settings/udyoga.json is not valid JSON (${e.message})');
+    }
     if (decoded is! Map<String, Object?>) {
       throw const FormatException('settings/udyoga.json is not a JSON object');
     }
-    final r = await apply(CareerFileSettings.fromJson(decoded), today: today, path: file.path);
+    final r = await apply(CareerFileSettings.fromJson(decoded), today: today, path: path);
     await book.db.setLocalSetting(LocalKeys.careerFile, mark);
     return r;
   }

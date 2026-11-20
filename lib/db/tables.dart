@@ -558,6 +558,34 @@ class BridgeStudyPlans extends Table with SyncedRow, StudyPlanColumns {}
 @DataClassName('StudyProgressRow')
 class BridgeStudyProgress extends Table with SyncedRow, StudyProgressColumns {}
 
+/// The app-relevant files of the candidate's career file folder, as the
+/// device that reads the folder last saw them, so devices without the
+/// folder apply the same settings, recipes and Vidya plans. Only an
+/// allow-list travels (see domain/career_file_sync.dart), inside the
+/// end-to-end-encrypted sync like every other row. The id is the path.
+@DataClassName('CareerFileDoc')
+class CareerFileDocs extends Table with SyncedRow {
+  /// Relative to the career folder, with forward slashes:
+  /// `settings/udyoga.json`, `settings/vidya-….json`, `recipes/….json`.
+  TextColumn get path => text()();
+
+  /// settings | vidya-plan | recipe
+  TextColumn get kind => text()();
+
+  /// SHA-256 of [content] as UTF-8, hex.
+  TextColumn get sha256 => text()();
+
+  /// The file's text; '' once removed from the folder (the row is then
+  /// tombstoned).
+  TextColumn get content => text().withDefault(const Constant(''))();
+
+  /// When this version was read (UTC, ISO 8601).
+  TextColumn get updated => text()();
+
+  /// The device that read it: its name, for "from device …".
+  TextColumn get device => text().withDefault(const Constant(''))();
+}
+
 @DataClassName('Pref')
 class Prefs extends Table with SyncedRow, PrefColumns {}
 

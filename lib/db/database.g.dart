@@ -16270,6 +16270,565 @@ class BridgeStudyProgressCompanion extends UpdateCompanion<StudyProgressRow> {
   }
 }
 
+class $CareerFileDocsTable extends CareerFileDocs
+    with TableInfo<$CareerFileDocsTable, CareerFileDoc> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CareerFileDocsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hlcMeta = const VerificationMeta('hlc');
+  @override
+  late final GeneratedColumn<String> hlc = GeneratedColumn<String>(
+    'hlc',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta(
+    'deleted',
+  );
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  @override
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sha256Meta = const VerificationMeta('sha256');
+  @override
+  late final GeneratedColumn<String> sha256 = GeneratedColumn<String>(
+    'sha256',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _updatedMeta = const VerificationMeta(
+    'updated',
+  );
+  @override
+  late final GeneratedColumn<String> updated = GeneratedColumn<String>(
+    'updated',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deviceMeta = const VerificationMeta('device');
+  @override
+  late final GeneratedColumn<String> device = GeneratedColumn<String>(
+    'device',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    hlc,
+    deleted,
+    path,
+    kind,
+    sha256,
+    content,
+    updated,
+    device,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'career_file_docs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CareerFileDoc> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('hlc')) {
+      context.handle(
+        _hlcMeta,
+        hlc.isAcceptableOrUnknown(data['hlc']!, _hlcMeta),
+      );
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(
+        _deletedMeta,
+        deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta),
+      );
+    }
+    if (data.containsKey('path')) {
+      context.handle(
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('sha256')) {
+      context.handle(
+        _sha256Meta,
+        sha256.isAcceptableOrUnknown(data['sha256']!, _sha256Meta),
+      );
+    } else if (isInserting) {
+      context.missing(_sha256Meta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    }
+    if (data.containsKey('updated')) {
+      context.handle(
+        _updatedMeta,
+        updated.isAcceptableOrUnknown(data['updated']!, _updatedMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedMeta);
+    }
+    if (data.containsKey('device')) {
+      context.handle(
+        _deviceMeta,
+        device.isAcceptableOrUnknown(data['device']!, _deviceMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CareerFileDoc map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CareerFileDoc(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      hlc: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hlc'],
+      )!,
+      deleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}deleted'],
+      )!,
+      path: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}path'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      sha256: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sha256'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      updated: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}updated'],
+      )!,
+      device: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}device'],
+      )!,
+    );
+  }
+
+  @override
+  $CareerFileDocsTable createAlias(String alias) {
+    return $CareerFileDocsTable(attachedDatabase, alias);
+  }
+}
+
+class CareerFileDoc extends DataClass implements Insertable<CareerFileDoc> {
+  final String id;
+  final String hlc;
+  final bool deleted;
+
+  /// Relative to the career folder, with forward slashes:
+  /// `settings/udyoga.json`, `settings/vidya-….json`, `recipes/….json`.
+  final String path;
+
+  /// settings | vidya-plan | recipe
+  final String kind;
+
+  /// SHA-256 of [content] as UTF-8, hex.
+  final String sha256;
+
+  /// The file's text; '' once removed from the folder (the row is then
+  /// tombstoned).
+  final String content;
+
+  /// When this version was read (UTC, ISO 8601).
+  final String updated;
+
+  /// The device that read it: its name, for "from device …".
+  final String device;
+  const CareerFileDoc({
+    required this.id,
+    required this.hlc,
+    required this.deleted,
+    required this.path,
+    required this.kind,
+    required this.sha256,
+    required this.content,
+    required this.updated,
+    required this.device,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['hlc'] = Variable<String>(hlc);
+    map['deleted'] = Variable<bool>(deleted);
+    map['path'] = Variable<String>(path);
+    map['kind'] = Variable<String>(kind);
+    map['sha256'] = Variable<String>(sha256);
+    map['content'] = Variable<String>(content);
+    map['updated'] = Variable<String>(updated);
+    map['device'] = Variable<String>(device);
+    return map;
+  }
+
+  CareerFileDocsCompanion toCompanion(bool nullToAbsent) {
+    return CareerFileDocsCompanion(
+      id: Value(id),
+      hlc: Value(hlc),
+      deleted: Value(deleted),
+      path: Value(path),
+      kind: Value(kind),
+      sha256: Value(sha256),
+      content: Value(content),
+      updated: Value(updated),
+      device: Value(device),
+    );
+  }
+
+  factory CareerFileDoc.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CareerFileDoc(
+      id: serializer.fromJson<String>(json['id']),
+      hlc: serializer.fromJson<String>(json['hlc']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
+      path: serializer.fromJson<String>(json['path']),
+      kind: serializer.fromJson<String>(json['kind']),
+      sha256: serializer.fromJson<String>(json['sha256']),
+      content: serializer.fromJson<String>(json['content']),
+      updated: serializer.fromJson<String>(json['updated']),
+      device: serializer.fromJson<String>(json['device']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'hlc': serializer.toJson<String>(hlc),
+      'deleted': serializer.toJson<bool>(deleted),
+      'path': serializer.toJson<String>(path),
+      'kind': serializer.toJson<String>(kind),
+      'sha256': serializer.toJson<String>(sha256),
+      'content': serializer.toJson<String>(content),
+      'updated': serializer.toJson<String>(updated),
+      'device': serializer.toJson<String>(device),
+    };
+  }
+
+  CareerFileDoc copyWith({
+    String? id,
+    String? hlc,
+    bool? deleted,
+    String? path,
+    String? kind,
+    String? sha256,
+    String? content,
+    String? updated,
+    String? device,
+  }) => CareerFileDoc(
+    id: id ?? this.id,
+    hlc: hlc ?? this.hlc,
+    deleted: deleted ?? this.deleted,
+    path: path ?? this.path,
+    kind: kind ?? this.kind,
+    sha256: sha256 ?? this.sha256,
+    content: content ?? this.content,
+    updated: updated ?? this.updated,
+    device: device ?? this.device,
+  );
+  CareerFileDoc copyWithCompanion(CareerFileDocsCompanion data) {
+    return CareerFileDoc(
+      id: data.id.present ? data.id.value : this.id,
+      hlc: data.hlc.present ? data.hlc.value : this.hlc,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+      path: data.path.present ? data.path.value : this.path,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      sha256: data.sha256.present ? data.sha256.value : this.sha256,
+      content: data.content.present ? data.content.value : this.content,
+      updated: data.updated.present ? data.updated.value : this.updated,
+      device: data.device.present ? data.device.value : this.device,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CareerFileDoc(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('path: $path, ')
+          ..write('kind: $kind, ')
+          ..write('sha256: $sha256, ')
+          ..write('content: $content, ')
+          ..write('updated: $updated, ')
+          ..write('device: $device')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    hlc,
+    deleted,
+    path,
+    kind,
+    sha256,
+    content,
+    updated,
+    device,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CareerFileDoc &&
+          other.id == this.id &&
+          other.hlc == this.hlc &&
+          other.deleted == this.deleted &&
+          other.path == this.path &&
+          other.kind == this.kind &&
+          other.sha256 == this.sha256 &&
+          other.content == this.content &&
+          other.updated == this.updated &&
+          other.device == this.device);
+}
+
+class CareerFileDocsCompanion extends UpdateCompanion<CareerFileDoc> {
+  final Value<String> id;
+  final Value<String> hlc;
+  final Value<bool> deleted;
+  final Value<String> path;
+  final Value<String> kind;
+  final Value<String> sha256;
+  final Value<String> content;
+  final Value<String> updated;
+  final Value<String> device;
+  final Value<int> rowid;
+  const CareerFileDocsCompanion({
+    this.id = const Value.absent(),
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.path = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.sha256 = const Value.absent(),
+    this.content = const Value.absent(),
+    this.updated = const Value.absent(),
+    this.device = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CareerFileDocsCompanion.insert({
+    required String id,
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    required String path,
+    required String kind,
+    required String sha256,
+    this.content = const Value.absent(),
+    required String updated,
+    this.device = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       path = Value(path),
+       kind = Value(kind),
+       sha256 = Value(sha256),
+       updated = Value(updated);
+  static Insertable<CareerFileDoc> custom({
+    Expression<String>? id,
+    Expression<String>? hlc,
+    Expression<bool>? deleted,
+    Expression<String>? path,
+    Expression<String>? kind,
+    Expression<String>? sha256,
+    Expression<String>? content,
+    Expression<String>? updated,
+    Expression<String>? device,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (hlc != null) 'hlc': hlc,
+      if (deleted != null) 'deleted': deleted,
+      if (path != null) 'path': path,
+      if (kind != null) 'kind': kind,
+      if (sha256 != null) 'sha256': sha256,
+      if (content != null) 'content': content,
+      if (updated != null) 'updated': updated,
+      if (device != null) 'device': device,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CareerFileDocsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? hlc,
+    Value<bool>? deleted,
+    Value<String>? path,
+    Value<String>? kind,
+    Value<String>? sha256,
+    Value<String>? content,
+    Value<String>? updated,
+    Value<String>? device,
+    Value<int>? rowid,
+  }) {
+    return CareerFileDocsCompanion(
+      id: id ?? this.id,
+      hlc: hlc ?? this.hlc,
+      deleted: deleted ?? this.deleted,
+      path: path ?? this.path,
+      kind: kind ?? this.kind,
+      sha256: sha256 ?? this.sha256,
+      content: content ?? this.content,
+      updated: updated ?? this.updated,
+      device: device ?? this.device,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (hlc.present) {
+      map['hlc'] = Variable<String>(hlc.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (sha256.present) {
+      map['sha256'] = Variable<String>(sha256.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (updated.present) {
+      map['updated'] = Variable<String>(updated.value);
+    }
+    if (device.present) {
+      map['device'] = Variable<String>(device.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CareerFileDocsCompanion(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('path: $path, ')
+          ..write('kind: $kind, ')
+          ..write('sha256: $sha256, ')
+          ..write('content: $content, ')
+          ..write('updated: $updated, ')
+          ..write('device: $device, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PrefsTable extends Prefs with TableInfo<$PrefsTable, Pref> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -17284,6 +17843,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $BridgeStudyProgressTable bridgeStudyProgress =
       $BridgeStudyProgressTable(this);
+  late final $CareerFileDocsTable careerFileDocs = $CareerFileDocsTable(this);
   late final $PrefsTable prefs = $PrefsTable(this);
   late final $OutboxTable outbox = $OutboxTable(this);
   late final $SyncCursorsTable syncCursors = $SyncCursorsTable(this);
@@ -17317,6 +17877,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     careerProcesses,
     bridgeStudyPlans,
     bridgeStudyProgress,
+    careerFileDocs,
     prefs,
     outbox,
     syncCursors,
@@ -25399,6 +25960,293 @@ typedef $$BridgeStudyProgressTableProcessedTableManager =
       StudyProgressRow,
       PrefetchHooks Function()
     >;
+typedef $$CareerFileDocsTableCreateCompanionBuilder =
+    CareerFileDocsCompanion Function({
+      required String id,
+      Value<String> hlc,
+      Value<bool> deleted,
+      required String path,
+      required String kind,
+      required String sha256,
+      Value<String> content,
+      required String updated,
+      Value<String> device,
+      Value<int> rowid,
+    });
+typedef $$CareerFileDocsTableUpdateCompanionBuilder =
+    CareerFileDocsCompanion Function({
+      Value<String> id,
+      Value<String> hlc,
+      Value<bool> deleted,
+      Value<String> path,
+      Value<String> kind,
+      Value<String> sha256,
+      Value<String> content,
+      Value<String> updated,
+      Value<String> device,
+      Value<int> rowid,
+    });
+
+class $$CareerFileDocsTableFilterComposer
+    extends Composer<_$AppDatabase, $CareerFileDocsTable> {
+  $$CareerFileDocsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hlc => $composableBuilder(
+    column: $table.hlc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get updated => $composableBuilder(
+    column: $table.updated,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get device => $composableBuilder(
+    column: $table.device,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CareerFileDocsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CareerFileDocsTable> {
+  $$CareerFileDocsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hlc => $composableBuilder(
+    column: $table.hlc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sha256 => $composableBuilder(
+    column: $table.sha256,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get updated => $composableBuilder(
+    column: $table.updated,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get device => $composableBuilder(
+    column: $table.device,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CareerFileDocsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CareerFileDocsTable> {
+  $$CareerFileDocsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => column);
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
+
+  GeneratedColumn<String> get path =>
+      $composableBuilder(column: $table.path, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get sha256 =>
+      $composableBuilder(column: $table.sha256, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get updated =>
+      $composableBuilder(column: $table.updated, builder: (column) => column);
+
+  GeneratedColumn<String> get device =>
+      $composableBuilder(column: $table.device, builder: (column) => column);
+}
+
+class $$CareerFileDocsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CareerFileDocsTable,
+          CareerFileDoc,
+          $$CareerFileDocsTableFilterComposer,
+          $$CareerFileDocsTableOrderingComposer,
+          $$CareerFileDocsTableAnnotationComposer,
+          $$CareerFileDocsTableCreateCompanionBuilder,
+          $$CareerFileDocsTableUpdateCompanionBuilder,
+          (
+            CareerFileDoc,
+            BaseReferences<_$AppDatabase, $CareerFileDocsTable, CareerFileDoc>,
+          ),
+          CareerFileDoc,
+          PrefetchHooks Function()
+        > {
+  $$CareerFileDocsTableTableManager(
+    _$AppDatabase db,
+    $CareerFileDocsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CareerFileDocsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CareerFileDocsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CareerFileDocsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<String> path = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> sha256 = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<String> updated = const Value.absent(),
+                Value<String> device = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CareerFileDocsCompanion(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                path: path,
+                kind: kind,
+                sha256: sha256,
+                content: content,
+                updated: updated,
+                device: device,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                required String path,
+                required String kind,
+                required String sha256,
+                Value<String> content = const Value.absent(),
+                required String updated,
+                Value<String> device = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CareerFileDocsCompanion.insert(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                path: path,
+                kind: kind,
+                sha256: sha256,
+                content: content,
+                updated: updated,
+                device: device,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CareerFileDocsTable, CareerFileDoc>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $CareerFileDocsTable,
+                    CareerFileDoc
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CareerFileDocsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CareerFileDocsTable,
+      CareerFileDoc,
+      $$CareerFileDocsTableFilterComposer,
+      $$CareerFileDocsTableOrderingComposer,
+      $$CareerFileDocsTableAnnotationComposer,
+      $$CareerFileDocsTableCreateCompanionBuilder,
+      $$CareerFileDocsTableUpdateCompanionBuilder,
+      (
+        CareerFileDoc,
+        BaseReferences<_$AppDatabase, $CareerFileDocsTable, CareerFileDoc>,
+      ),
+      CareerFileDoc,
+      PrefetchHooks Function()
+    >;
 typedef $$PrefsTableCreateCompanionBuilder = PrefsCompanion Function({
   required String id,
   Value<String> hlc,
@@ -26094,6 +26942,8 @@ class $AppDatabaseManager {
       $$BridgeStudyPlansTableTableManager(_db, _db.bridgeStudyPlans);
   $$BridgeStudyProgressTableTableManager get bridgeStudyProgress =>
       $$BridgeStudyProgressTableTableManager(_db, _db.bridgeStudyProgress);
+  $$CareerFileDocsTableTableManager get careerFileDocs =>
+      $$CareerFileDocsTableTableManager(_db, _db.careerFileDocs);
   $$PrefsTableTableManager get prefs =>
       $$PrefsTableTableManager(_db, _db.prefs);
   $$OutboxTableTableManager get outbox =>

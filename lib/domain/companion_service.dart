@@ -3,7 +3,7 @@ import 'dart:convert';
 import '../db/database.dart';
 import 'advisor.dart';
 import 'book.dart';
-import 'career_file.dart';
+import 'career_file_sync.dart';
 import 'companion.dart';
 import 'companion_book.dart';
 import 'documents.dart';
@@ -49,7 +49,7 @@ class Companion {
   }) async {
     onProgress?.call('Looking through your folders…');
     try {
-      await CareerFile(book).applyFrom(folders, today: today);
+      await runCareerFile(book, folders, today: today);
     } on Object {
       // A broken settings file must not stop the documents being read; the
       // routine refresh reports it.

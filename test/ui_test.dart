@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:brahma_core/brahma_core.dart' show AppShell;
 import 'package:udyoga/app/modules.dart';
@@ -9,6 +10,7 @@ import 'package:udyoga/app/navigation.dart';
 import 'package:udyoga/app/settings_page.dart';
 import 'package:udyoga/db/database.dart';
 import 'package:udyoga/domain/background.dart';
+import 'package:udyoga/domain/career_file_sync.dart';
 import 'package:udyoga/domain/pipeline.dart';
 import 'package:udyoga/ui/applications_page.dart';
 import 'package:udyoga/ui/coach_page.dart';
@@ -240,6 +242,41 @@ void main() {
     expect(app.scheduler.applied.single.minutes, 360);
     expect(find.text('Every 6 hours'), findsOneWidget);
     expect(find.textContaining('Next run'), findsOneWidget);
+    await app.close();
+  });
+
+  testWidgets('Settings says where the career file came from and can remove it from sync', (tester) async {
+    final app = AppHarness(tester)..desktop();
+    await app.open(
+      seed: (book) async {
+        await seedBook(book);
+        await book.save(
+          book.db.careerFileDocs,
+          CareerFileDocsCompanion.insert(
+            id: 'settings/udyoga.json',
+            path: 'settings/udyoga.json',
+            kind: 'settings',
+            sha256: 'x' * 64,
+            content: const Value('{}'),
+            updated: '2026-11-20T09:00:00Z',
+            device: const Value('example-laptop'),
+          ),
+          'settings/udyoga.json',
+        );
+        await book.db.setLocalSetting(careerFileOriginKey, 'sync');
+      },
+    );
+    await app.run();
+    await app.go('Settings');
+    expect(find.textContaining('Career file: from sync (last updated 20 Nov 2026'), findsOneWidget);
+    expect(find.textContaining('from device example-laptop'), findsOneWidget);
+    await app.tapText('Remove career file from sync');
+    await app.tapText('Remove');
+    expect(find.text('Share it again'), findsOneWidget);
+    await tester.runAsync(() async {
+      final row = await app.book.db.select(app.book.db.careerFileDocs).getSingle();
+      expect((row.deleted, row.content), (true, ''));
+    });
     await app.close();
   });
 

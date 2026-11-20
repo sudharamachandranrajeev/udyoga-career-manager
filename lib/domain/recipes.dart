@@ -15,6 +15,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/drift.dart' show BooleanExpressionOperators, OrderingTerm;
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html;
 import 'package:http/http.dart' as http;
@@ -425,8 +426,6 @@ class RecipeSet {
   /// first.
   static Future<RecipeSet> load(Directory dir) async {
     if (!await dir.exists()) return RecipeSet(problems: ['${dir.path}: no such folder']);
-    final recipes = <Recipe>[];
-    final problems = <String>[];
     final files =
         await dir
               .list()
@@ -434,10 +433,17 @@ class RecipeSet {
               .cast<File>()
               .toList()
           ..sort((a, b) => a.path.compareTo(b.path));
-    for (final f in files) {
-      final name = f.uri.pathSegments.last;
+    return parse([for (final f in files) (name: f.uri.pathSegments.last, text: await f.readAsString())]);
+  }
+
+  /// Reads recipes from files already read, such as the career file's
+  /// recipes that came through sync, in the order given.
+  static RecipeSet parse(List<({String name, String text})> files) {
+    final recipes = <Recipe>[];
+    final problems = <String>[];
+    for (final (:name, :text) in files) {
       try {
-        final v = jsonDecode(await f.readAsString());
+        final v = jsonDecode(text);
         final items = v is List ? v : [v];
         final read = [
           for (final i in items)
@@ -466,12 +472,22 @@ class RecipeSet {
 /// Device-only key: the recipes folder.
 const recipesFolderKey = 'udyoga.recipes.folder';
 
-/// The recipes in the folder chosen on this device; none when no folder is
-/// chosen.
+/// The recipes in the folder chosen on this device; without one, the career
+/// file's recipes that came through sync (none when there are none).
 Future<RecipeSet> savedRecipes(AppDatabase db) async {
   final folder = (await db.localSetting(recipesFolderKey) ?? '').trim();
-  if (folder.isEmpty) return const RecipeSet();
-  return RecipeSet.load(Directory(folder));
+  if (folder.isNotEmpty) return RecipeSet.load(Directory(folder));
+  return RecipeSet.parse(await syncedRecipeFiles(db));
+}
+
+/// The career file's recipes as synced, by file name.
+Future<List<({String name, String text})>> syncedRecipeFiles(AppDatabase db) async {
+  final rows =
+      await (db.select(db.careerFileDocs)
+            ..where((d) => d.deleted.not() & d.kind.equals('recipe'))
+            ..orderBy([(d) => OrderingTerm.asc(d.path)]))
+          .get();
+  return [for (final r in rows) (name: r.path.split('/').last, text: r.content)];
 }
 
 /// The fetch run for this device's recipes folder, or null without one.
