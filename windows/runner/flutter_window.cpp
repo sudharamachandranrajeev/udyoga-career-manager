@@ -4,8 +4,9 @@
 
 #include "flutter/generated_plugin_registrant.h"
 
-FlutterWindow::FlutterWindow(const flutter::DartProject& project)
-    : project_(project) {}
+FlutterWindow::FlutterWindow(const flutter::DartProject& project,
+                             bool headless)
+    : project_(project), headless_(headless) {}
 
 FlutterWindow::~FlutterWindow() {}
 
@@ -26,6 +27,9 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
+
+  // The background refresh runs without a window and exits on its own.
+  if (headless_) return true;
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();

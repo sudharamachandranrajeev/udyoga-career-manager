@@ -34,11 +34,6 @@ const afcPoints = [
   PayPoint('NI 2025/26', '5', 'top', 37796),
 ];
 
-const afcSources = [
-  'https://www.nhsemployers.org/articles/pay-scales-202627',
-  'https://nipsa.org.uk/images/attachments/2025-Attachments/afc-6-2025.pdf',
-];
-
 /// The Agenda for Change band an advert names ("Band 4", "band 8a"), or ''.
 String bandIn(String text) =>
     RegExp(r'\bband\s*(8[a-d]|[1-9])\b', caseSensitive: false).firstMatch(text)?.group(1)?.toLowerCase() ??

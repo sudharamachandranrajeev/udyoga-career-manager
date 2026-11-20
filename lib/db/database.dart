@@ -28,8 +28,12 @@ part 'database.g.dart';
     Conversations,
     Messages,
     CareerPosts,
+    CareerTracks,
+    CareerRoleProfiles,
+    CareerProcesses,
     BridgeStudyPlans,
     BridgeStudyProgress,
+    CareerFileDocs,
     Prefs,
     Outbox,
     SyncCursors,
@@ -63,13 +67,17 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     'career_conversations',
     'career_messages',
     'career_posts',
+    'career_tracks',
+    'career_role_profiles',
+    'career_processes',
     'bridge_study_plans',
     'bridge_study_progress',
+    'career_file_docs',
     'prefs',
   ];
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -127,27 +135,83 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
         }
       }
       if (from < 6) {
+        // createTable is CREATE TABLE IF NOT EXISTS, so this can run again.
         await m.createTable(bridgeStudyPlans);
         await m.createTable(bridgeStudyProgress);
       }
+      if (from < 7) {
+        // Who set each job's fit, so a profile change redoes only the
+        // offline scores. Only if not there yet, so it can run again.
+        final have = await customSelect('PRAGMA table_info(job_listings)')
+            .map((r) => r.read<String>('name'))
+            .get();
+        if (!have.contains(jobListings.fitBy.name)) await m.addColumn(jobListings, jobListings.fitBy);
+        await customStatement("UPDATE job_listings SET fit_by = 'ai' WHERE assessment != ''");
+      }
+      if (from < 8) {
+        // Route tracks (Explore). CREATE TABLE IF NOT EXISTS, so it can run again.
+        await m.createTable(careerTracks);
+        for (final sql in _v8Indexes) {
+          await customStatement(sql);
+        }
+      }
+      if (from < 9) {
+        // Interview I3: role profiles, saved processes, the debrief and the
+        // criteria a practice story evidenced. Only what is not there yet,
+        // so it can run again.
+        await m.createTable(careerRoleProfiles);
+        await m.createTable(careerProcesses);
+        Future<void> add(TableInfo t, String table, List<GeneratedColumn> cols) async {
+          final have = await customSelect('PRAGMA table_info($table)')
+              .map((r) => r.read<String>('name'))
+              .get();
+          for (final c in cols) {
+            if (!have.contains(c.name)) await m.addColumn(t, c);
+          }
+        }
+
+        await add(careerPractice, 'career_practice', [careerPractice.profileId, careerPractice.debrief]);
+        await add(careerStories, 'career_stories', [careerStories.criteria]);
+      }
+      if (from < 10) {
+        // Interview I4: nerves before and after a round. Only if missing.
+        final have = await customSelect('PRAGMA table_info(career_practice)')
+            .map((r) => r.read<String>('name'))
+            .get();
+        for (final c in [careerPractice.nervesBefore, careerPractice.nervesAfter]) {
+          if (!have.contains(c.name)) await m.addColumn(careerPractice, c);
+        }
+      }
+      if (from < 11) {
+        // The synced career file. CREATE TABLE IF NOT EXISTS, so it can run again.
+        await m.createTable(careerFileDocs);
+      }
     },
+    // The background refresh opens the same file from another process (or
+    // isolate) while the app may be open: wait for the other's write to end
+    // instead of failing with "database is locked".
+    beforeOpen: (_) => customStatement('PRAGMA busy_timeout = 10000'),
   );
 
   static const _indexes = [
-    'CREATE INDEX job_listings_source ON job_listings (source, source_id)',
-    'CREATE INDEX job_events_application ON job_events (application_id)',
-    'CREATE INDEX career_answers_session ON career_answers (session_id)',
-    'CREATE INDEX career_reports_kind ON career_reports (kind, created)',
+    'CREATE INDEX IF NOT EXISTS job_listings_source ON job_listings (source, source_id)',
+    'CREATE INDEX IF NOT EXISTS job_events_application ON job_events (application_id)',
+    'CREATE INDEX IF NOT EXISTS career_answers_session ON career_answers (session_id)',
+    'CREATE INDEX IF NOT EXISTS career_reports_kind ON career_reports (kind, created)',
     ..._v2Indexes,
     ..._v3Indexes,
     ..._v4Indexes,
     ..._v5Indexes,
+    ..._v8Indexes,
   ];
+
+  /// Added in schema 8 (route tracks).
+  static const _v8Indexes = ['CREATE INDEX IF NOT EXISTS career_tracks_country ON career_tracks (country)'];
 
   /// Added in schema 2 (pre-employment checks and the archive).
   static const _v2Indexes = [
-    'CREATE INDEX job_checks_application ON job_checks (application_id)',
-    'CREATE INDEX job_archive_application ON job_archive (application_id)',
+    'CREATE INDEX IF NOT EXISTS job_checks_application ON job_checks (application_id)',
+    'CREATE INDEX IF NOT EXISTS job_archive_application ON job_archive (application_id)',
   ];
 
   /// Added in schema 3 (documents, profile questions, check-ins, stories).

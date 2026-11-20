@@ -10,13 +10,18 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'app/app.dart';
+import 'app/background.dart';
 import 'app/providers.dart';
 import 'app/session.dart';
+import 'domain/background.dart';
 import 'domain/update.dart';
 import 'ui/look.dart';
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+  // `udyoga --refresh-once`: the systemd timer or Task Scheduler entry from
+  // Settings. The runner keeps the window hidden; this refreshes and exits.
+  if (args.contains(refreshOnceFlag)) exit(await refreshOnce());
   // The in-app site window's title bar (back, forward, reload) runs as its
   // own Flutter engine started through main.
   if (runWebViewTitleBarWidget(args)) return;

@@ -1,17 +1,25 @@
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../domain/book.dart';
 import '../domain/ai.dart';
+import '../domain/background.dart';
+import '../domain/career_file_sync.dart';
 import '../domain/feeds.dart';
 import '../domain/gemini.dart';
 import '../domain/n8n.dart';
+import '../domain/recipes.dart';
 import '../domain/subscription.dart';
 import '../domain/update.dart';
 import '../ui/accounts_page.dart';
 import '../ui/common.dart';
+import '../ui/interview_lab_page.dart';
+import 'background.dart';
 import 'check_in_reminder.dart';
+import 'page_tools.dart';
 import 'providers.dart';
 
 /// Settings for the AI and the job sites, read together.
@@ -22,7 +30,7 @@ final _aiSettingsProvider = FutureProvider((ref) async {
     keys: await book.aiKeys(),
     model: await book.pref<String>(PrefKeys.aiModel, ''),
     routine: await book.pref<String>(PrefKeys.aiRoutine, 'off'),
-    feeds: await book.feedKeys(),
+    feeds: await ref.watch(feedKeysProvider.future),
     n8n: await book.n8nLink(),
     spend: await book.spend(today().substring(0, 7)),
   );
@@ -143,11 +151,21 @@ class SettingsPage extends ConsumerWidget {
           ),
           child: Text(
             [
-              'NHS Jobs, Remotive, Jobicy and Arbeitnow need no key.',
+              'NHS Jobs, Remotive, Jobicy, Arbeitnow, Platsbanken (Sweden), arbeidsplassen.no (Norway, with '
+                  "NAV's public token) and UN jobs from unvacancies.org need no key.",
               (s?.feeds.adzunaId.isNotEmpty ?? false)
                   ? 'Adzuna is on.'
                   : 'Adzuna (UK, US, India, Australia, Canada, much of Europe) needs a free key.',
+              "Adzuna's free tier is for evaluating its API, under Adzuna's current terms; its ads show a "
+                  '"Jobs by Adzuna" link.',
               (s?.feeds.reed.isNotEmpty ?? false) ? 'Reed is on.' : 'Reed (UK) needs a free key.',
+              (s?.feeds.usajobsKey.isNotEmpty ?? false)
+                  ? 'USAJOBS is on.'
+                  : 'USAJOBS (US federal jobs) needs a free key and the e-mail you registered with.',
+              (s?.feeds.jooble.isNotEmpty ?? false)
+                  ? 'Jooble is on for ${s!.feeds.jooble.keys.join(', ')}.'
+                  : 'Jooble needs a free key for each country.',
+              'The USAJOBS and Jooble keys stay on this device.',
               'Sites without an open feed, such as LinkedIn and Indeed, are searched by the AI or opened '
                   'from the Jobs page.',
             ].join(' '),
@@ -186,6 +204,9 @@ class SettingsPage extends ConsumerWidget {
           ),
         ),
         const _CheckInCard(),
+        if (ref.watch(backgroundSchedulerProvider).supported) const _BackgroundCard(),
+        const _CareerFileCard(),
+        const _RecipesCard(),
         if (ref.watch(updaterProvider) case final updater?) _UpdateCard(updater),
         const AppLockCard(),
         const HintsCard(),
@@ -196,6 +217,7 @@ class SettingsPage extends ConsumerWidget {
               'sites) or use an AI feature (your profile and the job go to Google, Anthropic or OpenAI with your key '
               'or plan).',
         ),
+        const _DeveloperCard(),
         const AboutCard(
           description:
               'Career and job search: matched openings, tailored CVs, applications, contacts, career paths, '
@@ -291,15 +313,59 @@ class SettingsPage extends ConsumerWidget {
     final adzunaId = TextEditingController(text: k.adzunaId);
     final adzunaKey = TextEditingController(text: k.adzunaKey);
     final reed = TextEditingController(text: k.reed);
+    final usajobsKey = TextEditingController(text: k.usajobsKey);
+    final usajobsEmail = TextEditingController(text: k.usajobsEmail);
+    final jooble = TextEditingController(
+      text: [for (final e in k.jooble.entries) '${e.key}: ${e.value}'].join('\n'),
+    );
     return showFormDialog(
       context,
       title: 'Job site keys',
       fields: (_) => [
-        Field(adzunaId, 'Adzuna app ID', helper: 'Free at developer.adzuna.com'),
+        Field(
+          adzunaId,
+          'Adzuna app ID',
+          helper: "Free at developer.adzuna.com, for evaluation under Adzuna's current terms",
+        ),
         Field(adzunaKey, 'Adzuna app key', obscure: true),
         Field(reed, 'Reed API key', obscure: true, helper: 'Free at reed.co.uk/developers/jobseeker'),
+        const Subhead('Kept on this device only'),
+        Field(
+          usajobsKey,
+          'USAJOBS API key',
+          obscure: true,
+          helper: 'Free at developer.usajobs.gov. Udyoga is not endorsed by OPM.',
+        ),
+        Field(
+          usajobsEmail,
+          'E-mail you registered with USAJOBS',
+          helper: 'USAJOBS asks for it with each search',
+        ),
+        Field(
+          jooble,
+          'Jooble keys',
+          lines: 3,
+          obscure: false,
+          helper:
+              'One per line, "GB: your-key". Each country has its own Jooble site and key '
+              '(jooble.org is the US, uk.jooble.org the UK), 100 searches a day each.',
+        ),
       ],
       onSave: () async {
+        final email = usajobsEmail.text.trim();
+        if (usajobsKey.text.trim().isNotEmpty && !email.contains('@')) {
+          return 'USAJOBS needs the e-mail address its key was registered with.';
+        }
+        final joobleKeys = joobleKeysIn(jooble.text);
+        if (jooble.text.trim().isNotEmpty && joobleKeys.isEmpty) {
+          return 'Write each Jooble key as "GB: your-key", one per line.';
+        }
+        await FeedKeys.saveSecrets(
+          ref.read(sessionProvider).keys.store,
+          usajobsKey: usajobsKey.text,
+          usajobsEmail: email,
+          jooble: joobleKeys,
+        );
         await ref.mutate(
           (s) => s.book.setPref(
             PrefKeys.feedKeys,
@@ -375,6 +441,271 @@ class _CheckInCard extends ConsumerWidget {
                 }
                 await set(remind: on);
               },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The refresh that runs while Udyoga is closed: on or off, how often, and
+/// what the last run did. Per device.
+class _BackgroundCard extends ConsumerWidget {
+  const _BackgroundCard();
+
+  static String _when(DateTime t) {
+    final now = DateTime.now();
+    final sameDay = t.year == now.year && t.month == now.month && t.day == now.day;
+    return sameDay ? 'today at ${DateFormat.Hm().format(t)}' : DateFormat('d MMM, HH:mm').format(t);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(backgroundStatusProvider).value;
+    final scheduler = ref.watch(backgroundSchedulerProvider);
+    final s = status?.settings;
+    Future<void> set(BackgroundSettings next) async {
+      try {
+        await ref.setBackground(next);
+      } on Object catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(describeError(e))));
+        }
+      }
+    }
+
+    final last = status?.last;
+    return SectionCard(
+      title: 'Background refresh',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Checks the job sites, the employers you watch, the route tables and the sponsor register while '
+            'Udyoga is closed, and tells you about new jobs and to-dos that are due. The AI routine runs '
+            'there only on the device that already runs it.',
+          ),
+          if (s != null) ...[
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Refresh while Udyoga is closed'),
+              subtitle: Text(scheduler.description),
+              value: s.on,
+              onChanged: (on) => set(s.copyWith(on: on)),
+            ),
+            if (s.on)
+              Choice<int>(
+                label: 'How often',
+                value: s.minutes,
+                options: backgroundIntervals,
+                onChanged: (m) => set(s.copyWith(minutes: m)),
+              ),
+            if (s.on && status != null && !status.installed)
+              const Text(
+                'The schedule is missing (removed outside Udyoga?). Turn it off and on to add it again.',
+              ),
+          ],
+          Text(
+            last == null
+                ? 'No background run yet.'
+                : 'Last run ${_when(last.at)}: ${last.ok ? '' : 'failed: '}${last.summary}',
+          ),
+          if (status?.next case final next?)
+            Text(next.isBefore(DateTime.now()) ? 'Next run: due now.' : 'Next run: about ${_when(next)}.'),
+        ],
+      ),
+    );
+  }
+}
+
+/// Developer tools, off by default and kept on this device only: the
+/// interview lab that checks the simulator's speech and camera stack.
+class _DeveloperCard extends ConsumerWidget {
+  const _DeveloperCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final on = ref.watch(devToolsProvider).value ?? false;
+    return SectionCard(
+      title: 'Developer',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Developer tools'),
+            subtitle: const Text('Test screens for features still being built. On this device only.'),
+            value: on,
+            onChanged: (v) async {
+              await ref.read(sessionProvider).db.setLocalSetting(devToolsKey, v ? 'on' : 'off');
+              ref.invalidate(devToolsProvider);
+            },
+          ),
+          if (on)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.science_outlined),
+              title: const Text('Interview lab'),
+              subtitle: const Text('Microphone, voice, transcriber and camera, all on this device.'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () =>
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InterviewLabPage())),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+final _careerFileProvider = FutureProvider<CareerFileStatus>((ref) {
+  ref.watch(revisionProvider);
+  return CareerFileSync(ref.watch(sessionProvider).book).status();
+});
+
+/// Where the career file in force came from: this device's folder, or
+/// another device through sync. Removing it from sync tombstones every row.
+class _CareerFileCard extends ConsumerWidget {
+  const _CareerFileCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(_careerFileProvider).value;
+    if (s == null) return const SizedBox.shrink();
+    final updated = DateTime.tryParse(s.updated ?? '')?.toLocal();
+    final when = updated == null ? '' : DateFormat('d MMM y, HH:mm').format(updated);
+    final from = [
+      if (when.isNotEmpty) 'last updated $when',
+      if (s.device.isNotEmpty) 'from device ${s.device}',
+    ];
+    final line = switch (s.origin) {
+      CareerFileOrigin.folder => 'Career file: from this folder',
+      CareerFileOrigin.sync => 'Career file: from sync${from.isEmpty ? '' : ' (${from.join(', ')})'}',
+      CareerFileOrigin.none => 'Career file: none yet',
+    };
+    final muted = TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant);
+    return SectionCard(
+      title: 'Career file',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(line),
+          const SizedBox(height: 4),
+          Text(
+            s.sharing
+                ? 'The device that has your career folder shares its settings, recipes and Vidya plans with your '
+                      'other devices, end-to-end encrypted, when you tap Read now. Documents and CVs stay where they '
+                      'are. ${s.files} ${s.files == 1 ? 'file' : 'files'} shared now.'
+                : 'Not shared through sync. Each device uses only its own folder.',
+            style: muted,
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: s.sharing
+                ? TextButton.icon(
+                    icon: const Icon(Icons.cloud_off_outlined),
+                    label: const Text('Remove career file from sync'),
+                    onPressed: () async {
+                      final ok = await confirm(
+                        context,
+                        title: 'Remove career file from sync?',
+                        message:
+                            'Your other devices stop receiving it. What they already applied stays. The folder '
+                            'on this device is not touched.',
+                        action: 'Remove',
+                        destructive: true,
+                      );
+                      if (!ok) return;
+                      final n = await ref.mutate(
+                        (x) =>
+                            CareerFileSync(x.book).removeAll(now: DateTime.now().toUtc().toIso8601String()),
+                      );
+                      if (context.mounted) {
+                        showMessage(context, 'Removed $n ${n == 1 ? 'file' : 'files'} from sync.');
+                      }
+                    },
+                  )
+                : TextButton.icon(
+                    icon: const Icon(Icons.cloud_upload_outlined),
+                    label: const Text('Share it again'),
+                    onPressed: () => ref.mutate((x) => CareerFileSync(x.book).share()),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Site recipes: the folder they are read from, each one with its mode and
+/// today's use against its cap, and any file that was refused.
+class _RecipesCard extends ConsumerWidget {
+  const _RecipesCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final folder = ref.watch(recipesFolderProvider).value ?? '';
+    final set = ref.watch(recipesProvider).value ?? const RecipeSet();
+    final usage = ref.watch(recipeUsageProvider).value ?? const <String, int>{};
+    Future<void> pick() async {
+      final dir = await FilePicker.getDirectoryPath(dialogTitle: 'Recipes folder');
+      if (dir != null) await ref.setRecipesFolder(dir);
+    }
+
+    final muted = TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant);
+    return SectionCard(
+      title: 'Recipes',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Recipes teach Udyoga one site each: how to read its jobs politely in the background, how to read a '
+            'page you open, or which text box to fill with a draft you approve. Udyoga never presses Send or '
+            'Submit. They are JSON files in a folder you choose, such as your career file\'s recipes folder.',
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.folder_open),
+            title: const Text('Recipes folder'),
+            subtitle: Text(
+              folder.isNotEmpty
+                  ? folder
+                  : set.recipes.isEmpty
+                  ? 'None chosen'
+                  : 'None chosen: using your career file\'s recipes from sync',
+            ),
+            trailing: Wrap(
+              spacing: 4,
+              children: [
+                if (folder.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear),
+                    tooltip: 'Stop using this folder',
+                    onPressed: () => ref.setRecipesFolder(''),
+                  ),
+                TextButton(onPressed: pick, child: Text(folder.isEmpty ? 'Choose' : 'Change')),
+              ],
+            ),
+          ),
+          if (folder.isNotEmpty && set.recipes.isEmpty && set.problems.isEmpty)
+            Text('No recipes in this folder.', style: muted),
+          for (final r in set.recipes)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              leading: Icon(switch (r.mode) {
+                RecipeMode.fetch => Icons.cloud_download_outlined,
+                RecipeMode.browserRead => Icons.document_scanner_outlined,
+                RecipeMode.assistFill => Icons.edit_note,
+              }),
+              title: Text(r.title),
+              subtitle: Text('${r.mode.label} · ${r.site} · one every ${r.rate} s'),
+              trailing: Text('${usage[r.id] ?? 0} of ${r.effectiveCap} today'),
+            ),
+          for (final p in set.problems)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('Not loaded: $p', style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),
         ],
       ),

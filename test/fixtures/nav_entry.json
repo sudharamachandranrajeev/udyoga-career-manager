@@ -1,0 +1,53 @@
+{
+ "uuid": "00000000-0000-4000-8000-0000000000a3",
+ "ad_content": {
+  "uuid": "00000000-0000-4000-8000-0000000000a3",
+  "published": "2026-11-18T00:00:00+01:00",
+  "expires": "2026-12-06T00:00:00+01:00",
+  "updated": "2026-11-19T09:33:38.254921+01:00",
+  "workLocations": [
+   {
+    "country": "NORGE",
+    "address": "Eksempelveien 1",
+    "city": "EKSEMPELBY",
+    "postalCode": "0000",
+    "county": "EKSEMPEL FYLKE",
+    "municipal": "EKSEMPELBY"
+   }
+  ],
+  "title": "Sykepleiere til Eksempelby sykehjem",
+  "description": "<p>Vi trenger flere dyktige og positive kolleger. Ved Eksempelby sykehjem er det 3 ledige 100% faste stillinger for sykepleiere. Dette er en påhittet annonse for testing.  </p</p>",
+  "sourceurl": "",
+  "source": "IMPORTAPI",
+  "applicationUrl": "https://jobb.example.no/soknad/1003?channel=NavRest&iso=no",
+  "applicationDue": "2026-12-06T00:00:00",
+  "occupationCategories": [
+   {
+    "level1": "Helse og sosial",
+    "level2": "Sykepleier"
+   }
+  ],
+  "categoryList": [
+   {
+    "categoryType": "ESCO",
+    "code": "http://data.europa.eu/esco/occupation/00000000-0000-4000-8000-000000000e5c",
+    "name": "Sykepleier",
+    "description": "",
+    "score": 1.0
+   }
+  ],
+  "jobtitle": "Sykepleiere til Eksempelby sykehjem",
+  "link": "https://arbeidsplassen.nav.no/stillinger/stilling/00000000-0000-4000-8000-0000000000a3",
+  "employer": {
+   "name": "Eksempelby kommune Eksempelby sykehjem",
+   "orgnr": "000000003"
+  },
+  "engagementtype": "Fast",
+  "extent": "Heltid",
+  "starttime": "",
+  "positioncount": "3",
+  "sector": "Offentlig"
+ },
+ "sistEndret": "2026-11-19T09:33:38.254+01:00",
+ "status": "ACTIVE"
+}

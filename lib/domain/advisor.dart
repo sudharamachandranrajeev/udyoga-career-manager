@@ -3,11 +3,17 @@ import 'dart:typed_data';
 
 import '../db/database.dart';
 import 'answer_metrics.dart';
+import 'avenues.dart';
 import 'companion.dart';
 import 'ai.dart';
 import 'countries.dart';
+import 'explore.dart';
 import 'insights.dart';
+import 'interview_plan.dart';
+import 'interview_scoring.dart';
 import 'json.dart';
+import 'occupations.dart';
+import 'page_reader.dart';
 import 'profile.dart';
 import 'resume.dart';
 import 'schema.dart';
@@ -175,6 +181,73 @@ Evaluate this job for the candidate as a demanding hiring manager would. If the 
     onProgress: onProgress,
   );
 
+  /// An avenue: whether [screen]'s country is realistic for the candidate,
+  /// with live adverts, pay against living costs, the route by name and
+  /// honest pushback. [economy] gives sourced figures to work from.
+  Future<AiResult> assessAvenue(
+    CandidateProfile p,
+    CountryScreen screen, {
+    List<OccupationMatch> occupations = const [],
+    CountryEconomy? economy,
+    Progress? onProgress,
+  }) => ai.ask(
+    system: _system(p),
+    content: [
+      _candidate(p),
+      _text('<screen>\n${jsonEncode(screenForPrompt(screen))}\n</screen>'),
+      if (occupations.isNotEmpty)
+        _text(
+          '<occupation_codes>\n${jsonEncode([for (final o in occupations) o.toJson()])}\n</occupation_codes>',
+        ),
+      if (economy != null && economy.figures.isNotEmpty)
+        _text('<economy>\n${jsonEncode(economy.toJson())}\n</economy>'),
+      _text(
+        '''
+Assess ${screen.country.name} as an avenue for this candidate. Udyoga's rule-based screen above put it in "${screen.tier.label}"; check it against the official sources and say where it is wrong.
+
+Cover: the role families they could do there (local job titles, codes, demand and current pay); three to six live adverts you actually find now, with links (never invent one); typical pay against rent and living costs, using the economy figures where they help; the visa or permit route by its official name and page, its current threshold, and whether it fits; every blocker (language, pay floor, jobs reserved for nationals, recognition of qualifications, registration, the employer's willingness to sponsor) with how to fix it; and plain pushback where the candidate's hopes or the screen are unrealistic. Give your confidence and what it rests on. Answer for country code ${screen.code}.''',
+      ),
+    ],
+    schema: AvenueAssessment.schema,
+    web: true,
+    searches: 10,
+    onProgress: onProgress,
+  );
+
+  /// A prep plan for an avenue: ordered steps (qualifications, tests,
+  /// certifications with cost and time, CV gaps, applications) that finish
+  /// before [deadline], and the qualification planner.
+  Future<AiResult> prepPlan(
+    CandidateProfile p,
+    CountryScreen screen, {
+    AvenueAssessment? assessment,
+    String? deadline,
+    List<QualificationOption> options = const [],
+    Progress? onProgress,
+  }) => ai.ask(
+    system: _system(p),
+    content: [
+      _candidate(p),
+      _text('<screen>\n${jsonEncode(screenForPrompt(screen))}\n</screen>'),
+      if (assessment != null) _text('<avenue_assessment>\n${jsonEncode(assessment.j)}\n</avenue_assessment>'),
+      if (options.isNotEmpty)
+        _text('<known_options>\n${jsonEncode([for (final o in options) o.toJson()])}\n</known_options>'),
+      _text(
+        '''
+Make a prep plan for moving to ${screen.country.name}${deadline == null ? '' : ", with everything finished before $deadline (when the candidate's current right to work or the route closes)"}. Today is $today.
+
+Order the steps so that what unlocks later steps comes first: getting qualifications recognised or verified, language tests, certifications that employers there ask for (with cost and time from official or clearly named sources), CV gaps to close, applications, and any tests or registrations. Date each step so the whole plan fits before the deadline, and say when it cannot fit.
+
+Qualification planner: decide whether the route or the target jobs need the candidate's qualifications recognised or verified. Compare the options (start from the known options above, which carry their sources), including whether each needs the awarding university to respond, and recommend which to take and when. Prefer options that do not depend on a slow university when time is short. Mark a step verified only when you read its cost and time on an official page. Answer for country code ${screen.code}.''',
+      ),
+    ],
+    schema: PrepPlan.schema,
+    web: true,
+    searches: 8,
+    effort: 'medium',
+    onProgress: onProgress,
+  );
+
   /// Research on what it is like to work for [employer]: systems, culture
   /// evidence with sources, and risks.
   Future<AiResult> researchEmployer(
@@ -314,6 +387,31 @@ Return up to 20, best fit first.'''),
     return r.data;
   }
 
+  /// Reads a screenshot of a page (a PNG) into job, person and employer
+  /// records, as they are written there. Only offered when the model reads
+  /// images ([AiProvider.images]).
+  Future<Json> readScreenshot(Uint8List png, {String url = '', Progress? onProgress}) async {
+    final r = await ai.ask(
+      system:
+          'You read screenshots of web pages into records exactly as written: a job advert (job), people named '
+          'with their role and contact details as shown (person), and the employer (company). Copy the words on '
+          'the page; never guess or add anything that is not visible. Leave a field empty when the page does not '
+          'show it. Dates as yyyy-MM-dd. Today is $today.',
+      content: [
+        {
+          'type': 'image',
+          'source': {'type': 'base64', 'media_type': 'image/png', 'data': base64Encode(png)},
+        },
+        _text('This is a screenshot of ${url.isEmpty ? 'a web page' : url}. List the records on it.'),
+      ],
+      schema: visionRecordsSchema,
+      effort: 'low',
+      maxTokens: 8000,
+      onProgress: onProgress,
+    );
+    return r.data;
+  }
+
   /// People worth contacting about [job] or at [company]: recruiters,
   /// hiring managers, teams, from public professional pages.
   Future<AiResult> findLeads(CandidateProfile p, {Job? job, String company = '', Progress? onProgress}) =>
@@ -381,6 +479,130 @@ Research how this employer or sector interviews now (competency frameworks, valu
     onProgress: onProgress,
   );
 
+  /// Writes the round's question plan (interview plan I2): for each
+  /// question, the criterion it tests, the elements a full answer has and
+  /// probes for each. Only the questions go: no profile, no answers. The
+  /// probe is later picked on the device from what the answer lacks.
+  Future<List<QuestionPlan>> questionPlan({
+    required String role,
+    required List<PracticeQuestion> questions,
+  }) async {
+    final r = await ai.ask(
+      system:
+          'You plan structured interview questions the way a trained UK panel does: each question tests one '
+          'pre-agreed criterion, and follow-up probes are chosen by what an answer leaves out. Use plain UK '
+          'English. Probes are short, neutral and open; never leading, never two questions in one.',
+      content: [
+        _text(
+          '<round role="${_attr(role)}">\n'
+          '${[for (final (i, q) in questions.indexed) '<question n="${i + 1}" kind="${_attr(q.category)}">${q.question}</question>'].join('\n')}\n'
+          '</round>',
+        ),
+        _text('''
+For each question, in order, give:
+- criterion: what it tests, in a few words.
+- expected: the elements a full answer has, from: situation (one specific example), ownAction (what the candidate did themselves), measure (how they measured it or knew it worked), result (the outcome), learning (what they learned or would do differently), others (who else was involved). Settler, motivation, strengths and "any questions for us" questions expect none.
+- probes: one or two short follow-ups for each expected element, worded for this question.'''),
+      ],
+      schema: object({
+        'questions': array(
+          object({
+            'criterion': string(),
+            'expected': array(oneOf([for (final e in AnswerElement.values) e.name])),
+            'probes': array(
+              object({
+                'element': oneOf([for (final e in AnswerElement.values) e.name]),
+                'text': string(),
+              }),
+            ),
+          }),
+        ),
+      }),
+      effort: 'low',
+      maxTokens: 6000,
+    );
+    return [for (final q in objs(r.data['questions'])) QuestionPlan.fromJson(q)];
+  }
+
+  /// Reads an advert and person specification into the criteria a panel
+  /// agrees in advance (interview plan I3). Only the advert goes: no
+  /// profile. The reply is checked and parsed by [parseCriteria]; the user
+  /// edits it before it is used.
+  Future<Json> readCriteria({required String advert, String title = ''}) async {
+    final r = await ai.ask(
+      system:
+          'You read job adverts and person specifications the way a UK or Irish recruiting panel does before '
+          'shortlisting. List only criteria the text states; never add your own. Keep each criterion in the '
+          "document's own words, shortened. Use plain UK English.",
+      content: [
+        _text('<advert title="${_attr(title)}">\n$advert\n</advert>'),
+        _text(
+          '''
+List every essential and desirable criterion in the person specification (and any the advert states as required), one per item:
+- text: the criterion, short, in the document's words.
+- essential: true when the document calls it essential or required; false when desirable.
+- kind: experience, skill, knowledge, value, behaviour or qualification.
+- assessBy: how it is assessed when the document says (A application, I interview, T test, P presentation); [] when it does not say.
+- question: one open, neutral interview question that tests it. Values: "What does … mean to you, and when have you shown it?". Experience and behaviours: "Tell us about a time…".
+Also give the job title, the employer, and the framework this employer most likely scores with (nhs_values for NHS England, Scotland and Wales; hsc_ni for Health and Social Care Northern Ireland; civil_service for the UK Civil Service; hse_ie for the HSE in Ireland; private otherwise).''',
+        ),
+      ],
+      schema: criteriaSchema,
+      effort: 'low',
+      maxTokens: 8000,
+    );
+    return r.data;
+  }
+
+  /// Scores a whole round against the agreed criteria (interview plan I3):
+  /// only the transcripts and the criteria go, no profile. Every score must
+  /// quote the transcript; the caller checks each quote with
+  /// [verifyScores] and drops any that is not there.
+  Future<List<AnswerScore>> scoreRound({
+    required String role,
+    required Framework framework,
+    required List<Criterion> criteria,
+    required List<({int index, String question, List<String> criteria, String answer})> answers,
+  }) async {
+    final scale = framework.scale;
+    final r = await ai.ask(
+      system:
+          'You are a trained interview panel member scoring a practice interview. You score only what the '
+          'candidate said, against criteria agreed in advance, on the panel\'s own scale. Never guess: if the '
+          'transcript has no evidence for a criterion, give the "no evidence" level. Every other level must quote '
+          'the candidate\'s exact words that it rests on. Feedback is about the task, never the person: no '
+          'judgements of confidence or personality, no percentages.',
+      content: [
+        _text(
+          '<scale name="${_attr(scale.name)}">\n'
+          '${[for (final l in scale.levels) '<level code="${l.code}" label="${_attr(l.label)}">${l.anchor}</level>'].join('\n')}\n'
+          '</scale>\n'
+          '<criteria role="${_attr(role)}">\n'
+          '${[for (final c in criteria) '<criterion id="${c.id}" essential="${c.essential}">${c.text}</criterion>'].join('\n')}\n'
+          '</criteria>',
+        ),
+        _text(
+          '<round>\n'
+          '${[for (final a in answers) '<answer question="${a.index + 1}" tests="${a.criteria.join(',')}">\n<asked>${a.question}</asked>\n<said>\n${a.answer}\n</said>\n</answer>'].join('\n')}\n'
+          '</round>',
+        ),
+        _text(
+          '''
+For each answer, score each criterion it tests (its "tests" ids) on the scale:
+- level: a code from the scale. "${scale.noEvidence.code}" when the answer has no evidence for it, or only a bare claim.
+- quote: the candidate's exact words (one sentence or part of one, copied character for character) that the level rests on; "" for "${scale.noEvidence.code}".
+A claim without an example is "${scale.noEvidence.code}": "I am a good team player", "I always…" or "I would…" with no real instance of something the candidate did.
+Then one strength of the answer and one fix: a concrete thing to do differently in the answer next time.
+The strength and the fix never mention scores, levels, the scale or its numbers (not "move toward a 3", not "to score higher"). Say what to do, for example "Say how you knew it worked: a number, a check or feedback."''',
+        ),
+      ],
+      schema: scoringSchema(scale, [for (final c in criteria) c.id]),
+      effort: 'medium',
+      maxTokens: 12000,
+    );
+    return parseScoring(r.data);
+  }
+
   /// Scores an answer on every dimension, with a better version.
   Future<AnswerReview> review(
     CandidateProfile p, {
@@ -414,7 +636,7 @@ Evaluate the answer as a strict, experienced panel would in today's market. Scor
 - Communication: concise, confident, right length (about two minutes), few fillers.
 - Role knowledge: understanding of the role, sector, standards and current practice.
 - AI and change readiness: awareness of how AI and new tools are changing the work, and adaptability.
-Then the overall score, what was strong, what to improve (most important first), any red flags, a better answer using only the candidate's real experience, and the follow-up a tough interviewer would ask.''',
+Then the overall score, what was strong, what to improve (most important first; each an action to take in the answer, never put in terms of the score), any red flags, a better answer using only the candidate's real experience, and the follow-up a tough interviewer would ask.''',
         ),
       ],
       schema: AnswerReview.schema,

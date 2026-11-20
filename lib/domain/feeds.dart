@@ -1,10 +1,15 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:brahma_core/brahma_core.dart' show SecretStore;
 import 'package:http/http.dart' as http;
 import 'package:xml/xml.dart';
 
 import 'countries.dart';
 import 'json.dart';
+import 'work_rights.dart';
+import 'world.dart';
 
 /// An opening as a job feed gives it, before it is saved.
 class Posting {
@@ -34,12 +39,22 @@ class Posting {
 
 /// What to look for: search terms, where, and whether remote work counts.
 class FeedQuery {
-  const FeedQuery({required this.terms, required this.country, this.place = '', this.remote = false});
+  const FeedQuery({
+    required this.terms,
+    required this.country,
+    this.place = '',
+    this.radiusMiles,
+    this.remote = false,
+  });
   final List<String> terms;
 
-  /// ISO alpha-2.
+  /// ISO alpha-2; '' for a search not tied to a country (remote work, UN
+  /// jobs).
   final String country;
   final String place;
+
+  /// How far around [place]; null: the site's default.
+  final int? radiusMiles;
   final bool remote;
 }
 
@@ -49,8 +64,9 @@ abstract class JobFeed {
   String get id;
   String get name;
 
-  /// Where to get a key, or null when none is needed.
-  String? get keyUrl => null;
+  /// Searches around a town. A feed that does not is asked once per
+  /// country, however many home areas the candidate has.
+  bool get usesPlace => false;
   bool covers(FeedQuery q);
   Future<List<Posting>> search(FeedQuery q);
 }
@@ -76,15 +92,38 @@ Future<Object?> _getJson(http.Client client, Uri uri, {Map<String, String> heade
       .timeout(const Duration(seconds: 30));
   if (r.statusCode == 401 || r.statusCode == 403) throw FeedException('the key was rejected');
   if (r.statusCode != 200) throw FeedException('error ${r.statusCode}');
-  return jsonDecode(utf8.decode(r.bodyBytes));
+  try {
+    return jsonDecode(utf8.decode(r.bodyBytes));
+  } on FormatException {
+    // A sign-in page on public Wi-Fi, or the site changed its reply.
+    throw FeedException('sent a reply that is not job data (a Wi-Fi sign-in page, or the site changed)');
+  }
 }
+
+/// What went wrong with a feed, in a few words: its own message, a reply
+/// that could not be read, a time-out, or no connection.
+String feedProblem(Object e) => switch (e) {
+  FeedException() => e.message,
+  FormatException() => 'sent a reply that could not be read',
+  TimeoutException() => 'did not answer in time',
+  SocketException() || HandshakeException() || http.ClientException() => 'not reachable',
+  _ => 'failed ($e)',
+};
+
+/// True when [text] holds every word of at least one of [terms].
+bool mentionsAny(String text, List<String> terms) => _mentions(text, terms);
 
 bool _mentions(String text, List<String> terms) {
   final t = text.toLowerCase();
   return terms.any((term) => term.toLowerCase().split(RegExp(r'\s+')).every(t.contains));
 }
 
-/// Adzuna: many countries, needs a free app id and key.
+/// Where Adzuna's postings must credit it (its terms ask for a "Jobs by
+/// Adzuna" link on every ad shown).
+const adzunaHome = 'https://www.adzuna.com';
+
+/// Adzuna: many countries, needs a free app id and key. Its terms: the free
+/// tier is for evaluating the API, and each ad shown links back to Adzuna.
 class AdzunaFeed extends JobFeed {
   AdzunaFeed(this.client, {required this.appId, required this.appKey});
   final http.Client client;
@@ -95,8 +134,7 @@ class AdzunaFeed extends JobFeed {
   @override
   String get name => 'Adzuna';
   @override
-  String get keyUrl => 'https://developer.adzuna.com/signup';
-
+  bool get usesPlace => true;
   @override
   bool covers(FeedQuery q) => appId.isNotEmpty && Country.of(q.country)?.adzuna != null;
 
@@ -110,6 +148,7 @@ class AdzunaFeed extends JobFeed {
         'app_key': appKey,
         'what': term,
         if (q.place.isNotEmpty) 'where': q.place,
+        if (q.place.isNotEmpty && q.radiusMiles != null) 'distance': '${(q.radiusMiles! * 1.609).round()}',
         'results_per_page': '30',
         'max_days_old': '21',
         'sort_by': 'date',
@@ -153,8 +192,7 @@ class ReedFeed extends JobFeed {
   @override
   String get name => 'Reed';
   @override
-  String get keyUrl => 'https://www.reed.co.uk/developers/jobseeker';
-
+  bool get usesPlace => true;
   @override
   bool covers(FeedQuery q) => key.isNotEmpty && q.country == 'GB';
 
@@ -166,7 +204,7 @@ class ReedFeed extends JobFeed {
       final uri = Uri.https('www.reed.co.uk', '/api/1.0/search', {
         'keywords': term,
         if (q.place.isNotEmpty) 'locationName': q.place,
-        if (q.place.isNotEmpty) 'distanceFromLocation': '25',
+        if (q.place.isNotEmpty) 'distanceFromLocation': '${q.radiusMiles ?? 25}',
         'resultsToTake': '40',
       });
       for (final r in objs(obj(await _getJson(client, uri, headers: {'authorization': auth}))['results'])) {
@@ -209,6 +247,8 @@ class NhsJobsFeed extends JobFeed {
   String get name => 'NHS Jobs';
 
   @override
+  bool get usesPlace => true;
+  @override
   bool covers(FeedQuery q) => q.country == 'GB';
 
   @override
@@ -218,7 +258,11 @@ class NhsJobsFeed extends JobFeed {
       for (var page = 1; page <= pages; page++) {
         final uri = Uri.https('www.jobs.nhs.uk', '/api/v1/search_xml', {
           'keyword': term,
-          if (q.place.isNotEmpty) ...{'location': q.place, 'distance': '15', 'countryCode': 'GB-ENG'},
+          if (q.place.isNotEmpty) ...{
+            'location': q.place,
+            'distance': '${q.radiusMiles ?? 15}',
+            'countryCode': 'GB-ENG',
+          },
           'page': '$page',
         });
         final r = await client
@@ -429,15 +473,79 @@ class ArbeitnowFeed extends JobFeed {
   }
 }
 
-/// The user's job-feed keys (synced, end-to-end encrypted).
+/// Where the USAJOBS and Jooble keys are kept: this device's keychain
+/// (SecretStore), never synced.
+abstract final class FeedSecrets {
+  static const usajobsKey = 'udyoga.usajobs.key';
+  static const usajobsEmail = 'udyoga.usajobs.email';
+
+  /// JSON {"GB": key, ...}: Jooble gives one key per country site.
+  static const jooble = 'udyoga.jooble.keys';
+}
+
+/// The user's job-feed keys. Adzuna and Reed sync (end-to-end encrypted);
+/// USAJOBS and Jooble stay in this device's keychain.
 class FeedKeys {
-  const FeedKeys({this.adzunaId = '', this.adzunaKey = '', this.reed = ''});
+  const FeedKeys({
+    this.adzunaId = '',
+    this.adzunaKey = '',
+    this.reed = '',
+    this.usajobsKey = '',
+    this.usajobsEmail = '',
+    this.jooble = const {},
+  });
   final String adzunaId, adzunaKey, reed;
+
+  /// USAJOBS: the key and the e-mail it was registered with (sent as the
+  /// User-Agent, as its rules ask).
+  final String usajobsKey, usajobsEmail;
+
+  /// Jooble keys by ISO country code.
+  final Map<String, String> jooble;
 
   factory FeedKeys.fromJson(Json j) =>
       FeedKeys(adzunaId: str(j['adzunaId']), adzunaKey: str(j['adzunaKey']), reed: str(j['reed']));
+
+  /// The synced part only.
   Json toJson() => {'adzunaId': adzunaId, 'adzunaKey': adzunaKey, 'reed': reed};
+
+  /// These keys with the device's own from [store].
+  Future<FeedKeys> withSecrets(SecretStore? store) async {
+    if (store == null) return this;
+    final jooble = decodeObject(await store.read(FeedSecrets.jooble) ?? '');
+    return FeedKeys(
+      adzunaId: adzunaId,
+      adzunaKey: adzunaKey,
+      reed: reed,
+      usajobsKey: (await store.read(FeedSecrets.usajobsKey) ?? '').trim(),
+      usajobsEmail: (await store.read(FeedSecrets.usajobsEmail) ?? '').trim(),
+      jooble: {
+        for (final e in jooble.entries)
+          if (str(e.value).isNotEmpty) e.key.toUpperCase(): str(e.value),
+      },
+    );
+  }
+
+  /// Saves the device-only keys to [store]; an empty value removes one.
+  static Future<void> saveSecrets(
+    SecretStore store, {
+    required String usajobsKey,
+    required String usajobsEmail,
+    required Map<String, String> jooble,
+  }) async {
+    Future<void> put(String k, String v) => v.isEmpty ? store.delete(k) : store.write(k, v);
+    await put(FeedSecrets.usajobsKey, usajobsKey.trim());
+    await put(FeedSecrets.usajobsEmail, usajobsEmail.trim());
+    await put(FeedSecrets.jooble, jooble.isEmpty ? '' : jsonEncode(jooble));
+  }
 }
+
+/// "GB: abc123" lines as {"GB": "abc123"}; country names work too.
+Map<String, String> joobleKeysIn(String text) => {
+  for (final line in text.split('\n'))
+    if (RegExp(r'^\s*([^:=]+?)\s*[:=]\s*(\S+)\s*$').firstMatch(line) case final m?)
+      if (countryCode(m[1]!) case final cc when cc.isNotEmpty) cc: m[2]!,
+};
 
 List<JobFeed> allFeeds(http.Client client, FeedKeys keys) => [
   AdzunaFeed(client, appId: keys.adzunaId, appKey: keys.adzunaKey),
@@ -446,7 +554,25 @@ List<JobFeed> allFeeds(http.Client client, FeedKeys keys) => [
   RemotiveFeed(client),
   JobicyFeed(client),
   ArbeitnowFeed(client),
+  JobTechFeed(client),
+  NavFeed(client),
+  UsaJobsFeed(client, key: keys.usajobsKey, email: keys.usajobsEmail),
+  JoobleFeed(client, keys: keys.jooble),
+  UnVacanciesFeed(client),
 ];
+
+/// The credit a source's terms ask for on each of its ads, with its link.
+const feedCredits = <String, ({String label, String url})>{
+  'adzuna': (label: 'Jobs by Adzuna', url: adzunaHome),
+  'jooble': (label: 'Jobs by Jooble', url: 'https://jooble.org'),
+  'usajobs': (label: 'From USAJOBS (not endorsed by OPM)', url: 'https://www.usajobs.gov'),
+  'jobtech': (
+    label: 'From Platsbanken, Arbetsförmedlingen',
+    url: 'https://arbetsformedlingen.se/platsbanken',
+  ),
+  'nav': (label: 'From arbeidsplassen.no, NAV', url: 'https://arbeidsplassen.nav.no'),
+  'unvacancies': (label: 'Via unvacancies.org (not part of the UN)', url: 'https://unvacancies.org'),
+};
 
 const _months = {
   'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6, //
@@ -479,4 +605,382 @@ String? closingIn(String text) {
   final low = n(m[1]);
   if (low == null || low < 1000) return (null, null);
   return (low, n(m[2]) ?? low);
+}
+
+/// The yyyy-MM-dd of an RFC 822 date ("Thu, 19 Nov 2026 00:00:00 GMT"), or
+/// null.
+String? rfc822Day(String s) {
+  final m = RegExp(r'(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})').firstMatch(s);
+  if (m == null) return _date(s);
+  final month = _months[m[2]!.toLowerCase()];
+  if (month == null) return null;
+  return '${m[3]}-${month.toString().padLeft(2, '0')}-${m[1]!.padLeft(2, '0')}';
+}
+
+/// JobTech JobSearch: Sweden's public employment service (Platsbanken),
+/// no key.
+class JobTechFeed extends JobFeed {
+  JobTechFeed(this.client);
+  final http.Client client;
+
+  @override
+  String get id => 'jobtech';
+  @override
+  String get name => 'Platsbanken (JobTech)';
+  @override
+  bool covers(FeedQuery q) => q.country == 'SE';
+
+  @override
+  Future<List<Posting>> search(FeedQuery q) async {
+    final out = <Posting>[];
+    for (final term in q.terms.take(3)) {
+      final uri = Uri.https('jobsearch.api.jobtechdev.se', '/search', {'q': term, 'limit': '50'});
+      out.addAll(parse(obj(await _getJson(client, uri))));
+    }
+    return out;
+  }
+
+  /// The postings in one /search reply.
+  static List<Posting> parse(Json body) => [
+    for (final h in objs(body['hits']))
+      if (h['removed'] != true && str(h['headline']).isNotEmpty)
+        Posting(
+          source: 'jobtech',
+          sourceId: str(h['id']),
+          title: str(h['headline']),
+          company: str(obj(h['employer'])['name']).isNotEmpty
+              ? str(obj(h['employer'])['name'])
+              : str(obj(h['employer'])['workplace']),
+          location: [
+            str(obj(h['workplace_address'])['municipality']),
+            str(obj(h['workplace_address'])['region']),
+          ].where((x) => x.isNotEmpty).toSet().join(', '),
+          country: 'SE',
+          salaryText: str(h['salary_description']),
+          url: str(h['webpage_url']).isNotEmpty
+              ? str(h['webpage_url'])
+              : str(obj(h['application_details'])['url']),
+          description: str(obj(h['description'])['text']),
+          posted: _date(h['publication_date']),
+          closing: _date(h['application_deadline']),
+        ),
+  ];
+}
+
+/// NAV's job vacancy feed (Norway, arbeidsplassen.no). It is a stream of
+/// changes, not a search: Udyoga reads the last two days' pages with NAV's
+/// public token (which rotates, so it is fetched each run), keeps the open
+/// ads whose title matches, and reads those in full. Contact details are
+/// never kept.
+class NavFeed extends JobFeed {
+  NavFeed(this.client, {DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
+  final http.Client client;
+  final DateTime Function() _clock;
+
+  static const host = 'pam-stilling-feed.nav.no';
+
+  /// Pages of up to 1,000 changes read per run, and ads read in full.
+  static const pages = 3, details = 15;
+
+  @override
+  String get id => 'nav';
+  @override
+  String get name => 'NAV (arbeidsplassen.no)';
+  @override
+  bool covers(FeedQuery q) => q.country == 'NO';
+
+  /// The token in NAV's public-token page.
+  static String tokenIn(String text) =>
+      RegExp(r'[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}').firstMatch(text)?[0] ?? '';
+
+  @override
+  Future<List<Posting>> search(FeedQuery q) async {
+    final t = await client.get(Uri.https(host, '/api/publicToken')).timeout(const Duration(seconds: 30));
+    if (t.statusCode != 200) throw FeedException('the public token page answered ${t.statusCode}');
+    final token = tokenIn(utf8.decode(t.bodyBytes));
+    if (token.isEmpty) throw FeedException('the public token page holds no token');
+    final auth = {'authorization': 'Bearer $token'};
+    final since = HttpDate.format(_clock().toUtc().subtract(const Duration(days: 2)));
+    final entries = <Json>[];
+    var path = '/api/v1/feed';
+    for (var i = 0; i < pages; i++) {
+      final page = obj(
+        await _getJson(
+          client,
+          Uri.https(host, path),
+          headers: {...auth, if (i == 0) 'if-modified-since': since},
+        ),
+      );
+      entries.addAll(matching(page, q.terms));
+      final next = str(page['next_url']);
+      if (next.isEmpty || next == path) break;
+      path = next;
+    }
+    final out = <Posting>[];
+    final seen = <String>{};
+    for (final e in entries) {
+      final f = obj(e['_feed_entry']);
+      if (!seen.add(str(f['uuid']))) continue;
+      if (out.length >= details) break;
+      try {
+        out.add(parseEntry(obj(await _getJson(client, Uri.https(host, str(e['url'])), headers: auth))));
+      } on FeedException {
+        out.add(_brief(f));
+      }
+    }
+    return out;
+  }
+
+  /// The open ads on a feed page whose title matches [terms].
+  static List<Json> matching(Json page, List<String> terms) => [
+    for (final e in objs(page['items']))
+      if (str(obj(e['_feed_entry'])['status']) == 'ACTIVE' && _mentions(str(e['title']), terms)) e,
+  ];
+
+  static Posting _brief(Json f) => Posting(
+    source: 'nav',
+    sourceId: str(f['uuid']),
+    title: str(f['title']),
+    company: str(f['businessName']),
+    location: _town(str(f['municipal'])),
+    country: 'NO',
+    url: 'https://arbeidsplassen.nav.no/stillinger/stilling/${str(f['uuid'])}',
+  );
+
+  /// "TRONDHEIM" as "Trondheim".
+  static String _town(String s) => s
+      .toLowerCase()
+      .split(' ')
+      .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+      .join(' ');
+
+  /// One ad in full (a /feedentry reply); its contacts are left out.
+  static Posting parseEntry(Json entry) {
+    final ad = obj(entry['ad_content']);
+    final place = objs(ad['workLocations']).firstOrNull ?? const <String, Object?>{};
+    return Posting(
+      source: 'nav',
+      sourceId: str(ad['uuid']).isNotEmpty ? str(ad['uuid']) : str(entry['uuid']),
+      title: str(ad['title']),
+      company: str(obj(ad['employer'])['name']),
+      location: _town(str(place['city']).isNotEmpty ? str(place['city']) : str(place['municipal'])),
+      country: 'NO',
+      url: str(ad['link']).isNotEmpty
+          ? str(ad['link'])
+          : 'https://arbeidsplassen.nav.no/stillinger/stilling/${str(ad['uuid'])}',
+      description: htmlToText(str(ad['description'])),
+      posted: _date(ad['published']),
+      closing: _date(ad['applicationDue']) ?? _date(ad['expires']),
+    );
+  }
+}
+
+/// USAJOBS: US federal jobs, with the user's own free key. Its rules: the
+/// registered e-mail goes as the User-Agent, the key stays private, and
+/// nothing may suggest OPM endorses Udyoga.
+class UsaJobsFeed extends JobFeed {
+  UsaJobsFeed(this.client, {required this.key, required this.email});
+  final http.Client client;
+  final String key, email;
+
+  @override
+  String get id => 'usajobs';
+  @override
+  String get name => 'USAJOBS';
+  @override
+  bool get usesPlace => true;
+  @override
+  bool covers(FeedQuery q) => key.isNotEmpty && email.isNotEmpty && q.country == 'US';
+
+  @override
+  Future<List<Posting>> search(FeedQuery q) async {
+    final out = <Posting>[];
+    for (final term in q.terms.take(3)) {
+      final uri = Uri.https('data.usajobs.gov', '/api/search', {
+        'Keyword': term,
+        'ResultsPerPage': '50',
+        if (q.place.isNotEmpty) 'LocationName': q.place,
+        if (q.place.isNotEmpty && q.radiusMiles != null) 'Radius': '${q.radiusMiles}',
+      });
+      out.addAll(
+        parse(
+          obj(
+            await _getJson(
+              client,
+              uri,
+              headers: {'host': 'data.usajobs.gov', 'user-agent': email, 'authorization-key': key},
+            ),
+          ),
+        ),
+      );
+    }
+    return out;
+  }
+
+  static List<Posting> parse(Json body) => [
+    for (final item in objs(obj(body['SearchResult'])['SearchResultItems']))
+      if (obj(item['MatchedObjectDescriptor']) case final d when str(d['PositionTitle']).isNotEmpty)
+        () {
+          final pay = objs(d['PositionRemuneration']).firstOrNull ?? const <String, Object?>{};
+          final yearly = str(pay['RateIntervalCode']) == 'PA';
+          final min = intOf(pay['MinimumRange']), max = intOf(pay['MaximumRange']);
+          return Posting(
+            source: 'usajobs',
+            sourceId: str(item['MatchedObjectId']).isNotEmpty
+                ? str(item['MatchedObjectId'])
+                : str(d['PositionID']),
+            title: str(d['PositionTitle']),
+            company: [
+              str(d['OrganizationName']),
+              str(d['DepartmentName']),
+            ].where((x) => x.isNotEmpty).toSet().join(', '),
+            location: str(d['PositionLocationDisplay']),
+            country: 'US',
+            salaryMin: yearly ? min : null,
+            salaryMax: yearly ? max : null,
+            currency: yearly && min != null ? 'USD' : '',
+            salaryText: !yearly && min != null
+                ? 'USD $min–${max ?? min} ${str(pay['Description'])}'.trim()
+                : '',
+            url: str(d['PositionURI']),
+            description: htmlToText(str(obj(obj(d['UserArea'])['Details'])['JobSummary'])),
+            posted: _date(d['PublicationStartDate']),
+            closing: _date(d['ApplicationCloseDate']),
+          );
+        }(),
+  ];
+}
+
+/// Jooble: many countries, one free key per country site (jooble.org is
+/// the US; uk.jooble.org the UK, and so on), 100 calls a day each.
+class JoobleFeed extends JobFeed {
+  JoobleFeed(this.client, {required this.keys});
+  final http.Client client;
+  final Map<String, String> keys;
+
+  @override
+  String get id => 'jooble';
+  @override
+  String get name => 'Jooble';
+  @override
+  bool get usesPlace => true;
+  @override
+  bool covers(FeedQuery q) => keys[q.country]?.isNotEmpty ?? false;
+
+  /// The country's Jooble site.
+  static String hostFor(String cc) => switch (cc) {
+    'US' => 'jooble.org',
+    'GB' => 'uk.jooble.org',
+    _ => '${cc.toLowerCase()}.jooble.org',
+  };
+
+  /// Jooble takes only these radii (km).
+  static String radiusKm(int miles) {
+    final km = miles * 1.609;
+    return const [0, 4, 8, 16, 26, 40, 80].firstWhere((r) => r >= km, orElse: () => 80).toString();
+  }
+
+  @override
+  Future<List<Posting>> search(FeedQuery q) async {
+    final out = <Posting>[];
+    for (final term in q.terms.take(2)) {
+      final r = await client
+          .post(
+            Uri.https(hostFor(q.country), '/api/${keys[q.country]}'),
+            headers: {'content-type': 'application/json', 'accept': 'application/json'},
+            body: jsonEncode({
+              'keywords': term,
+              'location': q.place.isNotEmpty ? q.place : worldCountry(q.country)?.name ?? q.country,
+              if (q.place.isNotEmpty && q.radiusMiles != null) 'radius': radiusKm(q.radiusMiles!),
+              'page': '1',
+              'ResultOnPage': '30',
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+      if (r.statusCode == 403) throw FeedException('the key was rejected');
+      if (r.statusCode == 429) throw FeedException("used up today's calls");
+      if (r.statusCode != 200) throw FeedException('error ${r.statusCode}');
+      final Object? body;
+      try {
+        body = jsonDecode(utf8.decode(r.bodyBytes));
+      } on FormatException {
+        throw FeedException('sent a reply that is not job data (a Wi-Fi sign-in page, or the site changed)');
+      }
+      out.addAll(parse(obj(body), country: q.country));
+    }
+    return out;
+  }
+
+  static List<Posting> parse(Json body, {required String country}) => [
+    for (final j in objs(body['jobs']))
+      if (str(j['title']).isNotEmpty)
+        Posting(
+          source: 'jooble',
+          sourceId: str(j['id']),
+          title: htmlToText(str(j['title'])),
+          company: str(j['company']),
+          location: str(j['location']),
+          country: country,
+          salaryText: str(j['salary']),
+          url: str(j['link']),
+          description: htmlToText(str(j['snippet'])),
+          posted: _date(j['updated']),
+        ),
+  ];
+}
+
+/// unvacancies.org: an independent index of 45 UN-system career sites, no
+/// key or agreement needed; every job is applied for on the official
+/// portal. Its feed holds the newest 50, filtered here.
+class UnVacanciesFeed extends JobFeed {
+  UnVacanciesFeed(this.client);
+  final http.Client client;
+
+  @override
+  String get id => 'unvacancies';
+  @override
+  String get name => 'UN jobs (unvacancies.org)';
+
+  /// Not tied to a country, so it answers the country-less query.
+  @override
+  bool covers(FeedQuery q) => q.country.isEmpty;
+
+  @override
+  Future<List<Posting>> search(FeedQuery q) async {
+    final r = await client
+        .get(Uri.https('unvacancies.org', '/feed.xml'), headers: {'accept': 'application/rss+xml'})
+        .timeout(const Duration(seconds: 30));
+    if (r.statusCode != 200) throw FeedException('error ${r.statusCode}');
+    return [
+      for (final p in parse(utf8.decode(r.bodyBytes)))
+        if (_mentions('${p.title}\n${p.description}', q.terms)) p,
+    ];
+  }
+
+  static List<Posting> parse(String body) {
+    final XmlDocument doc;
+    try {
+      doc = XmlDocument.parse(body);
+    } on XmlException {
+      throw FeedException('sent a reply that is not job data (a Wi-Fi sign-in page, or the site changed)');
+    }
+    String text(XmlElement e, String name) => e.getElement(name)?.innerText.trim() ?? '';
+    return [
+      for (final item in doc.findAllElements('item'))
+        if (text(item, 'title').isNotEmpty)
+          () {
+            final link = text(item, 'link').replaceFirst(RegExp(r'\?utm_.*$'), '');
+            final guid = text(item, 'guid').isNotEmpty ? text(item, 'guid') : link;
+            return Posting(
+              source: 'unvacancies',
+              sourceId: guid.split('/').last.replaceFirst(RegExp(r'\?.*$'), ''),
+              title: htmlToText(text(item, 'title')),
+              company: text(item, 'category'),
+              url: link,
+              description: htmlToText(text(item, 'description')),
+              posted: rfc822Day(text(item, 'pubDate')),
+            );
+          }(),
+    ];
+  }
 }

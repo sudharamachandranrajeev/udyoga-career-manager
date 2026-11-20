@@ -1,0 +1,55 @@
+{
+ "total": {
+  "value": 2465
+ },
+ "hits": [
+  {
+   "id": "10000001",
+   "webpage_url": "https://arbetsformedlingen.se/platsbanken/annonser/10000001",
+   "headline": "Sjuksköterska till Exempelby vårdcentral",
+   "application_deadline": "2026-12-03T23:59:59",
+   "description": {
+    "text": "Exempelby vårdcentral\r\n\r\nVåra 40 medarbetare arbetar med nära vård och hälsa i Exempel län. Vi tar emot patienter på vår vårdcentral och ger råd på telefon. Vi söker nu en sjuksköterska som vill arbeta med oss. Utbildn"
+   },
+   "salary_description": null,
+   "employer": {
+    "name": "EXEMPEL REGION",
+    "workplace": "Exempelby vårdcentral"
+   },
+   "application_details": {
+    "url": "https://jobb.example.se/ansok?ref=EX-1001"
+   },
+   "workplace_address": {
+    "municipality": "Exempelby",
+    "region": "Exempel län",
+    "country": "Sverige"
+   },
+   "publication_date": "2026-11-19T16:01:12",
+   "removed": false
+  },
+  {
+   "id": "10000002",
+   "webpage_url": "https://arbetsformedlingen.se/platsbanken/annonser/10000002",
+   "headline": "Sjuksköterska, bemanning",
+   "application_deadline": "2026-12-03T23:59:59",
+   "description": {
+    "text": "Provstad Vård AB är ett påhittat bemanningsföretag.\n\nVi söker för kunds räkning sjuksköterska.\n\nUppdraget gäller från 23 jan 2027 och löpande.\n\nProvstad Vård är ett exempel på ett bemanningsföretag "
+   },
+   "salary_description": null,
+   "employer": {
+    "name": "Provstad Vård AB",
+    "workplace": "Mottagning"
+   },
+   "application_details": {
+    "url": null
+   },
+   "workplace_address": {
+    "municipality": "Provstad",
+    "region": "Exempel län",
+    "country": "Sverige"
+   },
+   "publication_date": "2026-11-19T15:41:18",
+   "removed": false
+  }
+ ]
+}

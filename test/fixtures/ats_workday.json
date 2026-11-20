@@ -1,0 +1,25 @@
+{
+ "total": 207,
+ "jobPostings": [
+  {
+   "title": "Example Engineer",
+   "externalPath": "/job/Exampleland-EX-Sampleford/Example-Engineer_JR-0000101",
+   "locationsText": "Exampleland, EX, Sampleford",
+   "postedOn": "Posted 30+ Days Ago",
+   "remoteType": "Flex",
+   "bulletFields": [
+    "JR-0000101"
+   ]
+  },
+  {
+   "title": "Example Engineer",
+   "externalPath": "/job/Sampleland-SL-Exampleton/Example-Engineer_JR-0000102",
+   "locationsText": "Sampleland, SL, Exampleton",
+   "postedOn": "Posted 30+ Days Ago",
+   "remoteType": "Flex",
+   "bulletFields": [
+    "JR-0000102"
+   ]
+  }
+ ]
+}

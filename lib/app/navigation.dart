@@ -173,6 +173,7 @@ class UdyogaPalette extends ConsumerWidget {
     'today': ['home', 'follow-ups', 'dashboard'],
     'jobs': ['openings', 'matches', 'search'],
     'applications': ['pipeline', 'board', 'stages'],
+    'explore': ['countries', 'visa', 'abroad', 'relocate', 'routes', 'tracks'],
     'contacts': ['people', 'recruiters', 'leads'],
     'linkedin': ['posts', 'comments'],
     'interview': ['practice', 'questions'],

@@ -1,6 +1,9 @@
-/// Countries a candidate can look for work in, with the job sites worth
-/// searching there. Portal links are searches the user opens in a browser:
-/// nothing is scraped.
+import 'world.dart';
+
+/// Countries with job sites worth searching there. Portal links are
+/// searches the user opens in a browser: nothing is scraped. Every other
+/// ISO country (name, region, currency, languages) is in [worldCountries];
+/// [info] joins the two.
 class Country {
   const Country(this.code, this.name, this.currency, {this.adzuna, this.indeed, this.portals = const []});
 
@@ -20,7 +23,11 @@ class Country {
 
   static Country? of(String code) => byCode[code.toUpperCase()];
 
-  static String nameOf(String code) => of(code)?.name ?? code;
+  /// The name of any ISO country, or [code] when it is not one.
+  static String nameOf(String code) => of(code)?.name ?? worldCountry(code)?.name ?? code;
+
+  /// What CLDR says about this country (region, languages).
+  WorldCountry? get info => worldCountry(code);
 }
 
 /// A job site search. In [url], {q} and {l} are the search terms and place
@@ -59,11 +66,6 @@ const globalPortals = [
 Uri linkedInPeople(String keywords, {String company = ''}) => Uri.parse(
   'https://www.linkedin.com/search/results/people/?keywords=${Uri.encodeQueryComponent(keywords)}'
   '${company.trim().isEmpty ? '' : '&company=${Uri.encodeQueryComponent(company.trim())}'}',
-);
-
-/// LinkedIn company page search.
-Uri linkedInCompany(String company) => Uri.parse(
-  'https://www.linkedin.com/search/results/companies/?keywords=${Uri.encodeQueryComponent(company)}',
 );
 
 const countries = [

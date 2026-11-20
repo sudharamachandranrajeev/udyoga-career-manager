@@ -61,7 +61,7 @@ void main() {
         'did': 'did:plc:jordan',
         'handle': 'jordan.example.com',
         'displayName': 'Jordan Example',
-        'description': 'Health informatics in Yorkshire.',
+        'description': 'Health informatics in Exampleshire.',
       });
     final app = AppHarness(tester)..desktop();
     await app.open();
@@ -85,7 +85,7 @@ void main() {
 
     await app.tapText('health informatics');
     expect(find.text('Jordan Example'), findsOneWidget);
-    expect(find.textContaining('Health informatics in Yorkshire.'), findsOneWidget);
+    expect(find.textContaining('Health informatics in Exampleshire.'), findsOneWidget);
     await app.tapText('Save');
     expect(find.byTooltip('Saved'), findsOneWidget);
     await tester.runAsync(() async {

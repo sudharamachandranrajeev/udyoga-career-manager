@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../ui/look.dart';
+import '../domain/assist_fill.dart';
+import '../domain/background.dart';
+import 'background.dart';
 import 'check_in_reminder.dart';
 import 'modules.dart';
 import 'navigation.dart';
@@ -69,10 +72,43 @@ class _RootState extends ConsumerState<_Root> {
       if (next == 'renew') await connectSubscription(context, ref, provider);
       if (next == 'forget') await ref.mutate((s) => s.book.setGrant(provider, null));
     }
+    await _offerBackground();
     final updater = ref.read(updaterProvider);
     if (updater == null) return;
     final release = await ref.read(updateProvider.future).catchError((_) => null);
     if (release != null && mounted) await offerUpdate(context, updater, release);
+  }
+
+  /// Android: once the profile is set up, asks once whether to look for
+  /// jobs while Udyoga is closed. It stays off unless the user says yes.
+  Future<void> _offerBackground() async {
+    final scheduler = ref.read(backgroundSchedulerProvider);
+    if (scheduler is! AndroidScheduler) return;
+    final book = ref.read(sessionProvider).book;
+    if (!await book.shouldOfferBackground() || !mounted) return;
+    await book.markBackgroundOffered();
+    if (!mounted) return;
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Look for jobs while Udyoga is closed?'),
+        content: const Text(
+          'Android can check your job sites every 6 hours when there is a network and the battery is not low, '
+          'and tell you about new jobs and to-dos that are due. You can change this in Settings, Background '
+          'refresh.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not now')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Turn it on')),
+        ],
+      ),
+    );
+    if (yes != true || !mounted) return;
+    try {
+      await ref.setBackground(const BackgroundSettings(on: true));
+    } on Object catch (e) {
+      if (mounted) showMessage(context, 'Could not turn it on: $e');
+    }
   }
 
   @override
@@ -89,6 +125,13 @@ class _RootState extends ConsumerState<_Root> {
           Future.microtask(() => ref.read(refreshTickerProvider)).ignore();
           ref.syncReminders().ignore();
           ref.syncPostPlanReminders().ignore();
+          // Android: the periodic refresh that runs while the app is closed.
+          ref.syncBackground().ignore();
+          // Synced fill counts older than a week are not needed any more.
+          final s = ref.read(sessionProvider);
+          AssistFill(s.db, book: s.book).pruneOldFills().then((n) {
+            if (n > 0) ref.changed();
+          }).ignore();
         },
       ),
     ),

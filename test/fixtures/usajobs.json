@@ -1,0 +1,38 @@
+{
+ "LanguageCode": "EN",
+ "SearchResult": {
+  "SearchResultCount": 1,
+  "SearchResultCountAll": 1,
+  "SearchResultItems": [
+   {
+    "MatchedObjectId": "10000004",
+    "MatchedObjectDescriptor": {
+     "PositionID": "EX-0000-04-0000004",
+     "PositionTitle": "IT SPECIALIST (EXAMPLE SYSTEMS)",
+     "PositionURI": "https://www.usajobs.gov/GetJob/ViewDetails/10000004",
+     "ApplyURI": [
+      "https://www.usajobs.gov/GetJob/ViewDetails/10000004?PostingChannelID=RESTAPI"
+     ],
+     "PositionLocationDisplay": "Example Campus, Exampleville, Example State",
+     "OrganizationName": "Example Systems Office",
+     "DepartmentName": "Department of Examples",
+     "PositionRemuneration": [
+      {
+       "MinimumRange": "92108",
+       "MaximumRange": "119746",
+       "RateIntervalCode": "PA",
+       "Description": "Per Year"
+      }
+     ],
+     "PublicationStartDate": "2016-06-05T00:00:00Z",
+     "ApplicationCloseDate": "2016-12-01T00:00:00Z",
+     "UserArea": {
+      "Details": {
+       "JobSummary": "..."
+      }
+     }
+    }
+   }
+  ]
+ }
+}

@@ -408,6 +408,28 @@ void main() {
       expect(await u('windows', '0.2.0').check(), isNull);
     });
 
+    test('Android picks the APK for its ABI, falling back to the 64-bit ARM one', () {
+      Release split(List<String> names) => Release.fromJson({
+        'tag_name': 'v1.0.0',
+        'assets': [
+          for (final n in names) {'name': n, 'browser_download_url': 'https://dl.example/$n', 'size': 4},
+        ],
+      });
+      final r = split([
+        'Udyoga-1.0.0-android.apk',
+        'Udyoga-1.0.0-android-armeabi-v7a.apk',
+        'Udyoga-1.0.0-android-x86_64.apk',
+      ]);
+      expect(r.installerFor('android')?.name, 'Udyoga-1.0.0-android.apk');
+      expect(r.installerFor('android', abi: 'armeabi-v7a')?.name, 'Udyoga-1.0.0-android-armeabi-v7a.apk');
+      expect(r.installerFor('android', abi: 'x86_64')?.name, 'Udyoga-1.0.0-android-x86_64.apk');
+      // A release from before the split has one universal APK.
+      expect(
+        split(['Udyoga-0.6.0-android.apk']).installerFor('android', abi: 'armeabi-v7a')?.name,
+        'Udyoga-0.6.0-android.apk',
+      );
+    });
+
     test('a download is kept only when it matches its checksum', () async {
       final dir = await Directory.systemTemp.createTemp('udyoga-update');
       addTearDown(() => dir.delete(recursive: true));
@@ -669,10 +691,17 @@ void main() {
     test('local fit prefers matching titles and skills', () {
       final near = localFit(
         sampleProfile,
-        title: 'Clinical Informatics Nurse',
-        description: 'EPR systems and patient safety training',
+        const JobFacts(
+          title: 'Clinical Informatics Nurse',
+          description: 'EPR systems and patient safety training',
+        ),
+        today: '2026-11-19',
       );
-      final far = localFit(sampleProfile, title: 'Forklift Driver', description: 'Warehouse shifts');
+      final far = localFit(
+        sampleProfile,
+        const JobFacts(title: 'Forklift Driver', description: 'Warehouse shifts'),
+        today: '2026-11-19',
+      );
       expect(near, greaterThan(far));
       expect(near, inInclusiveRange(0, 100));
     });

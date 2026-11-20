@@ -276,7 +276,8 @@ void main() {
               'did': 'did:plc:jordan',
               'handle': 'jordan.example.com',
               'displayName': 'Jordan Example',
-              'description': 'Health informatics in Yorkshire. EPR, clinical safety and the odd ward round.',
+              'description':
+                  'Health informatics in Exampleshire. EPR, clinical safety and the odd ward round.',
             },
             {
               'did': 'did:plc:priya',

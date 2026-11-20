@@ -1,0 +1,96 @@
+{
+ "jobs": [
+  {
+   "id": "0e0e0e0e-1111-4aaa-8bbb-000000000001",
+   "title": "Engineering Manager - Example Region",
+   "department": "Engineering",
+   "location": "Remote - Exampleland",
+   "isRemote": true,
+   "workplaceType": "Remote",
+   "publishedAt": "2026-03-04T14:29:08.532+00:00",
+   "jobUrl": "https://jobs.ashbyhq.com/exampleco/0e0e0e0e-1111-4aaa-8bbb-000000000001",
+   "applyUrl": "https://jobs.ashbyhq.com/exampleco/0e0e0e0e-1111-4aaa-8bbb-000000000001/application",
+   "address": {
+    "postalAddress": {
+     "postalCode": "",
+     "addressRegion": "",
+     "addressCountry": "Exampleland",
+     "addressLocality": ""
+    }
+   },
+   "compensation": {
+    "compensationTierSummary": "€150K – €250K • Offers Equity • Offers Bonus",
+    "summaryComponents": [
+     {
+      "compensationType": "Bonus",
+      "interval": "1 YEAR",
+      "currencyCode": "EUR",
+      "minValue": null,
+      "maxValue": null
+     },
+     {
+      "compensationType": "EquityPercentage",
+      "interval": "NONE",
+      "currencyCode": null,
+      "minValue": null,
+      "maxValue": null
+     },
+     {
+      "compensationType": "Salary",
+      "interval": "1 YEAR",
+      "currencyCode": "EUR",
+      "minValue": 150000,
+      "maxValue": 250000
+     }
+    ]
+   },
+   "isListed": true,
+   "descriptionPlain": "Hi 👋 I’m the engineering lead at Example Co. How do you feel about engineers writing their own specs, making product calls, and owning what they ship from start to finish? "
+  },
+  {
+   "id": "0e0e0e0e-2222-4aaa-8bbb-000000000002",
+   "title": "Account Executive - Sampleford (French Speaking)",
+   "department": "Sales",
+   "location": "Sampleford",
+   "isRemote": true,
+   "workplaceType": "Remote",
+   "publishedAt": "2026-09-08T16:27:26.694+00:00",
+   "jobUrl": "https://jobs.ashbyhq.com/exampleco/0e0e0e0e-2222-4aaa-8bbb-000000000002",
+   "applyUrl": "https://jobs.ashbyhq.com/exampleco/0e0e0e0e-2222-4aaa-8bbb-000000000002/application",
+   "address": {
+    "postalAddress": {
+     "addressRegion": "",
+     "addressCountry": "Exampleland",
+     "addressLocality": "Sampleford"
+    }
+   },
+   "compensation": {
+    "compensationTierSummary": "€110K – €195.5K • Offers Equity • Offers Commission • Multiple Ranges",
+    "summaryComponents": [
+     {
+      "compensationType": "EquityPercentage",
+      "minValue": null,
+      "maxValue": null,
+      "interval": "1 YEAR"
+     },
+     {
+      "compensationType": "Commission",
+      "minValue": null,
+      "maxValue": null,
+      "interval": "1 YEAR"
+     },
+     {
+      "minValue": 110000,
+      "maxValue": 195500,
+      "currencyCode": "EUR",
+      "interval": "1 YEAR",
+      "compensationType": "Salary"
+     }
+    ]
+   },
+   "isListed": true,
+   "descriptionPlain": "WHY JOIN SALES AT EXAMPLE CO\n\nSales at Example Co means selling a product customers already like https://www.example.com/customers to teams that are growing fast. Over 500 example companies "
+  }
+ ],
+ "apiVersion": "1"
+}

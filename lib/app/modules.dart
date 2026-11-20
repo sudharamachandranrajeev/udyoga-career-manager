@@ -6,6 +6,7 @@ import '../ui/career_page.dart';
 import '../ui/coach_page.dart';
 import '../ui/contacts_page.dart';
 import '../ui/conversations_page.dart';
+import '../ui/explore_page.dart';
 import '../ui/growth_page.dart';
 import '../ui/interview_page.dart';
 import '../ui/jobs_page.dart';
@@ -34,6 +35,17 @@ final jobsPage = Destination(
   icon: Icons.work_outline,
   selectedIcon: Icons.work,
   page: (_) => const JobsPage(),
+);
+
+/// Where the person could work: every country screened against their rights,
+/// languages, job codes and pay, and their route tracks. A tab of Jobs, so
+/// the phone dock keeps five entries.
+final explorePage = Destination(
+  id: 'explore',
+  label: 'Explore',
+  icon: Icons.public_outlined,
+  selectedIcon: Icons.public,
+  page: (_) => const ExplorePage(),
 );
 
 final applicationsPage = Destination(
@@ -136,7 +148,7 @@ final pageGroups = <PageGroup>[
     label: 'Jobs',
     icon: Icons.work_outline,
     selectedIcon: Icons.work,
-    pages: [jobsPage, applicationsPage],
+    pages: [jobsPage, applicationsPage, explorePage],
   ),
   PageGroup(
     id: 'network',

@@ -1,0 +1,70 @@
+{
+ "version": "1.0",
+ "title": "Stillingsfeeden fra arbeidsplassen.no",
+ "feed_url": "/api/v1/feed/00000000-0000-4000-8000-0000000000f1",
+ "next_url": "/api/v1/feed/00000000-0000-4000-8000-0000000000f2",
+ "id": "00000000-0000-4000-8000-0000000000f1",
+ "next_id": "00000000-0000-4000-8000-0000000000f2",
+ "items": [
+  {
+   "id": "00000000-0000-4000-8000-0000000000a1",
+   "url": "/api/v1/feedentry/00000000-0000-4000-8000-0000000000a1",
+   "title": "Vi søker motivert og effektiv Renholder",
+   "content_text": "Stillingsannonse",
+   "date_modified": "2026-11-18T18:49:41.142592+01:00",
+   "_feed_entry": {
+    "uuid": "00000000-0000-4000-8000-0000000000a1",
+    "status": "ACTIVE",
+    "title": "Vi søker motivert og effektiv Renholder",
+    "businessName": "Eksempel Kafé AS",
+    "municipal": "PRØVESTAD",
+    "sistEndret": "2026-11-18T18:49:41.142592+01:00"
+   }
+  },
+  {
+   "id": "00000000-0000-4000-8000-0000000000a2",
+   "url": "/api/v1/feedentry/00000000-0000-4000-8000-0000000000a2",
+   "title": "Liker du å ta godt imot gjester?",
+   "content_text": "Stillingsannonse",
+   "date_modified": "2026-11-18T18:49:41.158033+01:00",
+   "_feed_entry": {
+    "uuid": "00000000-0000-4000-8000-0000000000a2",
+    "status": "ACTIVE",
+    "title": "Liker du å ta godt imot gjester?",
+    "businessName": "Eksempel Kafé AS",
+    "municipal": "TØNSEKSEMPEL",
+    "sistEndret": "2026-11-18T18:49:41.158033+01:00"
+   }
+  },
+  {
+   "id": "00000000-0000-4000-8000-0000000000a3",
+   "url": "/api/v1/feedentry/00000000-0000-4000-8000-0000000000a3",
+   "title": "Sykepleiere til Eksempelby sykehjem",
+   "content_text": "Stillingsannonse",
+   "date_modified": "2026-11-18T20:54:11.280911+01:00",
+   "_feed_entry": {
+    "uuid": "00000000-0000-4000-8000-0000000000a3",
+    "status": "ACTIVE",
+    "title": "Sykepleiere til Eksempelby sykehjem",
+    "businessName": "Eksempelby kommune Eksempelby sykehjem",
+    "municipal": "EKSEMPELBY",
+    "sistEndret": "2026-11-18T20:54:11.280911+01:00"
+   }
+  },
+  {
+   "id": "00000000-0000-4000-8000-0000000000a4",
+   "url": "/api/v1/feedentry/00000000-0000-4000-8000-0000000000a4",
+   "title": "...",
+   "content_text": "Stillingsannonse",
+   "date_modified": "2026-11-18T19:51:40.850394+01:00",
+   "_feed_entry": {
+    "uuid": "00000000-0000-4000-8000-0000000000a4",
+    "status": "INACTIVE",
+    "title": "...",
+    "businessName": "",
+    "municipal": "PRØVESTAD",
+    "sistEndret": "2026-11-18T19:51:40.850394+01:00"
+   }
+  }
+ ]
+}

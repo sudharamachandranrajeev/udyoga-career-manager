@@ -6,7 +6,8 @@ set -euo pipefail
 
 out=${1:-smoke}
 mkdir -p "$out"
-apk=$(ls dist/*.apk | head -n1)
+# The emulator is x86_64; releases are split per ABI.
+apk=$(ls dist/*-android-x86_64.apk 2>/dev/null || ls dist/*.apk | head -n1)
 adb install -r "$apk"
 adb logcat -c
 adb shell am start -W -n dev.brahma.udyoga/.MainActivity

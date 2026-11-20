@@ -3,14 +3,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/navigation.dart';
+import '../app/interview_providers.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/answer_metrics.dart';
+import '../domain/common_questions.dart';
 import '../domain/insights.dart';
+import '../domain/interview_confidence.dart';
+import '../domain/interview_process.dart';
+import '../domain/interview_scoring.dart' show Framework;
 import '../domain/json.dart';
+import 'camera_coach_ui.dart';
 import 'common.dart';
+import 'interview_confidence_ui.dart';
+import 'interview_debrief_page.dart';
+import 'interview_device_ui.dart';
+import 'interview_process_page.dart';
 import 'kit/kit.dart';
 import 'look.dart';
+import 'spoken_round_page.dart';
 
 const _ratings = {
   'outstanding': Status.good,
@@ -65,7 +76,7 @@ Future<void> startPractice(BuildContext context, WidgetRef ref, {String role = '
   final r = await runAi(
     context,
     title: 'Preparing your interview',
-    task: (progress) async => (await requireAdvisor(ref)).practiceQuestions(
+    task: (progress) async => (await requireInterviewAdvisor(ref)).practiceQuestions(
       p,
       role: roleField.text.trim(),
       mode: mode,
@@ -89,16 +100,30 @@ Future<void> startPractice(BuildContext context, WidgetRef ref, {String role = '
   if (context.mounted) await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PracticePage(id)));
 }
 
+/// A spoken round of [commonQuestions], which needs no AI.
+Future<void> startCommonRound(BuildContext context, WidgetRef ref) async {
+  final id = await ref.mutate(
+    (s) => s.book.startPractice(
+      role: 'Common questions',
+      mode: 'standard',
+      questions: commonQuestions,
+      at: nowLocal(),
+    ),
+  );
+  if (context.mounted) await openSpokenRound(context, id);
+}
+
 class InterviewPage extends ConsumerWidget {
   const InterviewPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasAi = ref.watch(advisorProvider).value != null;
+    final hasAi = ref.watch(interviewAdvisorProvider).value != null;
     final answers = ref.watch(answersProvider).value ?? const <PracticeAnswer>[];
     return PageScaffold(
       title: 'Interview',
       banner: 'page.interview',
+      actions: const [OfflineBadge()],
       fab: hasAi
           ? FloatingActionButton.extended(
               heroTag: null,
@@ -108,7 +133,116 @@ class InterviewPage extends ConsumerWidget {
             )
           : null,
       children: [
-        if (!hasAi) const NeedsKey(what: 'Interview practice'),
+        if (!hasAi) const InterviewNoAi(),
+        // Confidence first (plan I4): what is ready, then what to work on.
+        const ReadyForCard(),
+        SectionCard(
+          title: 'Answer aloud',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'The interviewer reads each question aloud and you answer by voice, or type. You see what each '
+                'question tests first, then your transcript and how you said it. It runs on this device; '
+                'recordings never leave it.',
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton.tonalIcon(
+                    onPressed: () => startCommonRound(context, ref),
+                    icon: const Icon(Icons.mic_none),
+                    label: const Text('Common questions, aloud'),
+                  ),
+                  if (hasAi)
+                    TextButton(
+                      onPressed: () => startPractice(context, ref),
+                      child: const Text('Or prepare questions for a role first'),
+                    ),
+                  TextButton.icon(
+                    onPressed: () =>
+                        Navigator.of(context)
+                            .push(MaterialPageRoute<void>(builder: (_) => const CameraSetupPage())),
+                    icon: const Icon(Icons.videocam_outlined),
+                    label: const Text('Check my video setup'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const InterviewDeviceCard(),
+        SectionCard(
+          title: 'Rehearse a whole process',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Stage by stage: a screening call, a test or exercise, the panel, a presentation, a final '
+                'interview. Each stage has its own clock and opens with what the last one left to fix. Every '
+                'template can be edited to match your invitation.',
+              ),
+              for (final row in ref.watch(processesProvider).value ?? const <ProcessRow>[])
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.play_circle_outline),
+                  title: Text('Carry on: ${row.name}'),
+                  subtitle: Text(_processProgress(row)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => openProcess(
+                    context,
+                    processTemplates.where((t) => t.id == row.template).firstOrNull ?? processTemplates.first,
+                    savedId: row.id,
+                  ),
+                ),
+              for (final p in processTemplates)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(p.name),
+                  subtitle: Text(p.stages.map((s) => s.title).join(' → ')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => openProcess(context, p),
+                ),
+            ],
+          ),
+        ),
+        const DrillsCard(),
+        SectionCard(
+          title: 'Role profiles',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Paste an advert and person specification, or type the criteria. Each becomes a question, and '
+                'the debrief scores only what you said against them, essentials first.',
+              ),
+              for (final p in ref.watch(roleProfilesProvider).value ?? const <RoleProfileRow>[])
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(p.title),
+                  subtitle: Text(
+                    [
+                      if (p.employer.isNotEmpty) p.employer,
+                      Framework.of(p.framework).name,
+                      '${decodeList(p.criteria).length} criteria',
+                    ].join(' · '),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => openRoleProfile(context, id: p.id),
+                ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => openRoleProfile(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('New role profile'),
+                ),
+              ),
+            ],
+          ),
+        ),
         AsyncList(
           ref.watch(practiceProvider),
           builder: (rounds) {
@@ -175,6 +309,23 @@ class InterviewPage extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// How far a saved process has got, in a line.
+String _processProgress(ProcessRow row) {
+  final process = InterviewProcess.fromJson(decodeObject(row.process));
+  final progress = ProcessProgress.fromJson(decodeObject(row.progress));
+  final included = [
+    for (final (i, s) in process.stages.indexed)
+      if (s.included) i,
+  ];
+  final done = included.where(progress.finished).length;
+  final next = progress.next(process);
+  return [
+    '$done of ${included.length} stages done',
+    if (next != null) 'next: ${process.stages[next].title}',
+    'saved ${niceDateTime(row.updated)}',
+  ].join(' · ');
 }
 
 class _RoundTile extends StatelessWidget {
@@ -285,6 +436,16 @@ class _PracticePageState extends ConsumerState<PracticePage> {
       title: round.role,
       actions: [
         IconButton(
+          icon: const Icon(Icons.mic_none),
+          tooltip: 'Answer aloud',
+          onPressed: () => openSpokenRound(context, round.id),
+        ),
+        IconButton(
+          icon: const Icon(Icons.fact_check_outlined),
+          tooltip: 'Debrief',
+          onPressed: () => openDebrief(context, round.id),
+        ),
+        IconButton(
           icon: const Icon(Icons.delete_outline),
           tooltip: 'Delete this round',
           onPressed: () => _delete(round, saved.values.toList()),
@@ -301,8 +462,31 @@ class _PracticePageState extends ConsumerState<PracticePage> {
         const Text(
           'Answer as you would speak in the room. About two minutes (250 to 350 words) suits most questions.',
         ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton.tonalIcon(
+            onPressed: () => openSpokenRound(context, round.id),
+            icon: const Icon(Icons.mic_none),
+            label: const Text('Answer these aloud'),
+          ),
+        ),
+        const SizedBox(height: 12),
+        NervesRating(
+          label: 'Before you start: how nervous do you feel?',
+          value: round.nervesBefore,
+          onChanged: (n) => ref.mutate((s) => s.book.saveNerves(round.id, before: n)),
+        ),
         const SizedBox(height: 16),
         for (final (i, q) in questions.indexed) _question(round, i, q, saved[i]),
+        SectionCard(
+          title: 'After the round',
+          child: NervesRating(
+            label: 'How nervous do you feel now?',
+            value: round.nervesAfter,
+            onChanged: (n) => ref.mutate((s) => s.book.saveNerves(round.id, after: n)),
+          ),
+        ),
       ],
     );
   }
@@ -364,7 +548,7 @@ class _PracticePageState extends ConsumerState<PracticePage> {
     setState(() => _busy.add(i));
     try {
       final p = await ref.read(profileProvider.future);
-      final advisor = await requireAdvisor(ref);
+      final advisor = await requireInterviewAdvisor(ref);
       final review = await advisor.review(p, role: round.role, mode: round.mode, question: q, answer: answer);
       await ref.mutate((s) => s.book.saveAnswer(round.id, i, answer, review, at: nowLocal()));
     } catch (e) {

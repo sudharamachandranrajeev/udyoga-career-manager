@@ -11,9 +11,11 @@ import '../domain/advisor.dart';
 import '../domain/countries.dart';
 import '../domain/profile.dart';
 import '../domain/resume.dart';
+import '../domain/world.dart';
 import 'common.dart';
 import 'kit/kit.dart';
 import 'resume_page.dart';
+import 'rights_card.dart';
 
 /// The most CV versions read together.
 const _maxCvs = 8;
@@ -124,15 +126,18 @@ class ProfilePage extends ConsumerWidget {
                     'Roles: ${p.targets.roles.join(', ').ifEmpty('not set')}',
                     'Search terms: ${p.searchTerms.join(', ').ifEmpty('not set')}',
                     'Countries: ${p.searchCountries.map(Country.nameOf).join(', ').ifEmpty('not set')}',
-                    if (p.targets.locations.isNotEmpty) 'Places: ${p.targets.locations.join(', ')}',
+                    if (p.targets.homeAreas.isNotEmpty)
+                      'Home areas: ${p.targets.homeAreas.map((a) => [a.place, if (a.radiusMiles != null) '${a.radiusMiles} miles', if (a.commuteTowns.isNotEmpty) 'commute ${a.commuteTowns.join(', ')}'].join(', ')).join('; ')}',
                     if (p.targets.workModes.isNotEmpty)
                       'Work: ${p.targets.workModes.map((m) => _workModes[m] ?? m).join(', ')}',
                     if (p.targets.salaryMin != null)
                       'Minimum pay: ${p.targets.salaryCurrency} ${p.targets.salaryMin} a year'.trim(),
+                    if (p.targets.exclusions.isNotEmpty) 'Never show: ${p.targets.exclusions.join(', ')}',
                     if (p.targets.notes.isNotEmpty) p.targets.notes,
                   ].join('\n'),
                 ),
               ),
+              RightsCard(p),
               SectionCard(
                 title: 'Experience',
                 trailing: TextButton(
@@ -427,10 +432,11 @@ class ProfilePage extends ConsumerWidget {
     final t = p.targets;
     final roles = TextEditingController(text: t.roles.join('\n'));
     final keywords = TextEditingController(text: t.keywords.join('\n'));
-    final locations = TextEditingController(text: t.locations.join(', '));
+    final areas = TextEditingController(text: t.homeAreas.map((a) => a.line).join('\n'));
     final salary = TextEditingController(text: t.salaryMin?.toString() ?? '');
     final currency = TextEditingController(text: t.salaryCurrency);
     final notes = TextEditingController(text: t.notes);
+    final exclusions = TextEditingController(text: t.exclusions.join('\n'));
     final picked = [
       ...t.countries.isEmpty && p.country.isNotEmpty ? [p.country] : t.countries,
     ];
@@ -458,13 +464,24 @@ class ProfilePage extends ConsumerWidget {
                 selected: picked.contains(c.code),
                 onSelected: (v) => setState(() => v ? picked.add(c.code) : picked.remove(c.code)),
               ),
+            // Countries added from Explore that have no job sites listed here.
+            for (final code in [...picked])
+              if (!countries.any((c) => c.code == code))
+                FilterChip(
+                  label: Text(worldCountry(code)?.name ?? code),
+                  selected: true,
+                  onSelected: (_) => setState(() => picked.remove(code)),
+                ),
           ],
         ),
         const SizedBox(height: 12),
         Field(
-          locations,
-          'Towns or regions',
-          helper: 'In your home country; comma-separated. Empty: anywhere.',
+          areas,
+          'Home areas',
+          lines: 3,
+          helper:
+              'One per line: town | miles around it | towns you could commute to, such as '
+              '"Exampleton | 20 | Sampleby, Testford". Each area is searched on its own. Empty: anywhere.',
         ),
         const Subhead('Work'),
         Wrap(
@@ -487,8 +504,19 @@ class ProfilePage extends ConsumerWidget {
           lines: 3,
           hint: 'Right to work, notice period, hours, relocation, driving licence',
         ),
+        Field(
+          exclusions,
+          'Never show jobs that say',
+          lines: 3,
+          helper:
+              'One per line: a word or phrase in the title or employer (whole words), such as "night shift" '
+              'or an agency name. Those jobs are hidden and scored 0.',
+        ),
       ],
       onSave: () async {
+        final parsedAreas = [
+          for (final l in areas.text.split('\n')) ?HomeArea.parse(l),
+        ];
         await ref.mutate(
           (s) => s.book.saveProfile(
             p.copyWith(
@@ -496,7 +524,9 @@ class ProfilePage extends ConsumerWidget {
                 roles: linesIn(roles),
                 keywords: linesIn(keywords),
                 countries: picked,
-                locations: linesIn(locations),
+                locations: [for (final a in parsedAreas) a.place],
+                areas: parsedAreas,
+                radiusMiles: t.radiusMiles,
                 workModes: [
                   for (final m in _workModes.keys)
                     if (modes.contains(m)) m,
@@ -504,6 +534,7 @@ class ProfilePage extends ConsumerWidget {
                 salaryMin: intIn(salary),
                 salaryCurrency: currency.text.trim().toUpperCase(),
                 notes: notes.text.trim(),
+                exclusions: linesIn(exclusions),
               ),
             ),
           ),

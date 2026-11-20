@@ -1,0 +1,52 @@
+[
+ {
+  "id": "0a0a0a0a-3333-4ccc-9ddd-000000000003",
+  "text": "Customer Success Lead",
+  "categories": {
+   "commitment": "Regular Full Time (Salary)",
+   "department": "Customer Success",
+   "location": "Sampleford, Example State",
+   "team": "Customer Success Team",
+   "allLocations": [
+    "Sampleford, Example State"
+   ]
+  },
+  "createdAt": 1788199939703,
+  "hostedUrl": "https://jobs.lever.co/examplehealth/0a0a0a0a-3333-4ccc-9ddd-000000000003",
+  "applyUrl": "https://jobs.lever.co/examplehealth/0a0a0a0a-3333-4ccc-9ddd-000000000003/apply",
+  "workplaceType": "hybrid",
+  "country": "US",
+  "salaryRange": {
+   "min": 85000,
+   "max": 175000,
+   "currency": "USD",
+   "interval": "per-year-salary"
+  },
+  "descriptionPlain": "This is a made-up job, written for testing.\n \nJoin a small, friendly team that works directly with example customers and helps them get the most from the example product acro"
+ },
+ {
+  "id": "0a0a0a0a-4444-4ccc-9ddd-000000000004",
+  "text": "Dentist",
+  "categories": {
+   "commitment": "Regular Full Time (Salary)",
+   "department": "People (HR)",
+   "location": "Exampleton, EX",
+   "team": "People",
+   "allLocations": [
+    "Exampleton, EX"
+   ]
+  },
+  "createdAt": 1787600587936,
+  "hostedUrl": "https://jobs.lever.co/examplehealth/0a0a0a0a-4444-4ccc-9ddd-000000000004",
+  "applyUrl": "https://jobs.lever.co/examplehealth/0a0a0a0a-4444-4ccc-9ddd-000000000004/apply",
+  "workplaceType": "onsite",
+  "country": "US",
+  "salaryRange": {
+   "min": 150000,
+   "max": 185000,
+   "currency": "USD",
+   "interval": "per-year-salary"
+  },
+  "descriptionPlain": ""
+ }
+]

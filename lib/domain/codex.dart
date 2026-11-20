@@ -113,6 +113,11 @@ class Codex implements Ai {
   }) async {
     if (!grant.activeAt(_now())) throw AiException(subscriptionExpired('ChatGPT'));
     // Codex takes text and images only.
+    if (content.any((b) => b['type'] == 'image')) {
+      throw AiException(
+        'The ChatGPT subscription cannot read screenshots in Udyoga. Choose a Claude or Gemini model in Settings.',
+      );
+    }
     if (content.any((b) => b['type'] == 'document')) {
       throw AiException(
         'The ChatGPT subscription cannot read PDFs in Udyoga. Paste the text instead, or choose another model '

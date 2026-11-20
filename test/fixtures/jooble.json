@@ -1,0 +1,17 @@
+{
+ "totalCount": 1,
+ "jobs": [
+  {
+   "id": 1000000003,
+   "title": "Sales Manager",
+   "location": "Exampleville",
+   "snippet": "Join a made-up team at Example Trading...",
+   "salary": "17,600 UAH",
+   "source": "jooble",
+   "type": "Full-time",
+   "link": "https://ua.jooble.org/jdp/10003",
+   "company": "Example Trading Ltd",
+   "updated": "2023-09-15T12:55:35.3870000"
+  }
+ ]
+}

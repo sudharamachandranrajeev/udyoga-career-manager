@@ -1,21 +1,28 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
 import '../db/database.dart';
 import '../domain/advisor.dart';
 import '../domain/bluesky.dart';
+import '../domain/career_file_sync.dart';
 import '../domain/book.dart';
 import '../domain/ai.dart';
+import '../domain/ats.dart';
+import '../domain/background.dart';
 import '../domain/claude.dart';
 import '../domain/claude_code.dart';
 import '../domain/codex.dart';
 import '../domain/companion_service.dart';
 import '../domain/conversations.dart';
+import '../domain/employers.dart';
+import '../domain/feeds.dart';
 import '../domain/gemini.dart';
 import '../domain/insights.dart';
 import '../domain/linkedin_messages.dart';
@@ -24,7 +31,10 @@ import '../domain/mail_sync.dart';
 import '../domain/mail_transport.dart';
 import '../domain/pay.dart';
 import '../domain/profile.dart';
+import '../domain/recipes.dart';
 import '../domain/refresh.dart';
+import '../domain/route_refresh.dart';
+import '../domain/sponsors.dart';
 import '../domain/n8n.dart';
 import '../domain/subscription.dart';
 import '../domain/update.dart';
@@ -160,6 +170,16 @@ final practiceProvider = _rows<$CareerPracticeTable, PracticeSession>(
   orderBy: [(p) => OrderingTerm.desc(p.started)],
 );
 
+final roleProfilesProvider = _rows<$CareerRoleProfilesTable, RoleProfileRow>(
+  (db) => db.careerRoleProfiles,
+  orderBy: [(p) => OrderingTerm.desc(p.updated)],
+);
+
+final processesProvider = _rows<$CareerProcessesTable, ProcessRow>(
+  (db) => db.careerProcesses,
+  orderBy: [(p) => OrderingTerm.desc(p.updated)],
+);
+
 final answersProvider = _rows<$CareerAnswersTable, PracticeAnswer>(
   (db) => db.careerAnswers,
   orderBy: [(a) => OrderingTerm(expression: a.question)],
@@ -239,6 +259,19 @@ final mergeSuggestionsProvider = FutureProvider<List<MergeSuggestion>>((ref) {
 final knownAtTargetsProvider = FutureProvider<List<KnownAt>>((ref) {
   ref.watch(revisionProvider);
   return ref.watch(sessionProvider).book.knownAtTargets();
+});
+
+/// The employers the user watches, by name.
+final watchedEmployersProvider = FutureProvider<List<WatchedEmployer>>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.watchedEmployers();
+});
+
+/// The job-feed keys, the device-only ones (USAJOBS, Jooble) included.
+final feedKeysProvider = FutureProvider<FeedKeys>((ref) async {
+  ref.watch(revisionProvider);
+  final s = ref.watch(sessionProvider);
+  return (await s.book.feedKeys()).withSecrets(s.keys.store);
 });
 
 final targetEmployersProvider = FutureProvider<List<String>>((ref) {
@@ -387,21 +420,25 @@ final n8nLinkProvider = FutureProvider<N8nLink>((ref) {
 /// The adviser with the user's model and its key, or null until a key is set.
 final advisorProvider = FutureProvider<Advisor?>((ref) async {
   ref.watch(revisionProvider);
-  final s = ref.watch(sessionProvider);
-  final keys = await s.book.aiKeys();
-  final model = effectiveModel(await s.book.pref<String>(PrefKeys.aiModel, ''), keys);
+  return advisorFor(ref.watch(sessionProvider).book, ref.watch(httpClientProvider));
+});
+
+/// The adviser for [book]'s chosen model, or null without a key. Shared by
+/// the app and the background refresh, which has no providers.
+Future<Advisor?> advisorFor(CareerBook book, http.Client client) async {
+  final keys = await book.aiKeys();
+  final model = effectiveModel(await book.pref<String>(PrefKeys.aiModel, ''), keys);
   if (model == null) return null;
   final provider = AiProvider.of(model);
   final key = keys[provider]!;
-  final client = ref.watch(httpClientProvider);
-  void onUsage(AiUsage u) => s.book.addSpend(u, month: today().substring(0, 7)).ignore();
+  void onUsage(AiUsage u) => book.addSpend(u, month: today().substring(0, 7)).ignore();
   return Advisor(switch (provider) {
-    AiProvider.claudeCode => ClaudeCode(grant: (await s.book.grant(provider))!, model: model),
-    AiProvider.codex => Codex(grant: (await s.book.grant(provider))!, model: model),
+    AiProvider.claudeCode => ClaudeCode(grant: (await book.grant(provider))!, model: model),
+    AiProvider.codex => Codex(grant: (await book.grant(provider))!, model: model),
     AiProvider.claude => Claude(apiKey: key, model: model, client: client, onUsage: onUsage),
     AiProvider.gemini => Gemini(apiKey: key, model: model, client: client, onUsage: onUsage),
   }, today: today());
-});
+}
 
 /// The adviser, or an error telling the user to add a key.
 Future<Advisor> requireAdvisor(WidgetRef ref) async {
@@ -426,18 +463,36 @@ class RefreshController extends Notifier<RefreshState> {
   Future<RefreshReport?> run({bool force = false, bool ai = false}) async {
     if (state.running) return null;
     state = RefreshState(running: true, status: 'Starting…', last: state.last);
+    // The background refresh may be running in another process.
+    final lock = await ref.read(refreshLockProvider.future);
+    if (lock != null && !await lock.acquire('app')) {
+      state = RefreshState(
+        status: 'A background refresh is running; the jobs it finds appear when it ends.',
+        last: state.last,
+      );
+      return null;
+    }
     try {
       final s = ref.read(sessionProvider);
+      final client = ref.read(httpClientProvider);
       final report =
           await Refresher(
             s.book,
-            ref.read(httpClientProvider),
+            client,
             advisor: await ref.read(advisorProvider.future),
+            sponsors: await ref.read(sponsorStoreProvider.future),
+            secrets: s.keys.store,
+            watch: EmployerWatch(s.book, client),
+            recipes: () => recipeFetchFor(s.db, client),
+            routes: RouteRefresh(client, s.db),
           ).run(
             today: today(),
             force: force,
             ai: ai,
-            onProgress: (m) => state = RefreshState(running: true, status: m, last: state.last),
+            onProgress: (m) {
+              lock?.renew().ignore();
+              state = RefreshState(running: true, status: m, last: state.last);
+            },
           );
       state = RefreshState(last: report);
       ref.read(revisionProvider.notifier).bump();
@@ -445,11 +500,51 @@ class RefreshController extends Notifier<RefreshState> {
     } catch (e) {
       state = RefreshState(status: describeError(e), last: state.last);
       rethrow;
+    } finally {
+      await lock?.release();
     }
   }
 }
 
 final refreshProvider = NotifierProvider<RefreshController, RefreshState>(RefreshController.new);
+
+/// The lock shared with the background refresh, or null where there is no
+/// app folder (tests).
+final refreshLockProvider = FutureProvider<RefreshLock?>((ref) async {
+  try {
+    return RefreshLock.inFolder((await getApplicationSupportDirectory()).path);
+  } on Object {
+    return null;
+  }
+});
+
+/// The UK sponsor register's store on this device, or null where there is
+/// no app folder (tests).
+final sponsorStoreProvider = FutureProvider<SponsorStore?>((ref) async {
+  final s = ref.watch(sessionProvider);
+  try {
+    final dir = await getApplicationSupportDirectory();
+    return SponsorStore(
+      Directory('${dir.path}${Platform.pathSeparator}sponsors'),
+      ref.watch(httpClientProvider),
+      s.db,
+    );
+  } on Object {
+    return null;
+  }
+});
+
+/// The cached register (null before its first download). Re-read after a
+/// refresh; the store keeps it in memory until the file changes.
+final sponsorRegisterProvider = FutureProvider<SponsorRegister?>((ref) async {
+  ref.watch(revisionProvider);
+  final store = await ref.watch(sponsorStoreProvider.future);
+  try {
+    return await store?.load();
+  } on Object {
+    return null;
+  }
+});
 
 /// Runs the routine refresh and the mail check now and then hourly while
 /// the app is open; each run does only what is due. Read once at start-up.
@@ -462,4 +557,32 @@ final refreshTickerProvider = Provider<void>((ref) {
   tick();
   final timer = Timer.periodic(const Duration(hours: 1), (_) => tick());
   ref.onDispose(timer.cancel);
+
+  // The career file from sync: after the screens reload (a sync that
+  // brought changes, or a write), apply what arrived. Debounced, and a
+  // no-op when nothing changed (by SHA-256), so its own reload ends it.
+  Timer? wait;
+  var running = false;
+  Future<void> apply() async {
+    if (running) return;
+    running = true;
+    try {
+      final book = ref.read(sessionProvider).book;
+      if (await applySyncedCareerFile(book, await book.documentFolders(), today: today())) {
+        ref.read(revisionProvider.notifier).bump();
+        ref.read(syncProvider.notifier).soon();
+      }
+    } on Object {
+      // A broken file is reported by the routine refresh, which applies
+      // the same file.
+    } finally {
+      running = false;
+    }
+  }
+
+  ref.listen(revisionProvider, (_, _) {
+    wait?.cancel();
+    wait = Timer(const Duration(seconds: 2), apply);
+  });
+  ref.onDispose(() => wait?.cancel());
 });

@@ -11,6 +11,8 @@ const udyogaHints = <String, String>{
   'nav.prepare': 'Interview practice, your coach and what to learn next.',
   'nav.you': 'Your profile and CV, your career map, and Settings.',
   'nav.applications': 'Every application by stage, with follow-up dates.',
+  'nav.explore':
+      'Every country screened for you: where you can work now, later or not, and your route tracks.',
   'nav.interview': 'Practice interviews: answer questions and get scored.',
   'nav.career': 'Your career map: every path from your current role.',
   'nav.contacts': 'Recruiters, hiring managers and referrers to follow up.',
@@ -22,12 +24,34 @@ const udyogaHints = <String, String>{
   'jobs.refresh': 'Check the job sites now.',
   'jobs.ai': 'Ask the AI to search LinkedIn, Indeed, national and public-sector boards for you.',
   'jobs.add': 'Paste a job link or the advert text.',
+  'jobs.employers': 'Their new openings, from NHS Jobs, their job board or careers page, show on Today.',
+  'today.watched': 'New openings at the employers you watch.',
   'jobs.portals': 'Open searches for your roles on the main job sites, in your browser.',
   'jobs.fit': 'How well the job fits you, 0 to 100. A star means the AI assessed it.',
   'job.n8n': 'Sends this job (not your name or contact details) to your n8n workflow and adds the contacts it finds.',
   'job.assess': 'The AI reads the advert, researches the employer and scores your fit honestly.',
   'job.tailor': 'A CV and cover letter for this job, from your real experience only.',
   'job.leads': 'Find the recruiter, hiring manager and agencies for this job.',
+  'job.eligibility':
+      'Lines in the advert that limit who can apply (visa, nationality, residence, vetting, language, local '
+      'experience), checked against the rights and languages on your profile.',
+  'profile.rights': 'Passports, rights to work and languages. Udyoga checks every advert against them.',
+  'todos': 'Your own to-do list. Due and overdue ones show on Today.',
+  // Explore
+  'explore.tier':
+      'Ready: you may work there now. Possible: a sourced route fits. Later: a gap to close or unverified rules. '
+      'Blocked: nothing open on the current rules.',
+  'explore.route':
+      'The route\'s rules with their sources and the day they were read. Unverified ones say so.',
+  'explore.codes':
+      'Your job titles coded as SOC 2020 (UK) and ISCO-08. A route\'s rules and pay floor follow the code.',
+  'explore.rounds': 'The latest rounds of invitations, read from IRCC\'s own data.',
+  'explore.jobs': 'Openings in this country from your job sites.',
+  'explore.assess':
+      'The AI checks the screen against official sources: live adverts, pay against living costs, the route, '
+      'blockers and pushback, with how sure it is.',
+  'explore.plan': 'Ordered steps timed to your deadline, with a qualification planner. Steps can become to-dos or go to Vidya.',
+  'explore.track': 'A route you are working on, with the trigger that starts it and dated milestones.',
   // Applications
   'apps.followup': 'When to chase this up. Add it to your calendar so it reminds you.',
   'apps.calendar': 'Download every follow-up as a calendar file with 9 am alerts.',
@@ -58,9 +82,16 @@ const udyogaHints = <String, String>{
   'page.jobs':
       'Openings for your target roles in your countries, refreshed every few hours from job sites, and by '
       'the AI search when you turn it on. Open one to assess your fit, tailor your CV and apply.',
+  'page.explore':
+      'Every country, screened against your passports, rights to work, languages, job codes and pay. Rules carry '
+      'their source and date; open a country for its routes, live jobs, an AI assessment and a prep plan.',
   'page.applications':
       'Each application by stage. Udyoga sets a follow-up date when it moves on, and marks it No reply '
       'after six weeks of silence.',
+  'page.spoken':
+      'The interviewer reads each question aloud; answer by voice or type. Before each answer you see what the '
+      'question tests. The interviewer follows up on what your answer leaves out. After it: your transcript, '
+      'how you said it against usual ranges, and with an AI one strength and one fix.',
   'page.interview':
       'Questions a real panel would ask for the role, then a strict review of each answer on seven '
       'dimensions, with a better answer and the follow-up to expect.',

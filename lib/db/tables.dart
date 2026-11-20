@@ -44,6 +44,10 @@ class JobListings extends Table with SyncedRow {
   /// 0 to 100: the AI's when it has assessed the job, else the local match.
   IntColumn get fit => integer().nullable()();
 
+  /// Who set [fit]: local (the offline match, redone whenever the profile
+  /// changes) | triage (the AI's quick score) | ai (a full assessment).
+  TextColumn get fitBy => text().withDefault(const Constant('local'))();
+
   /// The AI's assessment (FitAssessment), '' until asked.
   TextColumn get assessment => text().withDefault(const Constant(''))();
   TextColumn get notes => text().withDefault(const Constant(''))();
@@ -344,6 +348,30 @@ class CareerGrowth extends Table with SyncedRow {
   TextColumn get added => text()();
 }
 
+/// A route track: one way into a country being worked on, with dated
+/// milestones and the trigger that starts or switches it. Several run side
+/// by side (say Ireland now, the UK if a sponsor appears).
+@DataClassName('RouteTrack')
+class CareerTracks extends Table with SyncedRow {
+  /// ISO alpha-2.
+  TextColumn get country => text()();
+
+  /// The route's id from the route tables ("gb.skilled-worker"), or ''.
+  TextColumn get routeId => text().withDefault(const Constant(''))();
+  TextColumn get title => text()();
+
+  /// active | paused | done | dropped
+  TextColumn get status => text().withDefault(const Constant('active'))();
+
+  /// What starts or switches this track ("a sponsored offer at £41,700").
+  TextColumn get trigger => text().withDefault(const Constant(''))();
+
+  /// JSON list of {id, title, due (yyyy-MM-dd or null), done (yyyy-MM-dd or null), todo (row id or null)}.
+  TextColumn get milestones => text().withDefault(const Constant('[]'))();
+  TextColumn get notes => text().withDefault(const Constant(''))();
+  TextColumn get added => text()();
+}
+
 /// An interview practice round.
 @DataClassName('PracticeSession')
 class CareerPractice extends Table with SyncedRow {
@@ -359,6 +387,60 @@ class CareerPractice extends Table with SyncedRow {
 
   /// Mean of the scored answers, 0 to 10.
   RealColumn get score => real().nullable()();
+
+  /// The role profile (career_role_profiles) the round's questions came
+  /// from, if any.
+  TextColumn get profileId => text().nullable()();
+
+  /// The panel scoring of the round (interview plan I3) as JSON: the
+  /// framework and each answer's scores with the quotes they rest on, ''
+  /// until scored. Text only, like the transcripts.
+  TextColumn get debrief => text().withDefault(const Constant(''))();
+
+  /// How nervous the candidate felt before and after the round, 1 (calm)
+  /// to 5 (very nervous), when they said (interview plan I4).
+  IntColumn get nervesBefore => integer().nullable()();
+  IntColumn get nervesAfter => integer().nullable()();
+}
+
+/// A role to practise for (interview plan I3): the criteria from its advert
+/// and person specification, and the framework its panel scores with.
+@DataClassName('RoleProfileRow')
+class CareerRoleProfiles extends Table with SyncedRow {
+  TextColumn get title => text()();
+  TextColumn get employer => text().withDefault(const Constant(''))();
+  TextColumn get jobId => text().nullable()();
+
+  /// A framework id (domain/interview_scoring.dart).
+  TextColumn get framework => text().withDefault(const Constant('private'))();
+
+  /// Criterion list as JSON.
+  TextColumn get criteria => text().withDefault(const Constant('[]'))();
+
+  /// ai | manual
+  TextColumn get source => text().withDefault(const Constant('manual'))();
+  TextColumn get added => text()();
+  TextColumn get updated => text()();
+}
+
+/// A whole interview process being rehearsed (interview plan I2): its
+/// stages as edited, and how far it has got, so it can be picked up later.
+@DataClassName('ProcessRow')
+class CareerProcesses extends Table with SyncedRow {
+  TextColumn get name => text()();
+
+  /// The template it started from.
+  TextColumn get template => text().withDefault(const Constant(''))();
+  TextColumn get profileId => text().nullable()();
+
+  /// InterviewProcess as JSON.
+  TextColumn get process => text()();
+
+  /// ProcessProgress as JSON: each stage's round, what it covered and what
+  /// it carries forward. Text only.
+  TextColumn get progress => text().withDefault(const Constant('{}'))();
+  TextColumn get started => text()();
+  TextColumn get updated => text()();
 }
 
 /// One answer in a practice round and its evaluation.
@@ -460,6 +542,9 @@ class CareerStories extends Table with SyncedRow {
   TextColumn get source => text().withDefault(const Constant('manual'))();
   TextColumn get sourceId => text().nullable()();
 
+  /// The role criteria a practice answer evidenced, JSON list of text.
+  TextColumn get criteria => text().withDefault(const Constant('[]'))();
+
   /// False until the candidate has checked it is true as written.
   BoolColumn get confirmed => boolean().withDefault(const Constant(false))();
   TextColumn get added => text()();
@@ -472,6 +557,34 @@ class BridgeStudyPlans extends Table with SyncedRow, StudyPlanColumns {}
 
 @DataClassName('StudyProgressRow')
 class BridgeStudyProgress extends Table with SyncedRow, StudyProgressColumns {}
+
+/// The app-relevant files of the candidate's career file folder, as the
+/// device that reads the folder last saw them, so devices without the
+/// folder apply the same settings, recipes and Vidya plans. Only an
+/// allow-list travels (see domain/career_file_sync.dart), inside the
+/// end-to-end-encrypted sync like every other row. The id is the path.
+@DataClassName('CareerFileDoc')
+class CareerFileDocs extends Table with SyncedRow {
+  /// Relative to the career folder, with forward slashes:
+  /// `settings/udyoga.json`, `settings/vidya-….json`, `recipes/….json`.
+  TextColumn get path => text()();
+
+  /// settings | vidya-plan | recipe
+  TextColumn get kind => text()();
+
+  /// SHA-256 of [content] as UTF-8, hex.
+  TextColumn get sha256 => text()();
+
+  /// The file's text; '' once removed from the folder (the row is then
+  /// tombstoned).
+  TextColumn get content => text().withDefault(const Constant(''))();
+
+  /// When this version was read (UTC, ISO 8601).
+  TextColumn get updated => text()();
+
+  /// The device that read it: its name, for "from device …".
+  TextColumn get device => text().withDefault(const Constant(''))();
+}
 
 @DataClassName('Pref')
 class Prefs extends Table with SyncedRow, PrefColumns {}

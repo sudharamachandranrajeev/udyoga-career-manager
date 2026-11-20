@@ -143,6 +143,11 @@ class Gemini implements Ai {
       'data': str(obj(block['source'])['data']),
       'mime_type': str(obj(block['source'])['media_type']),
     },
+    'image' => {
+      'type': 'image',
+      'data': str(obj(block['source'])['data']),
+      'mime_type': str(obj(block['source'])['media_type']),
+    },
     _ => {'type': 'text', 'text': str(block['text'])},
   };
 

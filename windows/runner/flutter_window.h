@@ -12,7 +12,10 @@
 class FlutterWindow : public Win32Window {
  public:
   // Creates a new FlutterWindow hosting a Flutter view running |project|.
-  explicit FlutterWindow(const flutter::DartProject& project);
+  // A |headless| window is never shown: `Udyoga.exe --refresh-once` runs
+  // the background refresh from Task Scheduler and exits.
+  explicit FlutterWindow(const flutter::DartProject& project,
+                         bool headless = false);
   virtual ~FlutterWindow();
 
  protected:
@@ -25,6 +28,9 @@ class FlutterWindow : public Win32Window {
  private:
   // The project to run.
   flutter::DartProject project_;
+
+  // Never show the window (the background refresh).
+  bool headless_;
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
