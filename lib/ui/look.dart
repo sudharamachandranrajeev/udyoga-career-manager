@@ -308,6 +308,12 @@ ThemeData udyogaTheme(Brightness b) {
     snackBarTheme: base.snackBarTheme.copyWith(
       shape: RoundedRectangleBorder(borderRadius: small),
       backgroundColor: dark ? const Color(0xFF1C2643) : ink,
+      // The background is dark in both modes, so the text must be light in
+      // both. Material's default (onInverseSurface) is dark in dark mode,
+      // which made toasts unreadable.
+      contentTextStyle: base.textTheme.bodyMedium?.copyWith(color: const Color(0xFFF4F6FB)),
+      actionTextColor: const Color(0xFF9DB8FF),
+      closeIconColor: const Color(0xFFF4F6FB),
     ),
     sliderTheme: base.sliderTheme.copyWith(trackHeight: 6),
     progressIndicatorTheme: ProgressIndicatorThemeData(
