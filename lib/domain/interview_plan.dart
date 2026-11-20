@@ -425,6 +425,24 @@ int _ownActions(String t) {
   return count;
 }
 
+/// True when the speaker tells of something they did: "I rang", "I then
+/// moved". A plan ("I would ring") or a habit told in the present ("I
+/// check") is not a past action.
+bool hasOwnPastAction(String text) {
+  for (final sentence in _normalise(text, commas: true).split(' . ')) {
+    final w = sentence.trim().split(' ');
+    for (var i = 0; i < w.length; i++) {
+      if (w[i] != 'i') continue;
+      var j = i + 1;
+      while (j < w.length && _between.contains(w[j])) {
+        j++;
+      }
+      if (j < w.length && _pastAction(w[j])) return true;
+    }
+  }
+  return false;
+}
+
 /// The elements [transcript] covers. Panels can only score what was said,
 /// so this reads the words alone, on the device.
 Set<AnswerElement> detectElements(String transcript) {

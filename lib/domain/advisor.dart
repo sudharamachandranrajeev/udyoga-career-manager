@@ -586,12 +586,15 @@ Also give the job title, the employer, and the framework this employer most like
           '${[for (final a in answers) '<answer question="${a.index + 1}" tests="${a.criteria.join(',')}">\n<asked>${a.question}</asked>\n<said>\n${a.answer}\n</said>\n</answer>'].join('\n')}\n'
           '</round>',
         ),
-        _text('''
+        _text(
+          '''
 For each answer, score each criterion it tests (its "tests" ids) on the scale:
 - level: a code from the scale. "${scale.noEvidence.code}" when the answer has no evidence for it, or only a bare claim.
 - quote: the candidate's exact words (one sentence or part of one, copied character for character) that the level rests on; "" for "${scale.noEvidence.code}".
+A claim without an example is "${scale.noEvidence.code}": "I am a good team player", "I always…" or "I would…" with no real instance of something the candidate did.
 Then one strength of the answer and one fix: a concrete thing to do differently in the answer next time.
-The strength and the fix never mention scores, levels, the scale or its numbers (not "move toward a 3", not "to score higher"). Say what to do, for example "Say how you knew it worked: a number, a check or feedback."'''),
+The strength and the fix never mention scores, levels, the scale or its numbers (not "move toward a 3", not "to score higher"). Say what to do, for example "Say how you knew it worked: a number, a check or feedback."''',
+        ),
       ],
       schema: scoringSchema(scale, [for (final c in criteria) c.id]),
       effort: 'medium',

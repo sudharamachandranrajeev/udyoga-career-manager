@@ -188,6 +188,103 @@ void main() {
     });
   });
 
+  group('a claim without an example', () {
+    final scale = Framework.of('nhs_values').scale;
+    Verified score(String answer, String quote, {String level = '1', ScoringScale? on}) => verifyScores(
+      [
+        AnswerScore(
+          question: 0,
+          scores: [CriterionScore(criterionId: 'c2', code: level, quote: quote)],
+        ),
+      ],
+      on ?? scale,
+      heard: {0: answer},
+      asked: {
+        0: ['c2'],
+      },
+    );
+
+    test('a bare claim reads as no evidence, whatever the provider scored', () {
+      final v = score(bareClaim, 'I am a very good team player');
+      expect(v.dropped, 0);
+      expect(v.scores.single.level.code, 'N/O');
+      expect(v.scores.single.quote, '');
+      expect(v.scores.single.reason, claimReason);
+      // On a scale whose lowest level is a number, the same.
+      final ks = Framework.of('hsc_ni').scale;
+      expect(score(bareClaim, 'I value working together', on: ks).scores.single.level.code, '0');
+      for (final claim in [
+        "I'm passionate about patient care and I always give a hundred and ten percent.",
+        "I'm a people person.",
+        'I always put the team first.',
+        'People say I am easy to work with.',
+        "I've got really good communication skills.",
+      ]) {
+        final quote = claim.replaceAll(RegExp(r'[.]$'), '');
+        // "a hundred and ten percent" is a number: that one is kept.
+        final kept = claim.contains('hundred');
+        expect(claimWithoutExample(quote, claim), !kept, reason: claim);
+      }
+    });
+
+    test('a hypothetical "I would" with nothing done reads as no evidence', () {
+      const answer = 'I would talk to the team and I would make sure everyone felt listened to.';
+      final v = score(answer, 'I would talk to the team');
+      expect(v.scores.single.level.code, 'N/O');
+      expect(v.scores.single.claimOnly, isTrue);
+    });
+
+    test('a claim with an example behind it keeps its score', () {
+      const answer =
+          'I am a good team player. When a colleague was off sick last winter, I took over her clinic list and '
+          'I rang every patient so nobody missed an appointment.';
+      // The quote is the claim, but the answer goes on to a real instance.
+      final v = score(answer, 'I am a good team player');
+      expect(v.scores.single.level.code, '1');
+      expect(v.scores.single.reason, '');
+      // A claim sentence followed by its own action is kept.
+      const same = "I'm good at working together, I set up a shared rota for the reception team.";
+      expect(claimWithoutExample("I'm good at working together", same), isFalse);
+      // A past action of the speaker's is evidence.
+      final w = score(answer, 'I took over her clinic list');
+      expect(w.scores.single.level.code, '1');
+    });
+
+    test('a number or a result is kept', () {
+      const numbers = 'I am always on time: the clinic list went out by 8am every day for 2 years.';
+      expect(score(numbers, 'I am always on time').scores.single.level.code, '1');
+      const result = 'I always check the list twice, and as a result the errors stopped.';
+      expect(score(result, 'I always check the list twice').scores.single.level.code, '1');
+      // An action told in the present, not a self-description, is left to
+      // the provider's score.
+      const habit = "I check the patient's date of birth before I open a record.";
+      expect(score(habit, "I check the patient's date of birth").scores.single.level.code, '1');
+    });
+
+    test('the debrief says why a claim scored nothing', () {
+      final r = DebriefRound.of(
+        questions: questionsFromProfile(profile),
+        answers: {2: bareClaim},
+        profile: profile,
+      );
+      final v = verifyScores(
+        [
+          const AnswerScore(
+            question: 2,
+            scores: [CriterionScore(criterionId: 'c2', code: '1', quote: 'I am a very good team player')],
+          ),
+        ],
+        scale,
+        heard: r.heard,
+        asked: r.asked,
+      );
+      final d = Debrief.build(framework: Framework.of('nhs_values'), round: r, verified: v);
+      final c2 = d.coverage.firstWhere((c) => c.criterion.id == 'c2');
+      expect(c2.status, Coverage.missing);
+      expect(c2.note, claimNote);
+    });
+  });
+
   group('feedback wording', () {
     test('a fix that talks about scores is cut back to the action, or dropped', () {
       // Cut back to the task-level part.

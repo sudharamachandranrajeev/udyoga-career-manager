@@ -706,7 +706,11 @@ final _scaleTalk = [
     caseSensitive: false,
   ),
   // "a 3", "an 4": a bare number with an article is a scale point.
-  RegExp(r'\b(a|an)\s+\d+\b' '$_countUnits', caseSensitive: false),
+  RegExp(
+    r'\b(a|an)\s+\d+\b'
+    '$_countUnits',
+    caseSensitive: false,
+  ),
   RegExp(r'\b\d+\s*(/\s*\d+|out of \d+)', caseSensitive: false),
   RegExp(r'\bN/O\b'),
   RegExp(r'\b(anchors?|the scale|on the scale)\b', caseSensitive: false),
@@ -756,11 +760,77 @@ class VerifiedScore {
     required this.criterionId,
     required this.level,
     this.quote = '',
+    this.reason = '',
   });
   final int question;
   final String criterionId;
   final ScaleLevel level;
   final String quote;
+
+  /// Why a score the AI gave was turned into "no evidence" ([claimReason]),
+  /// or ''.
+  final String reason;
+
+  bool get claimOnly => reason == claimReason;
+}
+
+/// The reason a score with a real quote still reads as "no evidence": the
+/// quote describes the candidate, or what they would do, with no instance
+/// behind it (plan rule 1).
+const claimReason = 'claim without an example';
+
+/// What the debrief says for a criterion whose only evidence was a claim.
+const claimNote = 'Claim without an example — add one real instance.';
+
+// A quote that describes the speaker rather than something they did: "I am
+// a good team player", "I'm passionate about", "I always", "I value",
+// "people say I". Read on [_plain] text.
+final _selfDescription = RegExp(
+  r"\bi('m| am)\b|\bi (always|really|truly|genuinely)\b|"
+  r"\bi (value|believe|love|enjoy|care about|like to think|pride myself|consider myself|see myself|thrive)\b|"
+  r"\bi( have| have got|'ve got) (a )?(very |really )?(good|great|strong|excellent)\b|"
+  r"\b(people|colleagues|others|my manager) (say|said|describe|would say|would describe)\b|"
+  r"\bi would describe myself\b",
+);
+
+// A plan rather than an instance: "I would ring", "I'd check", "I will".
+final _hypothetical = RegExp(r"\bi (would|will|could|might)\b|\bi'(d|ll)\b");
+
+// Specifics: a number, a day or month, a count in words.
+final _specific = RegExp(
+  r'\d|\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|fifty|hundred|dozen|'
+  r'twice|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|june|july|'
+  r'august|september|october|november|december)\b',
+);
+
+/// True when [quote] is only a claim: it describes the speaker ("I am a
+/// good team player") or what they would do ("I would ring the patient"),
+/// and the answer it comes from ([transcript]) holds nothing concrete: no
+/// past action of the speaker's, no example, number, time, named thing or
+/// result. Kept conservative: when in doubt it is not a claim, and the
+/// score stands, so a claim followed by a real instance keeps its score
+/// even when the quote is the claim.
+bool claimWithoutExample(String quote, String transcript) {
+  final q = _plain(quote);
+  if (!_selfDescription.hasMatch(q) && !_hypothetical.hasMatch(q)) return false;
+  final context = '$quote\n$transcript';
+  if (hasOwnPastAction(context)) return false;
+  if (_specific.hasMatch(_plain(context))) return false;
+  final els = detectElements(context);
+  if (els.contains(AnswerElement.situation) ||
+      els.contains(AnswerElement.measure) ||
+      els.contains(AnswerElement.result)) {
+    return false;
+  }
+  // A name mid-sentence ("the Lorenzo system", "Ward 4") is a specific.
+  for (final s in context.split(RegExp(r'(?<=[.!?])\s+|\n+'))) {
+    final words = s.trim().split(RegExp(r'\s+'));
+    for (final w in words.skip(1)) {
+      final bare = w.replaceAll(RegExp(r'^[^A-Za-z]+|[^A-Za-z]+$'), '');
+      if (RegExp(r'^[A-Z][a-z]').hasMatch(bare)) return false;
+    }
+  }
+  return true;
 }
 
 /// The checked scores and what was dropped.
@@ -782,7 +852,9 @@ class Verified {
 /// its level is on [scale], its criterion is one the question tests (from
 /// [asked]: question index to criterion ids) and its quote is in that
 /// question's transcript ([heard]). Anything else is dropped and the
-/// criterion reads as no evidence for that answer: never guessed.
+/// criterion reads as no evidence for that answer: never guessed. A real
+/// quote that is only a claim ([claimWithoutExample]) also reads as no
+/// evidence, with [claimReason]; it is not counted as dropped.
 Verified verifyScores(
   List<AnswerScore> raw,
   ScoringScale scale, {
@@ -813,6 +885,17 @@ Verified verifyScores(
       if (!none && !quoteInTranscript(s.quote, transcript)) {
         dropped++;
         kept.add(VerifiedScore(question: a.question, criterionId: s.criterionId, level: scale.noEvidence));
+        continue;
+      }
+      if (!none && claimWithoutExample(s.quote, transcript)) {
+        kept.add(
+          VerifiedScore(
+            question: a.question,
+            criterionId: s.criterionId,
+            level: scale.noEvidence,
+            reason: claimReason,
+          ),
+        );
         continue;
       }
       kept.add(
@@ -1034,7 +1117,12 @@ class Debrief {
             note: switch (status) {
               Coverage.evidenced => 'Scored ${best!.level.code} (${best.level.label}) on what you said.',
               Coverage.thin => 'Touched on, but thin: ${best!.level.label.toLowerCase()} evidence.',
-              Coverage.missing => answered ? 'No evidence heard: ${scale.noEvidence.code}.' : 'Not answered.',
+              Coverage.missing =>
+                !answered
+                    ? 'Not answered.'
+                    : mine.any((s) => s.claimOnly)
+                    ? claimNote
+                    : 'No evidence heard: ${scale.noEvidence.code}.',
             },
           ),
         );

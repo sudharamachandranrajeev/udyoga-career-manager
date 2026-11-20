@@ -934,6 +934,28 @@ about a minute a step on a laptop processor. `qwen2.5:7b` stays the
 suggested default. The quality note already says a small model scores
 less reliably.
 
+**The bare-claim fix.** A real quote is no longer enough on its own.
+After the quote check, `verifyScores` runs a second check on the device,
+for every provider (cloud and Ollama): `claimWithoutExample`. A quote
+that only describes the candidate ("I am a good team player", "I'm
+passionate about", "I always…", "I value…") or says what they would do
+("I would…") becomes N/O, with the reason "claim without an example",
+unless the answer holds something concrete: a past action of the
+speaker's ("I rang", "I set up"), an example or time ("last winter"), a
+number, a named thing, or a result. It is kept conservative: a quote
+that is not a self-description, or any concrete detail anywhere in the
+answer, leaves the score as the model gave it. The debrief says "Claim
+without an example — add one real instance." for these, and the
+scoring prompt has one more line: a claim without an example is N/O.
+
+Rerun of the live check (same laptop, `llama3.2:3b`, CPU): the advert
+took 49 s, the plan 66 s, scoring 47 s, each on the first request. This
+time the model itself scored the team-player answer N/O (no quote), so
+the new check had nothing to turn; the earlier reply (level 1, quoting
+"I am a very good team player") is now a unit test and comes out N/O.
+The diary answer kept its 2 (Good). `verifyScores` kept 3 scores and
+dropped 6, again all scores for criteria a question does not test.
+
 **Still to try.** `qwen2.5:7b` (about 4.7 GB), on a stronger laptop with
 a 12th generation Intel Core i7 and an RTX 4050 with 6 GB of video
 memory. It should fit in video memory and answer much faster. Compare it

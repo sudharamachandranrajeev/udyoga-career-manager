@@ -169,7 +169,13 @@ Future<void> _run() async {
       'dropped': v.dropped,
       'scores': [
         for (final s in v.scores)
-          {'q': s.question + 1, 'criterion': s.criterionId, 'level': s.level.code, 'quote': s.quote},
+          {
+            'q': s.question + 1,
+            'criterion': s.criterionId,
+            'level': s.level.code,
+            'quote': s.quote,
+            if (s.reason.isNotEmpty) 'reason': s.reason,
+          },
       ],
       'answers': {
         for (final e in v.answers.entries) '${e.key + 1}': {'strength': e.value.strength, 'fix': e.value.fix},
