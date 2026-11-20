@@ -869,8 +869,12 @@ Ollama 0.40.7 (installed here) ran inside the namespace on
 **Ollama itself.** At start-up, Ollama's server tried to reach
 ollama.com 3 times (a cloud model cache). The namespace stopped it at the
 name lookup. That is Ollama's own process, not Udyoga, and the guard
-cannot reach it. Someone who wants Ollama fully offline should check
-Ollama's own settings.
+cannot reach it. Ollama's FAQ ("How do I disable Ollama's cloud
+features?") names the setting: start Ollama with `OLLAMA_NO_CLOUD=1`, or
+put `"disable_ollama_cloud": true` in `~/.ollama/server.json`, then
+restart it. The FAQ does not say this stops every connection to
+ollama.com, and the macOS and Windows apps still download their own
+updates; Udyoga cannot control Ollama's own network use.
 
 **Not tried.** No model was pulled (several GB), so local planning and
 scoring were not run against a real model. Fake-server tests cover the

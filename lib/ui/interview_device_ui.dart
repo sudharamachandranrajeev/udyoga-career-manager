@@ -64,7 +64,9 @@ class _InterviewDeviceCardState extends ConsumerState<InterviewDeviceCard> {
               'Uses only what is on this device: the voice, the speech detector, the transcriber, the face '
               'finder and, when it is running here, Ollama. Without Ollama the built-in follow-ups and checks '
               'are used. Nothing from the interview screens goes to the network, and models cannot be '
-              'downloaded while it is on.',
+              'downloaded while it is on. Ollama itself can still contact ollama.com: to stop its cloud '
+              'features, start Ollama with OLLAMA_NO_CLOUD=1 (or put "disable_ollama_cloud": true in '
+              '~/.ollama/server.json) and restart it.',
             ),
             value: dev.offline,
             onChanged: (v) => unawaited(_save(dev.copyWith(offline: v))),
