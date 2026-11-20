@@ -810,10 +810,18 @@ final _specific = RegExp(
 /// result. Kept conservative: when in doubt it is not a claim, and the
 /// score stands, so a claim followed by a real instance keeps its score
 /// even when the quote is the claim.
-bool claimWithoutExample(String quote, String transcript) {
+///
+/// For a [situational] question ("What would you do if…") a plan in the
+/// conditional is the answer asked for, so "I would…" is not a claim in
+/// itself there: it stands when the plan has a concrete step
+/// ([hasConcreteStep]). "I would do my best" still reads as a claim, and so
+/// does a self-description on any question.
+bool claimWithoutExample(String quote, String transcript, {bool situational = false}) {
   final q = _plain(quote);
-  if (!_selfDescription.hasMatch(q) && !_hypothetical.hasMatch(q)) return false;
+  final self = _selfDescription.hasMatch(q);
+  if (!self && !_hypothetical.hasMatch(q)) return false;
   final context = '$quote\n$transcript';
+  if (situational && !self && hasConcreteStep(context)) return false;
   if (hasOwnPastAction(context)) return false;
   if (_specific.hasMatch(_plain(context))) return false;
   final els = detectElements(context);
@@ -854,12 +862,15 @@ class Verified {
 /// question's transcript ([heard]). Anything else is dropped and the
 /// criterion reads as no evidence for that answer: never guessed. A real
 /// quote that is only a claim ([claimWithoutExample]) also reads as no
-/// evidence, with [claimReason]; it is not counted as dropped.
+/// evidence, with [claimReason]; it is not counted as dropped. Questions
+/// in [situational] (by index) expect a plan, so a concrete "I would…" is
+/// not a claim on them.
 Verified verifyScores(
   List<AnswerScore> raw,
   ScoringScale scale, {
   required Map<int, String> heard,
   required Map<int, List<String>> asked,
+  Set<int> situational = const {},
 }) {
   final kept = <VerifiedScore>[];
   final answers = <int, ({String strength, String fix})>{};
@@ -887,7 +898,7 @@ Verified verifyScores(
         kept.add(VerifiedScore(question: a.question, criterionId: s.criterionId, level: scale.noEvidence));
         continue;
       }
-      if (!none && claimWithoutExample(s.quote, transcript)) {
+      if (!none && claimWithoutExample(s.quote, transcript, situational: situational.contains(a.question))) {
         kept.add(
           VerifiedScore(
             question: a.question,
@@ -1221,6 +1232,12 @@ class DebriefRound {
 
   /// The criterion ids each question tests.
   Map<int, List<String>> get asked => {for (final q in questions) q.index: q.criteria};
+
+  /// The questions that ask what the candidate would do ([isSituational]).
+  Set<int> get situational => {
+    for (final q in questions)
+      if (isSituational(q.question.category, q.question.question)) q.index,
+  };
 
   /// The answered, scored questions, for the scorer.
   List<DebriefQuestion> get answered => [

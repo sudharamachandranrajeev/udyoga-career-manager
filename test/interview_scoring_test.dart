@@ -234,6 +234,42 @@ void main() {
       expect(v.scores.single.claimOnly, isTrue);
     });
 
+    test('on a situational question a concrete plan keeps its score', () {
+      Verified onSituational(String answer, String quote) => verifyScores(
+        [
+          AnswerScore(
+            question: 0,
+            scores: [CriterionScore(criterionId: 'c2', code: '3', quote: quote)],
+          ),
+        ],
+        scale,
+        heard: {0: answer},
+        asked: {
+          0: ['c2'],
+        },
+        situational: {0},
+      );
+      // Found from the wording when the category does not say.
+      expect(isSituational('', 'What would you do if a caller was angry about a cancelled clinic?'), isTrue);
+      expect(isSituational('Situational', 'A caller is angry.'), isTrue);
+      expect(isSituational('', 'Tell us about a time you calmed an angry caller.'), isFalse);
+      const plan =
+          'I would first check the booking on the system to see why it was cancelled, then call the caller back '
+          'and offer the next free slot.';
+      final kept = onSituational(plan, 'I would first check the booking on the system');
+      expect(kept.scores.single.level.code, '3');
+      expect(kept.scores.single.reason, '');
+      // A plan with no step is still only a claim.
+      const vague = 'I would do my best and I would make sure to help them.';
+      final none = onSituational(vague, 'I would do my best');
+      expect(none.scores.single.level.code, 'N/O');
+      expect(none.scores.single.reason, claimReason);
+      // A self-description is a claim on a situational question too.
+      expect(onSituational(bareClaim, 'I am a very good team player').scores.single.level.code, 'N/O');
+      // On a behavioural question the same plan reads as no evidence.
+      expect(score(plan, 'I would first check the booking on the system').scores.single.level.code, 'N/O');
+    });
+
     test('a claim with an example behind it keeps its score', () {
       const answer =
           'I am a good team player. When a colleague was off sick last winter, I took over her clinic list and '

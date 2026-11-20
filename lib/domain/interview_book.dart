@@ -129,6 +129,7 @@ extension InterviewBook on CareerBook {
             framework.scale,
             heard: data.heard,
             asked: data.asked,
+            situational: data.situational,
           );
     return Debrief.build(framework: framework, round: data, verified: verified, wholeProfile: wholeProfile);
   }

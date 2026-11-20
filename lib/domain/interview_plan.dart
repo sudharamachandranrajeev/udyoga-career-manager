@@ -123,6 +123,14 @@ final _askedForExample = RegExp(
   r'^(tell (us|me) about a time|describe a time|give (us |me )?an example|can you think of a time|when have you)',
 );
 
+final _askedForPlan = RegExp(r'what would you do|how would you|\bimagine\b|\bsuppose\b|if you were');
+
+/// True when [q] asks what the candidate would do ("What would you do
+/// if…", "Imagine…"): its category says situational, or its wording does.
+/// A plan in the conditional is the expected answer to one.
+bool isSituational(String category, String question) =>
+    category.toLowerCase().contains('situational') || _askedForPlan.hasMatch(question.toLowerCase());
+
 /// The elements a question of [category] calls for, with no AI.
 List<AnswerElement> expectedFor(String category, String question) {
   final c = category.toLowerCase();
@@ -423,6 +431,59 @@ int _ownActions(String t) {
     }
   }
   return count;
+}
+
+/// Words after a planned verb that make no step of it ("I would make sure",
+/// "I would check everything").
+const _noObject = {
+  'sure',
+  'best',
+  'it',
+  'that',
+  'this',
+  'things',
+  'everything',
+  'something',
+  'anything',
+  'whatever',
+  'well',
+  'hard',
+  'properly',
+  'out',
+  'up',
+  '.',
+  ',',
+};
+
+/// True when a plan in [text] has a concrete step: a planned action with
+/// an object ("I would check the rota", "I'd call the ward manager") or a
+/// sequence ("first…, then…"). "I would do my best" has none.
+bool hasConcreteStep(String text) {
+  final t = _normalise(text, commas: true);
+  if (RegExp(r'\bfirst\b.*\bthen\b').hasMatch(t)) return true;
+  for (final sentence in t.split(' . ')) {
+    final w = sentence.trim().split(' ');
+    for (var i = 0; i < w.length; i++) {
+      var j = i + 1;
+      if (w[i] == 'i') {
+        while (j < w.length && _between.contains(w[j])) {
+          j++;
+        }
+        if (j >= w.length || (w[j] != 'would' && w[j] != 'will')) continue;
+        j++;
+      } else if (w[i] != "i'd" && w[i] != "i'll") {
+        continue;
+      }
+      while (j < w.length && _between.contains(w[j])) {
+        j++;
+      }
+      if (j + 1 >= w.length) continue;
+      final verb = w[j];
+      if (!_baseActions.contains(verb) || _vagueBase.contains(verb)) continue;
+      if (!_noObject.contains(w[j + 1])) return true;
+    }
+  }
+  return false;
 }
 
 /// True when the speaker tells of something they did: "I rang", "I then
