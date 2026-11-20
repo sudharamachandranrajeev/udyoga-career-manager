@@ -262,7 +262,8 @@ to-dos that are due.
 - **Linux:** Udyoga adds two small files, `udyoga-refresh.timer` and `udyoga-refresh.service`, to
   `~/.config/systemd/user`. Turning the option off removes them. The refresh runs
   `udyoga --refresh-once`, which opens no window. It needs your desktop session (for the
-  keyring), so it runs while you are logged in.
+  keyring), so it runs only while you are logged in to a desktop session. It does not run over
+  SSH, or on a machine without a screen (a headless server).
 - **Windows:** Udyoga adds a Task Scheduler entry called *Udyoga\Background refresh*. Turning the
   option off, or uninstalling, removes it.
 

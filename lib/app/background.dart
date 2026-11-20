@@ -190,7 +190,9 @@ class LinuxScheduler implements BackgroundScheduler {
   bool get supported => true;
 
   @override
-  String get description => 'Adds a systemd user timer (${timer.unitDir}/${SystemdTimer.name}.timer).';
+  String get description =>
+      'Adds a systemd user timer (${timer.unitDir}/${SystemdTimer.name}.timer). It runs only while you are '
+      'logged in to a desktop session: not over SSH, and not on a machine without a screen.';
 
   @override
   Future<bool> installed() => timer.installed();
