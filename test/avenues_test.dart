@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:flutter_test/flutter_test.dart';
@@ -155,6 +156,17 @@ void main() {
     expect(courses.last['dueWeek'], 11);
     expect(courses.last['startWeek'], 0);
     expect(str(courses.last['summary']), contains('unverified'));
+  });
+
+  test('the avenue plan fixture shared with Vidya is current', () async {
+    // Vidya's tests import this file next to the study plan and the drills.
+    final text = const JsonEncoder.withIndent('  ')
+        .convert(avenueVidyaPlan(plan, countryName: 'Ireland', today: today));
+    final fixture = File('test/fixtures/udyoga-avenue.json');
+    if (!fixture.existsSync() || Platform.environment['UPDATE_FIXTURES'] == '1') {
+      await fixture.writeAsString('$text\n');
+    }
+    expect(await fixture.readAsString(), '$text\n');
   });
 
   group('book', () {
