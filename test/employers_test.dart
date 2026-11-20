@@ -100,22 +100,22 @@ void main() {
     test('Greenhouse', () {
       final jobs = AtsClient.parseGreenhouse(fixtureJson('ats_greenhouse.json'), employer: 'Example Co');
       expect(jobs.map((j) => (j.source, j.sourceId, j.company)), [
-        ('greenhouse', '8638232002', 'Example Co'),
-        ('greenhouse', '8771512002', 'Example Co'),
+        ('greenhouse', '1000000001', 'Example Co'),
+        ('greenhouse', '1000000002', 'Example Co'),
       ]);
-      expect(jobs.first.title, 'AI Transformation Owner, CRO');
+      expect(jobs.first.title, 'Data Analyst, Example Insights');
       expect(jobs.first.url, startsWith('https://'));
     });
 
     test('Lever', () {
       final jobs = AtsClient.parseLever(fixtureAny('ats_lever.json'), employer: 'Example Co');
-      expect(jobs.map((j) => j.title), ['Customer Success Manager', 'Dentist']);
-      expect(jobs.first.sourceId, 'ad208490-4052-4f91-a57e-433f2d1e484b');
+      expect(jobs.map((j) => j.title), ['Customer Success Lead', 'Dentist']);
+      expect(jobs.first.sourceId, '0a0a0a0a-3333-4ccc-9ddd-000000000003');
     });
 
     test('Ashby', () {
       final jobs = AtsClient.parseAshby(fixtureJson('ats_ashby.json'), employer: 'Example Co');
-      expect(jobs.first.title, 'Engineering Manager - EU');
+      expect(jobs.first.title, 'Engineering Manager - Example Region');
       expect(jobs, hasLength(2));
     });
 
@@ -124,8 +124,8 @@ void main() {
         fixtureJson('ats_smartrecruiters.json'),
         employer: 'Example Co',
       ).single;
-      expect(j.title, 'Senior / Lead Engineering Operations Manager');
-      expect(j.sourceId, '744000158320111');
+      expect(j.title, 'Senior / Lead Example Operations Manager');
+      expect(j.sourceId, '100000000000005');
     });
 
     test('Workday', () {
@@ -140,10 +140,10 @@ void main() {
         board: board,
         employer: 'Example Co',
       );
-      expect(jobs.map((j) => j.sourceId), ['JR-0109305', 'JR-0110881']);
+      expect(jobs.map((j) => j.sourceId), ['JR-0000101', 'JR-0000102']);
       expect(
         jobs.first.url,
-        'https://example.wd3.myworkdayjobs.com/Careers/job/Canada-BC-Vancouver/AI-Engineer_JR-0109305',
+        'https://example.wd3.myworkdayjobs.com/Careers/job/Exampleland-EX-Sampleford/Example-Engineer_JR-0000101',
       );
     });
 
@@ -341,7 +341,7 @@ Disallow: /careers/search
         ),
       ]);
       expect(asked.single.toString(), 'https://boards-api.greenhouse.io/v1/boards/exampleco/jobs');
-      expect(r.postings.single.title, 'Backend Engineer, GitLab Orbit');
+      expect(r.postings.single.title, 'Backend Engineer, Example Platform');
     });
 
     test('a careers page is read politely: robots.txt first, once a day, its board remembered', () async {
@@ -461,7 +461,7 @@ Disallow: /careers/search
       expect(r.feedsChecked, isTrue);
       final jobs = await book.db.select(book.db.jobListings).get();
       expect(jobs.where((j) => j.source == 'greenhouse').map((j) => j.title), [
-        'Backend Engineer, GitLab Orbit',
+        'Backend Engineer, Example Platform',
       ]);
     });
   });

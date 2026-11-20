@@ -4,24 +4,24 @@
  "totalFound": 1,
  "content": [
   {
-   "id": "744000158320111",
-   "name": "Senior / Lead Engineering Operations Manager",
-   "refNumber": "REF2042H",
+   "id": "100000000000005",
+   "name": "Senior / Lead Example Operations Manager",
+   "refNumber": "REF0005X",
    "company": {
-    "identifier": "smartrecruiters",
-    "name": "SmartRecruiters Inc"
+    "identifier": "exampleco",
+    "name": "Example Co Ltd"
    },
    "releasedDate": "2026-10-28T15:14:43.941Z",
    "location": {
-    "city": "Poland",
+    "city": "Sampleford",
     "region": "Remote",
     "country": "pl",
     "remote": true,
     "hybrid": false,
-    "fullLocation": "Poland, Remote, Poland"
+    "fullLocation": "Sampleford, Remote, Exampleland"
    },
    "department": {
-    "id": "5408693",
+    "id": "1000001",
     "label": "Engineering"
    },
    "typeOfEmployment": {

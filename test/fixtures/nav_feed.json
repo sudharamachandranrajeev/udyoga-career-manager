@@ -1,68 +1,68 @@
 {
  "version": "1.0",
  "title": "Stillingsfeeden fra arbeidsplassen.no",
- "feed_url": "/api/v1/feed/94c23890-2ce8-4931-a0fb-10b89e895a4a",
- "next_url": "/api/v1/feed/770fdc10-0b91-432a-921a-3744755a5065",
- "id": "94c23890-2ce8-4931-a0fb-10b89e895a4a",
- "next_id": "770fdc10-0b91-432a-921a-3744755a5065",
+ "feed_url": "/api/v1/feed/00000000-0000-4000-8000-0000000000f1",
+ "next_url": "/api/v1/feed/00000000-0000-4000-8000-0000000000f2",
+ "id": "00000000-0000-4000-8000-0000000000f1",
+ "next_id": "00000000-0000-4000-8000-0000000000f2",
  "items": [
   {
-   "id": "d7959d14-6a62-4b8f-b475-daeeedb2177e",
-   "url": "/api/v1/feedentry/d7959d14-6a62-4b8f-b475-daeeedb2177e",
+   "id": "00000000-0000-4000-8000-0000000000a1",
+   "url": "/api/v1/feedentry/00000000-0000-4000-8000-0000000000a1",
    "title": "Vi søker motivert og effektiv Renholder",
    "content_text": "Stillingsannonse",
    "date_modified": "2026-11-18T18:49:41.142592+01:00",
    "_feed_entry": {
-    "uuid": "d7959d14-6a62-4b8f-b475-daeeedb2177e",
+    "uuid": "00000000-0000-4000-8000-0000000000a1",
     "status": "ACTIVE",
     "title": "Vi søker motivert og effektiv Renholder",
-    "businessName": "Burger King Norge",
-    "municipal": "TRONDHEIM",
+    "businessName": "Eksempel Kafé AS",
+    "municipal": "PRØVESTAD",
     "sistEndret": "2026-11-18T18:49:41.142592+01:00"
    }
   },
   {
-   "id": "0baf3e25-3c8e-442f-9980-090c4df8df9d",
-   "url": "/api/v1/feedentry/0baf3e25-3c8e-442f-9980-090c4df8df9d",
-   "title": "Brenner du for gode gjesteopplevelser?",
+   "id": "00000000-0000-4000-8000-0000000000a2",
+   "url": "/api/v1/feedentry/00000000-0000-4000-8000-0000000000a2",
+   "title": "Liker du å ta godt imot gjester?",
    "content_text": "Stillingsannonse",
    "date_modified": "2026-11-18T18:49:41.158033+01:00",
    "_feed_entry": {
-    "uuid": "0baf3e25-3c8e-442f-9980-090c4df8df9d",
+    "uuid": "00000000-0000-4000-8000-0000000000a2",
     "status": "ACTIVE",
-    "title": "Brenner du for gode gjesteopplevelser?",
-    "businessName": "Burger King Norge",
-    "municipal": "TØNSBERG",
+    "title": "Liker du å ta godt imot gjester?",
+    "businessName": "Eksempel Kafé AS",
+    "municipal": "TØNSEKSEMPEL",
     "sistEndret": "2026-11-18T18:49:41.158033+01:00"
    }
   },
   {
-   "id": "d4f0318d-e64c-4f9c-b7f4-eebf45b0dece",
-   "url": "/api/v1/feedentry/d4f0318d-e64c-4f9c-b7f4-eebf45b0dece",
-   "title": "Sykepleiere 100% faste stillinger",
+   "id": "00000000-0000-4000-8000-0000000000a3",
+   "url": "/api/v1/feedentry/00000000-0000-4000-8000-0000000000a3",
+   "title": "Sykepleiere til Eksempelby sykehjem",
    "content_text": "Stillingsannonse",
    "date_modified": "2026-11-18T20:54:11.280911+01:00",
    "_feed_entry": {
-    "uuid": "d4f0318d-e64c-4f9c-b7f4-eebf45b0dece",
+    "uuid": "00000000-0000-4000-8000-0000000000a3",
     "status": "ACTIVE",
-    "title": "Sykepleiere 100% faste stillinger",
-    "businessName": "Selbu kommune Selbu sykehjem",
-    "municipal": "SELBU",
+    "title": "Sykepleiere til Eksempelby sykehjem",
+    "businessName": "Eksempelby kommune Eksempelby sykehjem",
+    "municipal": "EKSEMPELBY",
     "sistEndret": "2026-11-18T20:54:11.280911+01:00"
    }
   },
   {
-   "id": "a4e399fc-b195-4a78-90ee-77aefa6d61bb",
-   "url": "/api/v1/feedentry/a4e399fc-b195-4a78-90ee-77aefa6d61bb",
+   "id": "00000000-0000-4000-8000-0000000000a4",
+   "url": "/api/v1/feedentry/00000000-0000-4000-8000-0000000000a4",
    "title": "...",
    "content_text": "Stillingsannonse",
    "date_modified": "2026-11-18T19:51:40.850394+01:00",
    "_feed_entry": {
-    "uuid": "a4e399fc-b195-4a78-90ee-77aefa6d61bb",
+    "uuid": "00000000-0000-4000-8000-0000000000a4",
     "status": "INACTIVE",
     "title": "...",
     "businessName": "",
-    "municipal": "BERGEN",
+    "municipal": "PRØVESTAD",
     "sistEndret": "2026-11-18T19:51:40.850394+01:00"
    }
   }

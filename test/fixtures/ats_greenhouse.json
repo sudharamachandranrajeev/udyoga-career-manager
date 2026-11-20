@@ -1,28 +1,28 @@
 {
  "jobs": [
   {
-   "id": 8638232002,
-   "title": "AI Transformation Owner, CRO",
+   "id": 1000000001,
+   "title": "Data Analyst, Example Insights",
    "updated_at": "2026-11-06T15:25:07-05:00",
    "first_published": "2026-07-22T13:38:40-04:00",
-   "absolute_url": "https://job-boards.greenhouse.io/gitlab/jobs/8638232002",
+   "absolute_url": "https://job-boards.greenhouse.io/exampleco/jobs/1000000001",
    "location": {
-    "name": "Remote, United States"
+    "name": "Remote, Exampleland"
    },
-   "company_name": "GitLab",
-   "content": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;GitLab is the intelligent orchestration platform for DevSecOps. GitLab enables organizations to increase developer productivity, improve operational efficiency, reduce security and complia"
+   "company_name": "Example Co",
+   "content": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;Example Co makes made-up tools for made-up teams. Example Co helps teams plan their work, ship it on time, and keep their records tidy and complia"
   },
   {
-   "id": 8771512002,
-   "title": "Backend Engineer, GitLab Orbit",
+   "id": 1000000002,
+   "title": "Backend Engineer, Example Platform",
    "updated_at": "2026-11-06T15:25:07-05:00",
    "first_published": "2026-10-23T18:47:07-04:00",
-   "absolute_url": "https://job-boards.greenhouse.io/gitlab/jobs/8771512002",
+   "absolute_url": "https://job-boards.greenhouse.io/exampleco/jobs/1000000002",
    "location": {
-    "name": "Remote, Canada; Remote, United States"
+    "name": "Remote, Exampleland; Remote, Sampleland"
    },
-   "company_name": "GitLab",
-   "content": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;GitLab is the intelligent orchestration platform for DevSecOps. GitLab enables organizations to increase developer productivity, improve operational efficiency, reduce security and complia"
+   "company_name": "Example Co",
+   "content": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;Example Co makes made-up tools for made-up teams. Example Co helps teams plan their work, ship it on time, and keep their records tidy and complia"
   }
  ],
  "meta": {

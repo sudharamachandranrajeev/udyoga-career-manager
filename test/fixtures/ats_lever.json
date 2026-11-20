@@ -1,19 +1,19 @@
 [
  {
-  "id": "ad208490-4052-4f91-a57e-433f2d1e484b",
-  "text": "Customer Success Manager",
+  "id": "0a0a0a0a-3333-4ccc-9ddd-000000000003",
+  "text": "Customer Success Lead",
   "categories": {
    "commitment": "Regular Full Time (Salary)",
    "department": "Customer Success",
-   "location": "Atlanta, Georgia",
+   "location": "Sampleford, Example State",
    "team": "Customer Success Team",
    "allLocations": [
-    "Atlanta, Georgia"
+    "Sampleford, Example State"
    ]
   },
   "createdAt": 1788199939703,
-  "hostedUrl": "https://jobs.lever.co/leverdemo/ad208490-4052-4f91-a57e-433f2d1e484b",
-  "applyUrl": "https://jobs.lever.co/leverdemo/ad208490-4052-4f91-a57e-433f2d1e484b/apply",
+  "hostedUrl": "https://jobs.lever.co/examplehealth/0a0a0a0a-3333-4ccc-9ddd-000000000003",
+  "applyUrl": "https://jobs.lever.co/examplehealth/0a0a0a0a-3333-4ccc-9ddd-000000000003/apply",
   "workplaceType": "hybrid",
   "country": "US",
   "salaryRange": {
@@ -22,23 +22,23 @@
    "currency": "USD",
    "interval": "per-year-salary"
   },
-  "descriptionPlain": "This is a test job - created by Alex Haugan, for testing candidate insights.\n \nJoin a scaling, tight-knit team that’s working directly with innovative talent acquisition teams and thought leaders acro"
+  "descriptionPlain": "This is a made-up job, written for testing.\n \nJoin a small, friendly team that works directly with example customers and helps them get the most from the example product acro"
  },
  {
-  "id": "120b5976-ee4e-4dc5-b31b-2b1ca124460c",
+  "id": "0a0a0a0a-4444-4ccc-9ddd-000000000004",
   "text": "Dentist",
   "categories": {
    "commitment": "Regular Full Time (Salary)",
    "department": "People (HR)",
-   "location": "Houston, TX",
+   "location": "Exampleton, EX",
    "team": "People",
    "allLocations": [
-    "Houston, TX"
+    "Exampleton, EX"
    ]
   },
   "createdAt": 1787600587936,
-  "hostedUrl": "https://jobs.lever.co/leverdemo/120b5976-ee4e-4dc5-b31b-2b1ca124460c",
-  "applyUrl": "https://jobs.lever.co/leverdemo/120b5976-ee4e-4dc5-b31b-2b1ca124460c/apply",
+  "hostedUrl": "https://jobs.lever.co/examplehealth/0a0a0a0a-4444-4ccc-9ddd-000000000004",
+  "applyUrl": "https://jobs.lever.co/examplehealth/0a0a0a0a-4444-4ccc-9ddd-000000000004/apply",
   "workplaceType": "onsite",
   "country": "US",
   "salaryRange": {

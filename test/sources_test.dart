@@ -32,7 +32,7 @@ void main() {
       expect(jobs, hasLength(2));
       final j = jobs.first;
       expect(j.source, 'jobtech');
-      expect(j.title, 'Sjuksköterska');
+      expect(j.title, 'Sjuksköterska till Exempelby vårdcentral');
       expect(j.country, 'SE');
       expect(j.company, isNotEmpty);
       expect(j.url, startsWith('https://arbetsformedlingen.se/platsbanken/annonser/'));
@@ -72,9 +72,9 @@ void main() {
 
     test('reads one ad in full, without its contacts', () {
       final j = NavFeed.parseEntry(fixtureJson('nav_entry.json'));
-      expect(j.title, 'Sykepleiere 100% faste stillinger');
+      expect(j.title, 'Sykepleiere til Eksempelby sykehjem');
       expect(j.country, 'NO');
-      expect(j.location, 'Selbu');
+      expect(j.location, 'Eksempelby');
       expect(j.closing, '2026-12-06');
       expect(j.url, startsWith('https://arbeidsplassen.nav.no/stillinger/stilling/'));
       expect(j.description, isNot(contains('@')));
@@ -98,7 +98,7 @@ void main() {
         clock: () => DateTime.utc(2026, 11, 19, 12),
       );
       final jobs = await feed.search(const FeedQuery(terms: ['sykepleiere'], country: 'NO'));
-      expect(jobs.single.title, 'Sykepleiere 100% faste stillinger');
+      expect(jobs.single.title, 'Sykepleiere til Eksempelby sykehjem');
       final first = seen.firstWhere((r) => r.url.path == '/api/v1/feed');
       expect(first.headers['authorization'], 'Bearer aaaaaaaaaaaa.bbbbbbbbbbbb.cccccccccccc');
       expect(first.headers['if-modified-since'], 'Tue, 17 Nov 2026 12:00:00 GMT');
@@ -108,7 +108,7 @@ void main() {
   group('USAJOBS', () {
     test('reads a search reply', () {
       final j = UsaJobsFeed.parse(fixtureJson('usajobs.json')).single;
-      expect(j.title, 'IT SPECIALIST (INFOSEC/NETWORK)');
+      expect(j.title, 'IT SPECIALIST (EXAMPLE SYSTEMS)');
       expect(j.salaryMin, 92108);
       expect(j.currency, 'USD');
       expect(j.country, 'US');
@@ -144,7 +144,7 @@ void main() {
     test('reads a reply', () {
       final j = JoobleFeed.parse(fixtureJson('jooble.json'), country: 'UA').single;
       expect(j.title, 'Sales Manager');
-      expect(j.company, 'ABC Corp');
+      expect(j.company, 'Example Trading Ltd');
       expect(j.salaryText, '17,600 UAH');
       expect(j.posted, '2023-09-15');
     });
@@ -184,10 +184,10 @@ void main() {
     test('reads its RSS feed', () {
       final jobs = UnVacanciesFeed.parse(fixture('unvacancies.xml'));
       expect(jobs, hasLength(3));
-      expect(jobs.first.title, 'Human Rights Officer');
-      expect(jobs.first.company, 'OHCHR');
+      expect(jobs.first.title, 'Example Programme Officer');
+      expect(jobs.first.company, 'EXAMPLE-AGENCY');
       expect(jobs.first.posted, '2026-11-19');
-      expect(jobs.first.sourceId, 'human-rights-officer-R-288019');
+      expect(jobs.first.sourceId, 'example-programme-officer-X-000001');
     });
 
     test('answers the country-less query, filtered by the terms', () async {

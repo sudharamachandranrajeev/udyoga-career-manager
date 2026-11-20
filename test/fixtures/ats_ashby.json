@@ -1,20 +1,20 @@
 {
  "jobs": [
   {
-   "id": "7458d4e9-da2e-47bd-98cb-adfda43d42b2",
-   "title": "Engineering Manager - EU",
+   "id": "0e0e0e0e-1111-4aaa-8bbb-000000000001",
+   "title": "Engineering Manager - Example Region",
    "department": "Engineering",
-   "location": "Remote - European Union",
+   "location": "Remote - Exampleland",
    "isRemote": true,
    "workplaceType": "Remote",
-   "publishedAt": "2024-03-04T14:29:08.532+00:00",
-   "jobUrl": "https://jobs.ashbyhq.com/Ashby/7458d4e9-da2e-47bd-98cb-adfda43d42b2",
-   "applyUrl": "https://jobs.ashbyhq.com/Ashby/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application",
+   "publishedAt": "2026-03-04T14:29:08.532+00:00",
+   "jobUrl": "https://jobs.ashbyhq.com/exampleco/0e0e0e0e-1111-4aaa-8bbb-000000000001",
+   "applyUrl": "https://jobs.ashbyhq.com/exampleco/0e0e0e0e-1111-4aaa-8bbb-000000000001/application",
    "address": {
     "postalAddress": {
      "postalCode": "",
      "addressRegion": "",
-     "addressCountry": "European Union",
+     "addressCountry": "Exampleland",
      "addressLocality": ""
     }
    },
@@ -45,23 +45,23 @@
     ]
    },
    "isListed": true,
-   "descriptionPlain": "Hi 👋 I’m the Director of Engineering, Europe. How do you feel about software engineers writing product specs, making product decisions, and not breaking down "
+   "descriptionPlain": "Hi 👋 I’m the engineering lead at Example Co. How do you feel about engineers writing their own specs, making product calls, and owning what they ship from start to finish? "
   },
   {
-   "id": "86a60834-ba64-484d-9658-afa1bc97a957",
-   "title": "Mid Market Account Executive - EMEA (French Speaking)",
+   "id": "0e0e0e0e-2222-4aaa-8bbb-000000000002",
+   "title": "Account Executive - Sampleford (French Speaking)",
    "department": "Sales",
-   "location": "France",
+   "location": "Sampleford",
    "isRemote": true,
    "workplaceType": "Remote",
    "publishedAt": "2026-09-08T16:27:26.694+00:00",
-   "jobUrl": "https://jobs.ashbyhq.com/Ashby/86a60834-ba64-484d-9658-afa1bc97a957",
-   "applyUrl": "https://jobs.ashbyhq.com/Ashby/86a60834-ba64-484d-9658-afa1bc97a957/application",
+   "jobUrl": "https://jobs.ashbyhq.com/exampleco/0e0e0e0e-2222-4aaa-8bbb-000000000002",
+   "applyUrl": "https://jobs.ashbyhq.com/exampleco/0e0e0e0e-2222-4aaa-8bbb-000000000002/application",
    "address": {
     "postalAddress": {
      "addressRegion": "",
-     "addressCountry": "France",
-     "addressLocality": ""
+     "addressCountry": "Exampleland",
+     "addressLocality": "Sampleford"
     }
    },
    "compensation": {
@@ -89,7 +89,7 @@
     ]
    },
    "isListed": true,
-   "descriptionPlain": "WHY JOIN SALES AT ASHBY\n\nSales at Ashby is a unique opportunity to sell a product customers genuinely love https://www.ashbyhq.com/customers during an AI-fueled market expansion. Over 5,000 companies "
+   "descriptionPlain": "WHY JOIN SALES AT EXAMPLE CO\n\nSales at Example Co means selling a product customers already like https://www.example.com/customers to teams that are growing fast. Over 500 example companies "
   }
  ],
  "apiVersion": "1"
