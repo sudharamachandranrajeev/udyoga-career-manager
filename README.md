@@ -324,6 +324,8 @@ scripts/make-icons.sh                                               # app icons 
   [docs/interview-spike.md](docs/interview-spike.md)).
 - Changes per version: [CHANGELOG.md](CHANGELOG.md). Lead workflow and LinkedIn study:
   [docs/n8n](docs/n8n/README.md).
+- Research behind the features (job sources and their terms, visa and occupation-code data,
+  interview scoring, what users of other apps hate and want): [docs/research.md](docs/research.md).
 
 </details>
 
