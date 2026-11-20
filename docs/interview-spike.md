@@ -876,6 +876,65 @@ restart it. The FAQ does not say this stops every connection to
 ollama.com, and the macOS and Windows apps still download their own
 updates; Udyoga cannot control Ollama's own network use.
 
-**Not tried.** No model was pulled (several GB), so local planning and
-scoring were not run against a real model. Fake-server tests cover the
-request and reply format.
+**Not tried in that run.** No model was pulled there. The next section
+runs the interview AI on a real local model.
+
+### The interview AI on a real local model
+
+`tool/ollama_live_check.dart` sends the interview AI's three tasks to
+Ollama through the app's own `Ollama` provider and `Advisor`. Everything
+sent is made up: an advert for a Band 3 Medical Records Officer at a
+made-up trust, and a three-answer round typed in as transcripts. The
+scores then go through `verifyScores`, as in the app. Run it with
+`OLLAMA_MODEL=llama3.2:3b flutter test tool/ollama_live_check.dart`.
+
+The model was `llama3.2:3b` (2.0 GB), on Ollama 0.40.7 started with
+`OLLAMA_NO_CLOUD=1`. It ran on this laptop's processor (an 11th
+generation Intel Core i5, 8 threads, 16 GB of memory, no graphics card
+in use). It was the only model pulled.
+
+| Task | Time | Valid JSON | Requests | Result |
+| --- | --- | --- | --- | --- |
+| Advert into criteria | 53.0 s | Yes, first try | 1 | 6 criteria, essential and desirable split right, how each is assessed right, NHS values framework |
+| Question plan (3 questions) | 67.2 s | Yes, first try | 1 | A criterion and probes for each question; all six answer elements expected every time |
+| Scoring the round | 48.4 s | Yes, first try | 1 | 9 scores sent; `verifyScores` kept 3 and dropped 6 |
+
+"Requests" counts the calls to `/api/chat`. One means the first reply
+already matched the schema, so the provider's second try was never
+needed.
+
+**What `verifyScores` dropped.** The model scored every criterion
+against every answer, not only the one each question tests. All 6 drops
+were those extra scores. One of them was a fabricated quote: answer 1
+(the diary) was given a records score, quoting a sentence from answer 3.
+It was dropped because answer 1 does not test that criterion. No kept
+score had a quote missing from its own answer.
+
+**Against the earlier cloud check** (Claude Sonnet, same kind of advert
+and answers, in the I3 live check):
+
+- **Criteria:** as good. Both found 6 criteria with the right split.
+  The cloud model took about 4 s; the local one 53 s.
+- **The diary answer:** the same. Both scored it 2 (Good), and the local
+  quote ("I moved the overflow to a Tuesday session and I told the
+  consultant.") is exact.
+- **The bare "very good team player" claim:** worse. The cloud model
+  scored it N/O. The local model scored it 1 (Limited), quoting the claim
+  itself. The quote is real, so `verifyScores` keeps it. A claim with no
+  example should read as not observed.
+- **Feedback:** weaker. The "strengths" were instructions ("Provide a
+  specific example of…"), and one fix was about the diary on the
+  teamwork answer.
+- **The plan:** usable but generic. The probes were plain and neutral,
+  but every question expected all six elements.
+
+**What changed.** The `llama3.2:3b` line in the suggested models now
+says it reads adverts well, scores bare claims too kindly, and took
+about a minute a step on a laptop processor. `qwen2.5:7b` stays the
+suggested default. The quality note already says a small model scores
+less reliably.
+
+**Still to try.** `qwen2.5:7b` (about 4.7 GB), on a stronger laptop with
+a 12th generation Intel Core i7 and an RTX 4050 with 6 GB of video
+memory. It should fit in video memory and answer much faster. Compare it
+on the same three tasks, above all on the bare-claim answer.

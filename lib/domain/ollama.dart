@@ -17,7 +17,9 @@ const ollamaDefaultHost = 'http://localhost:11434';
 /// one: the user runs `ollama pull <name>` if they want it.
 const ollamaSuggestions = {
   'qwen2.5:7b': 'Qwen 2.5 7B Instruct: about 4.7 GB, needs about 8 GB of free memory',
-  'llama3.2:3b': 'Llama 3.2 3B Instruct: about 2 GB, for smaller machines',
+  'llama3.2:3b':
+      'Llama 3.2 3B Instruct: about 2 GB, for smaller machines. It reads adverts well, but scores bare claims too '
+      'kindly, and each step took about a minute on a laptop processor',
 };
 
 /// The model suggested when the user names none.
