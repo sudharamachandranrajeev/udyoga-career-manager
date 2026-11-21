@@ -15,6 +15,7 @@ import 'interview_book.dart';
 import 'interview_scoring.dart';
 import 'json.dart';
 import 'vidya_link.dart' show studyPlanId;
+import 'vidya_practice.dart';
 export 'vidya_link.dart' show storyCardId;
 
 // ---- nerves ----
@@ -176,13 +177,17 @@ String threeBullets(Story s) => [
 ].join('\n');
 
 /// The drills as a Vidya plan ("vidya-curriculum", version 1). Every card
-/// carries a stable id.
+/// carries a stable id. [readiness] is Vidya's readiness per role plan: each
+/// weak or missing essential criterion becomes a drill card, which updates
+/// in place while it stays weak and drops out once Vidya says it is covered.
 Json interviewDrills({
   required List<Story> stories,
   required List<String> questionsForThem,
   bool reappraisal = false,
   String settler = 'Could you start by telling us a little about your current role?',
+  List<VidyaReadiness> readiness = const [],
 }) {
+  final gapCards = readinessDrillCards(readiness, deck: drillsDeck);
   Json card(String id, String front, String back) => {
     'id': id,
     'deck': drillsDeck,
@@ -248,6 +253,7 @@ Json interviewDrills({
         ),
       if (reappraisal)
         card('${drillIdPrefix}reappraisal', 'Your heart is racing as you wait to go in', reappraisalNote),
+      ...gapCards,
     ],
     'notes': [
       {
@@ -256,6 +262,9 @@ Json interviewDrills({
           'Made by Udyoga from your story bank and your questions for them. Sending again updates these cards '
               'and keeps your reviews.',
           if (reappraisal) '\nThe "I\'m excited" card is optional. $reappraisalLabel',
+          if (gapCards.isNotEmpty)
+            '\n${gapCards.length == 1 ? '1 card comes' : '${gapCards.length} cards come'} from your Vidya readiness: the '
+                'essential criteria still weak or missing. Each goes once Vidya counts it covered.',
         ].join('\n'),
         'tags': ['udyoga', 'interview'],
       },
@@ -388,6 +397,7 @@ extension InterviewConfidence on CareerBook {
     questionsForThem: await questionsForThem(),
     reappraisal: await reappraisal(),
     settler: profileSettler.question,
+    readiness: await vidyaReadiness(),
   );
 
   /// Sends the drills to Vidya through sync, as their own plan row.

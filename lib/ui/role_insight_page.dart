@@ -15,6 +15,7 @@ import '../domain/vidya_link.dart';
 import 'career_page.dart';
 import 'common.dart';
 import 'role_search_view.dart';
+import 'vidya_practice_ui.dart';
 
 /// The most roles approached at once.
 const maxInsightRoles = 3;
@@ -402,6 +403,7 @@ class _RoleInsightCardState extends ConsumerState<RoleInsightCard> {
                 ),
               ],
             ),
+            RoleReadinessLine(i.role),
             for (final p in i.problems) StatusLabel(Status.warning, p),
 
             // 1. What the role is.
