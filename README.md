@@ -311,6 +311,10 @@ scripts/make-icons.sh                                               # app icons 
 - `brahma_core` comes from the [brahma](https://github.com/sudharamachandranrajeev/brahma-life-suite) repo.
   To work on both at once, add a `pubspec_overrides.yaml` (ignored by git) with
   `dependency_overrides: brahma_core: path: ../brahma/core`.
+- `ui_kit` (the shared motion and components) comes from the
+  [pariksha-interview-kit](https://github.com/sudharamachandranrajeev/pariksha-interview-kit) repo
+  and paints in Udyoga's azure through a `KitPalette`. To work on it locally, add
+  `ui_kit: path: ../pariksha-interview-kit/packages/ui_kit` to the same overrides file.
 - Tests use made-up people and companies only. CI runs analyse and test on each push. A `v*` tag
   builds, smoke-tests and publishes the Android, Windows and Linux builds
   (`.github/workflows/release.yml`).
