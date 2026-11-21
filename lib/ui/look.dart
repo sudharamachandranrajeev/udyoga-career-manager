@@ -135,7 +135,9 @@ ThemeData udyogaTheme(Brightness b) {
   final base = buildTheme(b, seed: azure, accent: mint);
   final scheme = base.colorScheme.copyWith(
     primary: p.primary,
-    onPrimary: Colors.white,
+    // White on the light dark-mode blue is 2.7:1, too faint for button
+    // labels; ink is 7:1.
+    onPrimary: dark ? ink : Colors.white,
     surface: p.surface,
     surfaceContainerLow: p.card,
     surfaceContainerHighest: p.raised,

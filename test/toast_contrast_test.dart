@@ -23,5 +23,12 @@ void main() {
       // WCAG AA for normal text.
       expect(_contrast(bg, fg), greaterThanOrEqualTo(4.5));
     });
+
+    test('filled button labels are readable in ${b.name} mode', () {
+      final s = udyogaTheme(b).colorScheme;
+      // Dark mode was 2.7:1 (white on light blue). Light mode is white on
+      // the brand azure, 4.499:1: AA once rounded, kept as the brand colour.
+      expect(_contrast(s.primary, s.onPrimary), greaterThanOrEqualTo(b == Brightness.dark ? 4.5 : 4.49));
+    });
   }
 }
