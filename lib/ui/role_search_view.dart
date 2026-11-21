@@ -7,6 +7,7 @@ import '../domain/job_identity.dart';
 import '../domain/occupations.dart';
 import '../domain/role_family.dart';
 import '../domain/role_search.dart';
+import '../domain/saved_searches.dart';
 import 'common.dart';
 import 'eligibility_view.dart';
 import 'jobs_page.dart';
@@ -18,15 +19,19 @@ import 'site_page.dart';
 /// titles the same work goes by as chips (close ones on, the rest off),
 /// choose, and search every job site that covers the person's places. The
 /// results are ranked by title match, then fit, and the same job on several
-/// boards is one card with each board's link.
+/// boards is one card with each board's link. "Save this search" keeps the
+/// role, the chosen titles and the exclusions as a saved search, which the
+/// routine refresh then runs.
 class RoleSearchView extends ConsumerStatefulWidget {
   const RoleSearchView({super.key});
 
   @override
-  ConsumerState<RoleSearchView> createState() => _RoleSearchViewState();
+  ConsumerState<RoleSearchView> createState() => RoleSearchViewState();
 }
 
-class _RoleSearchViewState extends ConsumerState<RoleSearchView> {
+/// The role search's state; the Jobs page calls [open] to run a saved
+/// search here.
+class RoleSearchViewState extends ConsumerState<RoleSearchView> {
   final role = TextEditingController();
   final notWords = TextEditingController();
   final notEmployers = TextEditingController();
@@ -54,6 +59,9 @@ class _RoleSearchViewState extends ConsumerState<RoleSearchView> {
   /// Results saved this time, by board and id.
   final saved = <String>{};
 
+  /// The saved search on show, which "Save" updates; null: a new search.
+  SavedSearch? editing;
+
   @override
   void dispose() {
     role.dispose();
@@ -73,6 +81,13 @@ class _RoleSearchViewState extends ConsumerState<RoleSearchView> {
     final r = role.text.trim();
     if (r.isEmpty) return;
     setState(() {
+      // Another role is another search: the saved one's settings go.
+      if (editing != null && normalJobTitle(editing!.role) != normalJobTitle(r)) {
+        editing = null;
+        exactOnly = false;
+        notWords.clear();
+        notEmployers.clear();
+      }
       finding = true;
       result = null;
       skills = null;
@@ -147,7 +162,84 @@ class _RoleSearchViewState extends ConsumerState<RoleSearchView> {
       ],
       notWords: _list(notWords.text),
       notEmployers: _list(notEmployers.text),
+      places: editing?.places ?? const [],
     );
+  }
+
+  /// Fills the search from [s], runs it and marks it looked at, so its
+  /// new jobs stop counting as new. A search saved with no titles (moved
+  /// from an old profile) starts with the close titles on, for when the
+  /// person turns "Exact title only" off.
+  Future<void> open(SavedSearch s) async {
+    final index = await loadSocIndex();
+    if (!mounted) return;
+    final base = offlineFamily(s.role, index: index).plus([for (final t in s.titles) t.title]);
+    setState(() {
+      editing = s;
+      role.text = s.role;
+      notWords.text = s.notWords.join(', ');
+      notEmployers.text = s.notEmployers.join(', ');
+      exactOnly = s.exactOnly;
+      family = base;
+      on
+        ..clear()
+        ..addAll([
+          if (s.titles.isEmpty)
+            for (final t in base.titles)
+              if (t.closeness == Closeness.close) normalJobTitle(t.title),
+          for (final t in s.titles)
+            if (t.on) normalJobTitle(t.title.title),
+        ]);
+      skills = s.skills.isEmpty ? null : List.of(s.skills);
+      skillsOn
+        ..clear()
+        ..addAll(s.skills);
+    });
+    await ref.mutate((x) => x.book.markLooked(s.id));
+    await _run();
+  }
+
+  /// Saves the search on show: a new saved search, or the one opened.
+  Future<void> _saveSearch() async {
+    final f = family;
+    if (f == null) return;
+    final q = _query();
+    final book = ref.read(sessionProvider).book;
+    // The stored copy, so a rename made since it was opened is kept.
+    final was = editing == null
+        ? null
+        : (await book.savedSearches()).where((x) => x.id == editing!.id).firstOrNull ?? editing;
+    if (!mounted) return;
+    final now = DateTime.now().toUtc().toIso8601String();
+    final s = SavedSearch(
+      id: was?.id ?? newId(),
+      name: was?.name ?? f.role,
+      role: f.role,
+      titles: [
+        for (final t in f.titles)
+          if (t.source != FamilySource.typed) SearchTitle(t, on: on.contains(normalJobTitle(t.title))),
+      ],
+      exactOnly: q.exactOnly,
+      skills: q.skills,
+      notWords: q.notWords,
+      notEmployers: q.notEmployers,
+      places: was?.places ?? const [],
+      created: was?.created ?? now,
+      updated: now,
+      lastLooked: was?.lastLooked,
+      seen: was?.seen ?? const [],
+    );
+    try {
+      final out = await ref.mutate((x) => x.book.saveSearch(s));
+      if (!mounted) return;
+      setState(() => editing = out);
+      showMessage(
+        context,
+        was == null ? 'Saved. Udyoga checks it with every refresh.' : 'Saved search "${out.name}" updated.',
+      );
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
   }
 
   Future<void> _run() async {
@@ -364,9 +456,11 @@ class _RoleSearchViewState extends ConsumerState<RoleSearchView> {
                 icon: const Icon(Icons.search),
                 label: Text(searching ? 'Searching…' : 'Search job sites'),
               ),
-              const Tooltip(
-                message: 'Saved searches come in the next update.',
-                child: OutlinedButton(onPressed: null, child: Text('Save this search')),
+              OutlinedButton.icon(
+                key: const ValueKey('roleSearch.save'),
+                onPressed: _saveSearch,
+                icon: const Icon(Icons.bookmark_add_outlined),
+                label: Text(editing == null ? 'Save this search' : 'Update saved search'),
               ),
             ],
           ),

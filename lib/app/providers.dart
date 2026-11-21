@@ -34,6 +34,7 @@ import '../domain/profile.dart';
 import '../domain/recipes.dart';
 import '../domain/refresh.dart';
 import '../domain/route_refresh.dart';
+import '../domain/saved_searches.dart';
 import '../domain/sponsors.dart';
 import '../domain/n8n.dart';
 import '../domain/subscription.dart';
@@ -387,6 +388,16 @@ final checkInSettingsProvider = FutureProvider<({String time, bool remind})>((re
 /// and asks the built-in check-in questions).
 Future<Companion> companionOf(WidgetRef ref) async =>
     Companion(ref.read(sessionProvider).book, advisor: await ref.read(advisorProvider.future));
+
+/// The saved role searches, oldest first. An old profile's search terms
+/// are moved over to saved searches first (once, see
+/// [SavedSearchBook.migrateSavedSearches]).
+final savedSearchesProvider = FutureProvider<List<SavedSearch>>((ref) async {
+  ref.watch(revisionProvider);
+  final book = ref.watch(sessionProvider).book;
+  await book.migrateSavedSearches();
+  return book.savedSearches();
+});
 
 final profileProvider = FutureProvider<CandidateProfile>((ref) {
   ref.watch(revisionProvider);

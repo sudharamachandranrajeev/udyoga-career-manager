@@ -31,6 +31,7 @@ class RoleQuery {
     this.skills = const [],
     this.notWords = const [],
     this.notEmployers = const [],
+    this.places = const [],
   });
 
   /// The role as the person typed it.
@@ -52,6 +53,9 @@ class RoleQuery {
 
   /// Employers and agencies whose jobs are left out.
   final List<String> notEmployers;
+
+  /// Where to search; empty: the profile's home areas.
+  final List<HomeArea> places;
 
   /// The typed role as a family title.
   FamilyTitle get typed => FamilyTitle(
@@ -236,7 +240,12 @@ class RoleSearch {
     // once per country.
     final plan = <JobFeed, List<FeedQuery>>{};
     final once = <String>{};
-    for (final fq in Refresher.queries(p, terms: q.termsFor(null), keep: q.keep)) {
+    for (final fq in Refresher.queries(
+      p,
+      terms: q.termsFor(null),
+      keep: q.keep,
+      areas: q.places.isEmpty ? null : q.places,
+    )) {
       for (final f in all.where((f) => f.covers(fq))) {
         if (!f.usesPlace && !once.add('${f.id}:${fq.country}')) continue;
         final cap = f.maxTerms == null ? null : math.min(f.maxTerms!, maxTitlesPerFeed);
@@ -273,7 +282,7 @@ class RoleSearch {
 
     final kept = [
       for (final x in postings)
-        if (!_leftOut(x, p, q)) x,
+        if (!excluded(x.title, x.company, p, q)) x,
     ];
     final hits = rank(merge(kept), q, p, today: today);
     return RoleSearchResult(hits: hits, feeds: progress, leftOut: postings.length - kept.length);
@@ -298,12 +307,12 @@ class RoleSearch {
     return got;
   }
 
-  /// True when the person's exclusions, or this search's NOT words or
-  /// employers, rule [x] out.
-  static bool _leftOut(Posting x, CandidateProfile p, RoleQuery q) =>
-      excludedBy(p.targets.exclusions, title: x.title, company: x.company) != null ||
-      excludedBy(q.notWords, title: x.title, company: x.company) != null ||
-      q.notEmployers.any((e) => e.trim().isNotEmpty && hasWords(x.company, e.trim()));
+  /// True when the person's exclusions, or [q]'s NOT words or employers,
+  /// rule out a job with [title] at [company].
+  static bool excluded(String title, String company, CandidateProfile p, RoleQuery q) =>
+      excludedBy(p.targets.exclusions, title: title, company: company) != null ||
+      excludedBy(q.notWords, title: title, company: company) != null ||
+      q.notEmployers.any((e) => e.trim().isNotEmpty && hasWords(company, e.trim()));
 
   /// [postings] with the same job from several boards (or several searches)
   /// merged: the same board and id, the same link, or the same [jobKey] and

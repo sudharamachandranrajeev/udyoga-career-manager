@@ -391,7 +391,9 @@ class RoleFamilies {
           FamilyTitle(
             title: titleCase(l),
             reason: l == o.title ? 'ESCO occupation' : 'ESCO alternative label of "${o.title}"',
-            closeness: _headKey(l) == roleHead && closeByHead(l, base.role) ? Closeness.close : Closeness.related,
+            closeness: _headKey(l) == roleHead && closeByHead(l, base.role)
+                ? Closeness.close
+                : Closeness.related,
             source: FamilySource.esco,
           ),
         );

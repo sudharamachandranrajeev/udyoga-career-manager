@@ -16829,6 +16829,904 @@ class CareerFileDocsCompanion extends UpdateCompanion<CareerFileDoc> {
   }
 }
 
+class $CareerSavedSearchesTable extends CareerSavedSearches
+    with TableInfo<$CareerSavedSearchesTable, SavedSearchRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CareerSavedSearchesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hlcMeta = const VerificationMeta('hlc');
+  @override
+  late final GeneratedColumn<String> hlc = GeneratedColumn<String>(
+    'hlc',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta(
+    'deleted',
+  );
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titlesMeta = const VerificationMeta('titles');
+  @override
+  late final GeneratedColumn<String> titles = GeneratedColumn<String>(
+    'titles',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _exactOnlyMeta = const VerificationMeta(
+    'exactOnly',
+  );
+  @override
+  late final GeneratedColumn<bool> exactOnly = GeneratedColumn<bool>(
+    'exact_only',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("exact_only" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _skillsMeta = const VerificationMeta('skills');
+  @override
+  late final GeneratedColumn<String> skills = GeneratedColumn<String>(
+    'skills',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _notWordsMeta = const VerificationMeta(
+    'notWords',
+  );
+  @override
+  late final GeneratedColumn<String> notWords = GeneratedColumn<String>(
+    'not_words',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _notEmployersMeta = const VerificationMeta(
+    'notEmployers',
+  );
+  @override
+  late final GeneratedColumn<String> notEmployers = GeneratedColumn<String>(
+    'not_employers',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _placesMeta = const VerificationMeta('places');
+  @override
+  late final GeneratedColumn<String> places = GeneratedColumn<String>(
+    'places',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _originMeta = const VerificationMeta('origin');
+  @override
+  late final GeneratedColumn<String> origin = GeneratedColumn<String>(
+    'origin',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('user'),
+  );
+  static const VerificationMeta _createdMeta = const VerificationMeta(
+    'created',
+  );
+  @override
+  late final GeneratedColumn<String> created = GeneratedColumn<String>(
+    'created',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedMeta = const VerificationMeta(
+    'updated',
+  );
+  @override
+  late final GeneratedColumn<String> updated = GeneratedColumn<String>(
+    'updated',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastLookedMeta = const VerificationMeta(
+    'lastLooked',
+  );
+  @override
+  late final GeneratedColumn<String> lastLooked = GeneratedColumn<String>(
+    'last_looked',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _seenMeta = const VerificationMeta('seen');
+  @override
+  late final GeneratedColumn<String> seen = GeneratedColumn<String>(
+    'seen',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    hlc,
+    deleted,
+    name,
+    role,
+    titles,
+    exactOnly,
+    skills,
+    notWords,
+    notEmployers,
+    places,
+    origin,
+    created,
+    updated,
+    lastLooked,
+    seen,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'career_saved_searches';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SavedSearchRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('hlc')) {
+      context.handle(
+        _hlcMeta,
+        hlc.isAcceptableOrUnknown(data['hlc']!, _hlcMeta),
+      );
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(
+        _deletedMeta,
+        deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+        _roleMeta,
+        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_roleMeta);
+    }
+    if (data.containsKey('titles')) {
+      context.handle(
+        _titlesMeta,
+        titles.isAcceptableOrUnknown(data['titles']!, _titlesMeta),
+      );
+    }
+    if (data.containsKey('exact_only')) {
+      context.handle(
+        _exactOnlyMeta,
+        exactOnly.isAcceptableOrUnknown(data['exact_only']!, _exactOnlyMeta),
+      );
+    }
+    if (data.containsKey('skills')) {
+      context.handle(
+        _skillsMeta,
+        skills.isAcceptableOrUnknown(data['skills']!, _skillsMeta),
+      );
+    }
+    if (data.containsKey('not_words')) {
+      context.handle(
+        _notWordsMeta,
+        notWords.isAcceptableOrUnknown(data['not_words']!, _notWordsMeta),
+      );
+    }
+    if (data.containsKey('not_employers')) {
+      context.handle(
+        _notEmployersMeta,
+        notEmployers.isAcceptableOrUnknown(
+          data['not_employers']!,
+          _notEmployersMeta,
+        ),
+      );
+    }
+    if (data.containsKey('places')) {
+      context.handle(
+        _placesMeta,
+        places.isAcceptableOrUnknown(data['places']!, _placesMeta),
+      );
+    }
+    if (data.containsKey('origin')) {
+      context.handle(
+        _originMeta,
+        origin.isAcceptableOrUnknown(data['origin']!, _originMeta),
+      );
+    }
+    if (data.containsKey('created')) {
+      context.handle(
+        _createdMeta,
+        created.isAcceptableOrUnknown(data['created']!, _createdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdMeta);
+    }
+    if (data.containsKey('updated')) {
+      context.handle(
+        _updatedMeta,
+        updated.isAcceptableOrUnknown(data['updated']!, _updatedMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedMeta);
+    }
+    if (data.containsKey('last_looked')) {
+      context.handle(
+        _lastLookedMeta,
+        lastLooked.isAcceptableOrUnknown(data['last_looked']!, _lastLookedMeta),
+      );
+    }
+    if (data.containsKey('seen')) {
+      context.handle(
+        _seenMeta,
+        seen.isAcceptableOrUnknown(data['seen']!, _seenMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SavedSearchRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SavedSearchRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      hlc: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hlc'],
+      )!,
+      deleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}deleted'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      )!,
+      titles: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}titles'],
+      )!,
+      exactOnly: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}exact_only'],
+      )!,
+      skills: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}skills'],
+      )!,
+      notWords: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}not_words'],
+      )!,
+      notEmployers: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}not_employers'],
+      )!,
+      places: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}places'],
+      )!,
+      origin: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}origin'],
+      )!,
+      created: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created'],
+      )!,
+      updated: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}updated'],
+      )!,
+      lastLooked: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_looked'],
+      ),
+      seen: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}seen'],
+      )!,
+    );
+  }
+
+  @override
+  $CareerSavedSearchesTable createAlias(String alias) {
+    return $CareerSavedSearchesTable(attachedDatabase, alias);
+  }
+}
+
+class SavedSearchRow extends DataClass implements Insertable<SavedSearchRow> {
+  final String id;
+  final String hlc;
+  final bool deleted;
+
+  /// What the person calls it; the role until renamed.
+  final String name;
+
+  /// The role as typed.
+  final String role;
+
+  /// Family titles as JSON: each FamilyTitle plus "on" (switched on).
+  final String titles;
+
+  /// Search the typed title only (family expansion off).
+  final bool exactOnly;
+
+  /// Tasks and tools searched as well, JSON list of text.
+  final String skills;
+
+  /// Words that rule a job out, JSON list of text.
+  final String notWords;
+
+  /// Employers and agencies left out, JSON list of text.
+  final String notEmployers;
+
+  /// HomeArea list as JSON; empty: the profile's home areas.
+  final String places;
+
+  /// profile (made from a profile keyword or target role, untouched since)
+  /// | user (saved or edited by the person).
+  final String origin;
+  final String created;
+  final String updated;
+
+  /// When the person last opened it; null: never.
+  final String? lastLooked;
+
+  /// Ids of the listed jobs it matched when last looked at, JSON list, so
+  /// the rest count as new.
+  final String seen;
+  const SavedSearchRow({
+    required this.id,
+    required this.hlc,
+    required this.deleted,
+    required this.name,
+    required this.role,
+    required this.titles,
+    required this.exactOnly,
+    required this.skills,
+    required this.notWords,
+    required this.notEmployers,
+    required this.places,
+    required this.origin,
+    required this.created,
+    required this.updated,
+    this.lastLooked,
+    required this.seen,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['hlc'] = Variable<String>(hlc);
+    map['deleted'] = Variable<bool>(deleted);
+    map['name'] = Variable<String>(name);
+    map['role'] = Variable<String>(role);
+    map['titles'] = Variable<String>(titles);
+    map['exact_only'] = Variable<bool>(exactOnly);
+    map['skills'] = Variable<String>(skills);
+    map['not_words'] = Variable<String>(notWords);
+    map['not_employers'] = Variable<String>(notEmployers);
+    map['places'] = Variable<String>(places);
+    map['origin'] = Variable<String>(origin);
+    map['created'] = Variable<String>(created);
+    map['updated'] = Variable<String>(updated);
+    if (!nullToAbsent || lastLooked != null) {
+      map['last_looked'] = Variable<String>(lastLooked);
+    }
+    map['seen'] = Variable<String>(seen);
+    return map;
+  }
+
+  CareerSavedSearchesCompanion toCompanion(bool nullToAbsent) {
+    return CareerSavedSearchesCompanion(
+      id: Value(id),
+      hlc: Value(hlc),
+      deleted: Value(deleted),
+      name: Value(name),
+      role: Value(role),
+      titles: Value(titles),
+      exactOnly: Value(exactOnly),
+      skills: Value(skills),
+      notWords: Value(notWords),
+      notEmployers: Value(notEmployers),
+      places: Value(places),
+      origin: Value(origin),
+      created: Value(created),
+      updated: Value(updated),
+      lastLooked: lastLooked == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastLooked),
+      seen: Value(seen),
+    );
+  }
+
+  factory SavedSearchRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SavedSearchRow(
+      id: serializer.fromJson<String>(json['id']),
+      hlc: serializer.fromJson<String>(json['hlc']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
+      name: serializer.fromJson<String>(json['name']),
+      role: serializer.fromJson<String>(json['role']),
+      titles: serializer.fromJson<String>(json['titles']),
+      exactOnly: serializer.fromJson<bool>(json['exactOnly']),
+      skills: serializer.fromJson<String>(json['skills']),
+      notWords: serializer.fromJson<String>(json['notWords']),
+      notEmployers: serializer.fromJson<String>(json['notEmployers']),
+      places: serializer.fromJson<String>(json['places']),
+      origin: serializer.fromJson<String>(json['origin']),
+      created: serializer.fromJson<String>(json['created']),
+      updated: serializer.fromJson<String>(json['updated']),
+      lastLooked: serializer.fromJson<String?>(json['lastLooked']),
+      seen: serializer.fromJson<String>(json['seen']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'hlc': serializer.toJson<String>(hlc),
+      'deleted': serializer.toJson<bool>(deleted),
+      'name': serializer.toJson<String>(name),
+      'role': serializer.toJson<String>(role),
+      'titles': serializer.toJson<String>(titles),
+      'exactOnly': serializer.toJson<bool>(exactOnly),
+      'skills': serializer.toJson<String>(skills),
+      'notWords': serializer.toJson<String>(notWords),
+      'notEmployers': serializer.toJson<String>(notEmployers),
+      'places': serializer.toJson<String>(places),
+      'origin': serializer.toJson<String>(origin),
+      'created': serializer.toJson<String>(created),
+      'updated': serializer.toJson<String>(updated),
+      'lastLooked': serializer.toJson<String?>(lastLooked),
+      'seen': serializer.toJson<String>(seen),
+    };
+  }
+
+  SavedSearchRow copyWith({
+    String? id,
+    String? hlc,
+    bool? deleted,
+    String? name,
+    String? role,
+    String? titles,
+    bool? exactOnly,
+    String? skills,
+    String? notWords,
+    String? notEmployers,
+    String? places,
+    String? origin,
+    String? created,
+    String? updated,
+    Value<String?> lastLooked = const Value.absent(),
+    String? seen,
+  }) => SavedSearchRow(
+    id: id ?? this.id,
+    hlc: hlc ?? this.hlc,
+    deleted: deleted ?? this.deleted,
+    name: name ?? this.name,
+    role: role ?? this.role,
+    titles: titles ?? this.titles,
+    exactOnly: exactOnly ?? this.exactOnly,
+    skills: skills ?? this.skills,
+    notWords: notWords ?? this.notWords,
+    notEmployers: notEmployers ?? this.notEmployers,
+    places: places ?? this.places,
+    origin: origin ?? this.origin,
+    created: created ?? this.created,
+    updated: updated ?? this.updated,
+    lastLooked: lastLooked.present ? lastLooked.value : this.lastLooked,
+    seen: seen ?? this.seen,
+  );
+  SavedSearchRow copyWithCompanion(CareerSavedSearchesCompanion data) {
+    return SavedSearchRow(
+      id: data.id.present ? data.id.value : this.id,
+      hlc: data.hlc.present ? data.hlc.value : this.hlc,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+      name: data.name.present ? data.name.value : this.name,
+      role: data.role.present ? data.role.value : this.role,
+      titles: data.titles.present ? data.titles.value : this.titles,
+      exactOnly: data.exactOnly.present ? data.exactOnly.value : this.exactOnly,
+      skills: data.skills.present ? data.skills.value : this.skills,
+      notWords: data.notWords.present ? data.notWords.value : this.notWords,
+      notEmployers: data.notEmployers.present
+          ? data.notEmployers.value
+          : this.notEmployers,
+      places: data.places.present ? data.places.value : this.places,
+      origin: data.origin.present ? data.origin.value : this.origin,
+      created: data.created.present ? data.created.value : this.created,
+      updated: data.updated.present ? data.updated.value : this.updated,
+      lastLooked: data.lastLooked.present
+          ? data.lastLooked.value
+          : this.lastLooked,
+      seen: data.seen.present ? data.seen.value : this.seen,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavedSearchRow(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('name: $name, ')
+          ..write('role: $role, ')
+          ..write('titles: $titles, ')
+          ..write('exactOnly: $exactOnly, ')
+          ..write('skills: $skills, ')
+          ..write('notWords: $notWords, ')
+          ..write('notEmployers: $notEmployers, ')
+          ..write('places: $places, ')
+          ..write('origin: $origin, ')
+          ..write('created: $created, ')
+          ..write('updated: $updated, ')
+          ..write('lastLooked: $lastLooked, ')
+          ..write('seen: $seen')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    hlc,
+    deleted,
+    name,
+    role,
+    titles,
+    exactOnly,
+    skills,
+    notWords,
+    notEmployers,
+    places,
+    origin,
+    created,
+    updated,
+    lastLooked,
+    seen,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SavedSearchRow &&
+          other.id == this.id &&
+          other.hlc == this.hlc &&
+          other.deleted == this.deleted &&
+          other.name == this.name &&
+          other.role == this.role &&
+          other.titles == this.titles &&
+          other.exactOnly == this.exactOnly &&
+          other.skills == this.skills &&
+          other.notWords == this.notWords &&
+          other.notEmployers == this.notEmployers &&
+          other.places == this.places &&
+          other.origin == this.origin &&
+          other.created == this.created &&
+          other.updated == this.updated &&
+          other.lastLooked == this.lastLooked &&
+          other.seen == this.seen);
+}
+
+class CareerSavedSearchesCompanion extends UpdateCompanion<SavedSearchRow> {
+  final Value<String> id;
+  final Value<String> hlc;
+  final Value<bool> deleted;
+  final Value<String> name;
+  final Value<String> role;
+  final Value<String> titles;
+  final Value<bool> exactOnly;
+  final Value<String> skills;
+  final Value<String> notWords;
+  final Value<String> notEmployers;
+  final Value<String> places;
+  final Value<String> origin;
+  final Value<String> created;
+  final Value<String> updated;
+  final Value<String?> lastLooked;
+  final Value<String> seen;
+  final Value<int> rowid;
+  const CareerSavedSearchesCompanion({
+    this.id = const Value.absent(),
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.name = const Value.absent(),
+    this.role = const Value.absent(),
+    this.titles = const Value.absent(),
+    this.exactOnly = const Value.absent(),
+    this.skills = const Value.absent(),
+    this.notWords = const Value.absent(),
+    this.notEmployers = const Value.absent(),
+    this.places = const Value.absent(),
+    this.origin = const Value.absent(),
+    this.created = const Value.absent(),
+    this.updated = const Value.absent(),
+    this.lastLooked = const Value.absent(),
+    this.seen = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CareerSavedSearchesCompanion.insert({
+    required String id,
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    required String name,
+    required String role,
+    this.titles = const Value.absent(),
+    this.exactOnly = const Value.absent(),
+    this.skills = const Value.absent(),
+    this.notWords = const Value.absent(),
+    this.notEmployers = const Value.absent(),
+    this.places = const Value.absent(),
+    this.origin = const Value.absent(),
+    required String created,
+    required String updated,
+    this.lastLooked = const Value.absent(),
+    this.seen = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       role = Value(role),
+       created = Value(created),
+       updated = Value(updated);
+  static Insertable<SavedSearchRow> custom({
+    Expression<String>? id,
+    Expression<String>? hlc,
+    Expression<bool>? deleted,
+    Expression<String>? name,
+    Expression<String>? role,
+    Expression<String>? titles,
+    Expression<bool>? exactOnly,
+    Expression<String>? skills,
+    Expression<String>? notWords,
+    Expression<String>? notEmployers,
+    Expression<String>? places,
+    Expression<String>? origin,
+    Expression<String>? created,
+    Expression<String>? updated,
+    Expression<String>? lastLooked,
+    Expression<String>? seen,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (hlc != null) 'hlc': hlc,
+      if (deleted != null) 'deleted': deleted,
+      if (name != null) 'name': name,
+      if (role != null) 'role': role,
+      if (titles != null) 'titles': titles,
+      if (exactOnly != null) 'exact_only': exactOnly,
+      if (skills != null) 'skills': skills,
+      if (notWords != null) 'not_words': notWords,
+      if (notEmployers != null) 'not_employers': notEmployers,
+      if (places != null) 'places': places,
+      if (origin != null) 'origin': origin,
+      if (created != null) 'created': created,
+      if (updated != null) 'updated': updated,
+      if (lastLooked != null) 'last_looked': lastLooked,
+      if (seen != null) 'seen': seen,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CareerSavedSearchesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? hlc,
+    Value<bool>? deleted,
+    Value<String>? name,
+    Value<String>? role,
+    Value<String>? titles,
+    Value<bool>? exactOnly,
+    Value<String>? skills,
+    Value<String>? notWords,
+    Value<String>? notEmployers,
+    Value<String>? places,
+    Value<String>? origin,
+    Value<String>? created,
+    Value<String>? updated,
+    Value<String?>? lastLooked,
+    Value<String>? seen,
+    Value<int>? rowid,
+  }) {
+    return CareerSavedSearchesCompanion(
+      id: id ?? this.id,
+      hlc: hlc ?? this.hlc,
+      deleted: deleted ?? this.deleted,
+      name: name ?? this.name,
+      role: role ?? this.role,
+      titles: titles ?? this.titles,
+      exactOnly: exactOnly ?? this.exactOnly,
+      skills: skills ?? this.skills,
+      notWords: notWords ?? this.notWords,
+      notEmployers: notEmployers ?? this.notEmployers,
+      places: places ?? this.places,
+      origin: origin ?? this.origin,
+      created: created ?? this.created,
+      updated: updated ?? this.updated,
+      lastLooked: lastLooked ?? this.lastLooked,
+      seen: seen ?? this.seen,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (hlc.present) {
+      map['hlc'] = Variable<String>(hlc.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (titles.present) {
+      map['titles'] = Variable<String>(titles.value);
+    }
+    if (exactOnly.present) {
+      map['exact_only'] = Variable<bool>(exactOnly.value);
+    }
+    if (skills.present) {
+      map['skills'] = Variable<String>(skills.value);
+    }
+    if (notWords.present) {
+      map['not_words'] = Variable<String>(notWords.value);
+    }
+    if (notEmployers.present) {
+      map['not_employers'] = Variable<String>(notEmployers.value);
+    }
+    if (places.present) {
+      map['places'] = Variable<String>(places.value);
+    }
+    if (origin.present) {
+      map['origin'] = Variable<String>(origin.value);
+    }
+    if (created.present) {
+      map['created'] = Variable<String>(created.value);
+    }
+    if (updated.present) {
+      map['updated'] = Variable<String>(updated.value);
+    }
+    if (lastLooked.present) {
+      map['last_looked'] = Variable<String>(lastLooked.value);
+    }
+    if (seen.present) {
+      map['seen'] = Variable<String>(seen.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CareerSavedSearchesCompanion(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('name: $name, ')
+          ..write('role: $role, ')
+          ..write('titles: $titles, ')
+          ..write('exactOnly: $exactOnly, ')
+          ..write('skills: $skills, ')
+          ..write('notWords: $notWords, ')
+          ..write('notEmployers: $notEmployers, ')
+          ..write('places: $places, ')
+          ..write('origin: $origin, ')
+          ..write('created: $created, ')
+          ..write('updated: $updated, ')
+          ..write('lastLooked: $lastLooked, ')
+          ..write('seen: $seen, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PrefsTable extends Prefs with TableInfo<$PrefsTable, Pref> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -17844,6 +18742,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $BridgeStudyProgressTable bridgeStudyProgress =
       $BridgeStudyProgressTable(this);
   late final $CareerFileDocsTable careerFileDocs = $CareerFileDocsTable(this);
+  late final $CareerSavedSearchesTable careerSavedSearches =
+      $CareerSavedSearchesTable(this);
   late final $PrefsTable prefs = $PrefsTable(this);
   late final $OutboxTable outbox = $OutboxTable(this);
   late final $SyncCursorsTable syncCursors = $SyncCursorsTable(this);
@@ -17878,6 +18778,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     bridgeStudyPlans,
     bridgeStudyProgress,
     careerFileDocs,
+    careerSavedSearches,
     prefs,
     outbox,
     syncCursors,
@@ -26247,6 +27148,444 @@ typedef $$CareerFileDocsTableProcessedTableManager =
       CareerFileDoc,
       PrefetchHooks Function()
     >;
+typedef $$CareerSavedSearchesTableCreateCompanionBuilder =
+    CareerSavedSearchesCompanion Function({
+      required String id,
+      Value<String> hlc,
+      Value<bool> deleted,
+      required String name,
+      required String role,
+      Value<String> titles,
+      Value<bool> exactOnly,
+      Value<String> skills,
+      Value<String> notWords,
+      Value<String> notEmployers,
+      Value<String> places,
+      Value<String> origin,
+      required String created,
+      required String updated,
+      Value<String?> lastLooked,
+      Value<String> seen,
+      Value<int> rowid,
+    });
+typedef $$CareerSavedSearchesTableUpdateCompanionBuilder =
+    CareerSavedSearchesCompanion Function({
+      Value<String> id,
+      Value<String> hlc,
+      Value<bool> deleted,
+      Value<String> name,
+      Value<String> role,
+      Value<String> titles,
+      Value<bool> exactOnly,
+      Value<String> skills,
+      Value<String> notWords,
+      Value<String> notEmployers,
+      Value<String> places,
+      Value<String> origin,
+      Value<String> created,
+      Value<String> updated,
+      Value<String?> lastLooked,
+      Value<String> seen,
+      Value<int> rowid,
+    });
+
+class $$CareerSavedSearchesTableFilterComposer
+    extends Composer<_$AppDatabase, $CareerSavedSearchesTable> {
+  $$CareerSavedSearchesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hlc => $composableBuilder(
+    column: $table.hlc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get titles => $composableBuilder(
+    column: $table.titles,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get exactOnly => $composableBuilder(
+    column: $table.exactOnly,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get skills => $composableBuilder(
+    column: $table.skills,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notWords => $composableBuilder(
+    column: $table.notWords,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notEmployers => $composableBuilder(
+    column: $table.notEmployers,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get places => $composableBuilder(
+    column: $table.places,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get origin => $composableBuilder(
+    column: $table.origin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get created => $composableBuilder(
+    column: $table.created,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get updated => $composableBuilder(
+    column: $table.updated,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastLooked => $composableBuilder(
+    column: $table.lastLooked,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get seen => $composableBuilder(
+    column: $table.seen,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CareerSavedSearchesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CareerSavedSearchesTable> {
+  $$CareerSavedSearchesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hlc => $composableBuilder(
+    column: $table.hlc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get titles => $composableBuilder(
+    column: $table.titles,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get exactOnly => $composableBuilder(
+    column: $table.exactOnly,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get skills => $composableBuilder(
+    column: $table.skills,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notWords => $composableBuilder(
+    column: $table.notWords,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notEmployers => $composableBuilder(
+    column: $table.notEmployers,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get places => $composableBuilder(
+    column: $table.places,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get origin => $composableBuilder(
+    column: $table.origin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get created => $composableBuilder(
+    column: $table.created,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get updated => $composableBuilder(
+    column: $table.updated,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastLooked => $composableBuilder(
+    column: $table.lastLooked,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get seen => $composableBuilder(
+    column: $table.seen,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CareerSavedSearchesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CareerSavedSearchesTable> {
+  $$CareerSavedSearchesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => column);
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get titles =>
+      $composableBuilder(column: $table.titles, builder: (column) => column);
+
+  GeneratedColumn<bool> get exactOnly =>
+      $composableBuilder(column: $table.exactOnly, builder: (column) => column);
+
+  GeneratedColumn<String> get skills =>
+      $composableBuilder(column: $table.skills, builder: (column) => column);
+
+  GeneratedColumn<String> get notWords =>
+      $composableBuilder(column: $table.notWords, builder: (column) => column);
+
+  GeneratedColumn<String> get notEmployers => $composableBuilder(
+    column: $table.notEmployers,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get places =>
+      $composableBuilder(column: $table.places, builder: (column) => column);
+
+  GeneratedColumn<String> get origin =>
+      $composableBuilder(column: $table.origin, builder: (column) => column);
+
+  GeneratedColumn<String> get created =>
+      $composableBuilder(column: $table.created, builder: (column) => column);
+
+  GeneratedColumn<String> get updated =>
+      $composableBuilder(column: $table.updated, builder: (column) => column);
+
+  GeneratedColumn<String> get lastLooked => $composableBuilder(
+    column: $table.lastLooked,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get seen =>
+      $composableBuilder(column: $table.seen, builder: (column) => column);
+}
+
+class $$CareerSavedSearchesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CareerSavedSearchesTable,
+          SavedSearchRow,
+          $$CareerSavedSearchesTableFilterComposer,
+          $$CareerSavedSearchesTableOrderingComposer,
+          $$CareerSavedSearchesTableAnnotationComposer,
+          $$CareerSavedSearchesTableCreateCompanionBuilder,
+          $$CareerSavedSearchesTableUpdateCompanionBuilder,
+          (
+            SavedSearchRow,
+            BaseReferences<
+              _$AppDatabase,
+              $CareerSavedSearchesTable,
+              SavedSearchRow
+            >,
+          ),
+          SavedSearchRow,
+          PrefetchHooks Function()
+        > {
+  $$CareerSavedSearchesTableTableManager(
+    _$AppDatabase db,
+    $CareerSavedSearchesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CareerSavedSearchesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CareerSavedSearchesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CareerSavedSearchesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> role = const Value.absent(),
+                Value<String> titles = const Value.absent(),
+                Value<bool> exactOnly = const Value.absent(),
+                Value<String> skills = const Value.absent(),
+                Value<String> notWords = const Value.absent(),
+                Value<String> notEmployers = const Value.absent(),
+                Value<String> places = const Value.absent(),
+                Value<String> origin = const Value.absent(),
+                Value<String> created = const Value.absent(),
+                Value<String> updated = const Value.absent(),
+                Value<String?> lastLooked = const Value.absent(),
+                Value<String> seen = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CareerSavedSearchesCompanion(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                name: name,
+                role: role,
+                titles: titles,
+                exactOnly: exactOnly,
+                skills: skills,
+                notWords: notWords,
+                notEmployers: notEmployers,
+                places: places,
+                origin: origin,
+                created: created,
+                updated: updated,
+                lastLooked: lastLooked,
+                seen: seen,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                required String name,
+                required String role,
+                Value<String> titles = const Value.absent(),
+                Value<bool> exactOnly = const Value.absent(),
+                Value<String> skills = const Value.absent(),
+                Value<String> notWords = const Value.absent(),
+                Value<String> notEmployers = const Value.absent(),
+                Value<String> places = const Value.absent(),
+                Value<String> origin = const Value.absent(),
+                required String created,
+                required String updated,
+                Value<String?> lastLooked = const Value.absent(),
+                Value<String> seen = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CareerSavedSearchesCompanion.insert(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                name: name,
+                role: role,
+                titles: titles,
+                exactOnly: exactOnly,
+                skills: skills,
+                notWords: notWords,
+                notEmployers: notEmployers,
+                places: places,
+                origin: origin,
+                created: created,
+                updated: updated,
+                lastLooked: lastLooked,
+                seen: seen,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CareerSavedSearchesTable, SavedSearchRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $CareerSavedSearchesTable,
+                    SavedSearchRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CareerSavedSearchesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CareerSavedSearchesTable,
+      SavedSearchRow,
+      $$CareerSavedSearchesTableFilterComposer,
+      $$CareerSavedSearchesTableOrderingComposer,
+      $$CareerSavedSearchesTableAnnotationComposer,
+      $$CareerSavedSearchesTableCreateCompanionBuilder,
+      $$CareerSavedSearchesTableUpdateCompanionBuilder,
+      (
+        SavedSearchRow,
+        BaseReferences<
+          _$AppDatabase,
+          $CareerSavedSearchesTable,
+          SavedSearchRow
+        >,
+      ),
+      SavedSearchRow,
+      PrefetchHooks Function()
+    >;
 typedef $$PrefsTableCreateCompanionBuilder = PrefsCompanion Function({
   required String id,
   Value<String> hlc,
@@ -26944,6 +28283,8 @@ class $AppDatabaseManager {
       $$BridgeStudyProgressTableTableManager(_db, _db.bridgeStudyProgress);
   $$CareerFileDocsTableTableManager get careerFileDocs =>
       $$CareerFileDocsTableTableManager(_db, _db.careerFileDocs);
+  $$CareerSavedSearchesTableTableManager get careerSavedSearches =>
+      $$CareerSavedSearchesTableTableManager(_db, _db.careerSavedSearches);
   $$PrefsTableTableManager get prefs =>
       $$PrefsTableTableManager(_db, _db.prefs);
   $$OutboxTableTableManager get outbox =>

@@ -11,6 +11,7 @@ import '../domain/json.dart';
 import '../domain/listing_check.dart';
 import '../domain/pipeline.dart';
 import '../domain/profile.dart';
+import '../domain/saved_searches.dart';
 import 'common.dart';
 import 'eligibility_view.dart';
 import 'employers_page.dart';
@@ -18,6 +19,7 @@ import 'job_page.dart';
 import 'kit/kit.dart';
 import 'look.dart';
 import 'role_search_view.dart';
+import 'saved_searches_view.dart';
 import 'site_page.dart';
 
 class JobsPage extends ConsumerStatefulWidget {
@@ -35,6 +37,9 @@ class _JobsPageState extends ConsumerState<JobsPage> {
   /// The search box asks the job sites for a role, rather than filtering
   /// the jobs already saved.
   var siteSearch = false;
+
+  /// The role search, so a saved search can be run in it.
+  final _roleSearch = GlobalKey<RoleSearchViewState>();
 
   @override
   void dispose() {
@@ -117,9 +122,13 @@ class _JobsPageState extends ConsumerState<JobsPage> {
             onSelectionChanged: (s) => setState(() => siteSearch = s.first),
           ),
         ),
+        SavedSearchesRow(onOpen: _openSearch),
         const SizedBox(height: 12),
         // Kept while hidden, so switching back and forth keeps the search.
-        Offstage(offstage: !siteSearch, child: const RoleSearchView()),
+        Offstage(
+          offstage: !siteSearch,
+          child: RoleSearchView(key: _roleSearch),
+        ),
         if (!siteSearch) ...[
           Wrap(
             spacing: 8,
@@ -213,6 +222,12 @@ class _JobsPageState extends ConsumerState<JobsPage> {
         ],
       ],
     );
+  }
+
+  /// Runs saved search [s] in "Search job sites".
+  void _openSearch(SavedSearch s) {
+    setState(() => siteSearch = true);
+    _roleSearch.currentState?.open(s);
   }
 
   Future<void> _run({bool ai = false, bool hasAi = true}) async {

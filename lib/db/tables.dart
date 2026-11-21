@@ -586,6 +586,50 @@ class CareerFileDocs extends Table with SyncedRow {
   TextColumn get device => text().withDefault(const Constant(''))();
 }
 
+/// A saved role search (role search plan U3): the role, the family titles
+/// shown with which are switched on, NOT words, employers to leave out and
+/// places. The routine refresh runs every saved search; the Jobs page shows
+/// how many jobs on the list are new since the person last looked.
+@DataClassName('SavedSearchRow')
+class CareerSavedSearches extends Table with SyncedRow {
+  /// What the person calls it; the role until renamed.
+  TextColumn get name => text()();
+
+  /// The role as typed.
+  TextColumn get role => text()();
+
+  /// Family titles as JSON: each FamilyTitle plus "on" (switched on).
+  TextColumn get titles => text().withDefault(const Constant('[]'))();
+
+  /// Search the typed title only (family expansion off).
+  BoolColumn get exactOnly => boolean().withDefault(const Constant(false))();
+
+  /// Tasks and tools searched as well, JSON list of text.
+  TextColumn get skills => text().withDefault(const Constant('[]'))();
+
+  /// Words that rule a job out, JSON list of text.
+  TextColumn get notWords => text().withDefault(const Constant('[]'))();
+
+  /// Employers and agencies left out, JSON list of text.
+  TextColumn get notEmployers => text().withDefault(const Constant('[]'))();
+
+  /// HomeArea list as JSON; empty: the profile's home areas.
+  TextColumn get places => text().withDefault(const Constant('[]'))();
+
+  /// profile (made from a profile keyword or target role, untouched since)
+  /// | user (saved or edited by the person).
+  TextColumn get origin => text().withDefault(const Constant('user'))();
+  TextColumn get created => text()();
+  TextColumn get updated => text()();
+
+  /// When the person last opened it; null: never.
+  TextColumn get lastLooked => text().nullable()();
+
+  /// Ids of the listed jobs it matched when last looked at, JSON list, so
+  /// the rest count as new.
+  TextColumn get seen => text().withDefault(const Constant('[]'))();
+}
+
 @DataClassName('Pref')
 class Prefs extends Table with SyncedRow, PrefColumns {}
 

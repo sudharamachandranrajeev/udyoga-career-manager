@@ -21,6 +21,7 @@ import 'pay.dart';
 import 'pipeline.dart';
 import 'profile.dart';
 import 'resume.dart';
+import 'saved_searches.dart';
 import 'subscription.dart';
 import 'work_rights.dart';
 
@@ -56,6 +57,10 @@ abstract final class PrefKeys {
   /// "until": ISO time, "ran": ISO time of the last successful run}. Synced,
   /// so only one device spends on it.
   static const aiLease = 'udyoga.ai.lease';
+
+  /// True once the profile's search terms have become saved searches
+  /// (lib/domain/saved_searches.dart). Synced, so it runs on one device.
+  static const searchesMoved = 'udyoga.searches.moved';
 }
 
 /// Device-only settings (local_settings).
@@ -308,9 +313,12 @@ class CareerBook {
   });
 
   /// Saves the profile (not its rights, notes or stories, which live apart)
-  /// and rescores the jobs against it.
+  /// and rescores the jobs against it. A search term added to it becomes a
+  /// saved search for that exact title (see [SavedSearchBook.followProfileTerms]).
   Future<void> saveProfile(CandidateProfile p) async {
+    final before = CandidateProfile.fromJson(await pref<Map<String, Object?>>(PrefKeys.profile, const {}));
     await setPref(PrefKeys.profile, p.toJson());
+    await followProfileTerms(before, p);
     await rescoreJobs();
   }
 
