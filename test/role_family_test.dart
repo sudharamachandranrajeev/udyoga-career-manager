@@ -109,6 +109,21 @@ void main() {
     expect(cst.reason, contains('3573'));
   });
 
+  test('a synonym head with nothing else in common is related, not close', () {
+    final f = offlineFamily('Digital Training Facilitator');
+    final coach = f.titles.firstWhere((t) => t.title == 'AI Coach');
+    expect(coach.source, FamilySource.soc);
+    expect(coach.closeness, Closeness.related);
+    // The role's own head word, or one it already uses, stays close.
+    expect(closeByHead('clinical systems trainer', 'Digital Training Facilitator'), isTrue);
+    expect(closeByHead('learning facilitator', 'Digital Training Facilitator'), isTrue);
+    // A synonym head with a shared field word ("ICT" is "digital") is close.
+    expect(closeByHead('ict instructor', 'Digital Training Facilitator'), isTrue);
+    expect(closeByHead('ai coach', 'Digital Training Facilitator'), isFalse);
+    expect(closeByHead('dog coach', 'IT Trainer'), isFalse);
+    expect(closeByHead('it tutor', 'IT Trainer'), isTrue);
+  });
+
   test('the exact title comes first and titles never repeat, in any case', () {
     final f = offlineFamily('it trainer');
     expect(f.titles.first.title, 'it trainer');

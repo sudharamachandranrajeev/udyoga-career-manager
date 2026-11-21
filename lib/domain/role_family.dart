@@ -187,6 +187,24 @@ String _headKey(String title) {
   return wordKey(words.last, words.last);
 }
 
+/// True when [title], whose head noun is the role's or a synonym of it, is
+/// a close title for [role]: it ends in the role's own head word, or in a
+/// word the role already uses ("trainer" for a "training facilitator"), or
+/// its other words share at least one with the role's ("ICT Instructor" for
+/// "Digital Training Facilitator": ICT and digital name the same field). A
+/// synonym head with nothing else in common is only related: "AI Coach"
+/// shares nothing with "Digital Training".
+bool closeByHead(String title, String role) {
+  final words = normTitle(title).split(' ').where((w) => w.isNotEmpty).toList();
+  final roleWords = normTitle(role).split(' ').where((w) => w.isNotEmpty).toList();
+  if (words.isEmpty || roleWords.isEmpty) return false;
+  final head = words.last;
+  if (roleWords.any((w) => w == head || stem(w) == stem(head))) return true;
+  final others = titleKeys(title).difference({_headKey(title)});
+  final roleOthers = titleKeys(role).difference({_headKey(role)});
+  return others.intersection(roleOthers).isNotEmpty;
+}
+
 /// The role's title with its head noun swapped for each synonym:
 /// "digital training facilitator" gives "digital trainer" (the word before
 /// the head folds in when it is the same word, like "training"), "digital
@@ -259,7 +277,7 @@ RoleFamily offlineFamily(String role, {SocIndex? index, int groups = 2, int perG
             title: titleCase(e.title),
             reason: 'Same SOC 2020 group ${m.soc} (${m.socTitle})',
             closeness: switch ((i == 0, sameHead)) {
-              (true, true) => Closeness.close,
+              (true, true) => closeByHead(e.title, r) ? Closeness.close : Closeness.related,
               (true, false) => mixed && !shares ? Closeness.distant : Closeness.related,
               (false, true) => Closeness.related,
               (false, false) => Closeness.distant,
@@ -373,7 +391,7 @@ class RoleFamilies {
           FamilyTitle(
             title: titleCase(l),
             reason: l == o.title ? 'ESCO occupation' : 'ESCO alternative label of "${o.title}"',
-            closeness: _headKey(l) == roleHead ? Closeness.close : Closeness.related,
+            closeness: _headKey(l) == roleHead && closeByHead(l, base.role) ? Closeness.close : Closeness.related,
             source: FamilySource.esco,
           ),
         );
