@@ -51,6 +51,7 @@ final occupationsProvider = FutureProvider<List<OccupationMatch>>((ref) async {
   final p = await ref.watch(profileProvider.future);
   final titles = titlesOf(p);
   final s = ref.watch(sessionProvider);
+  await loadSocIndex();
   return EscoLookup(ref.watch(httpClientProvider), s.db).complete(titles, codeTitles(titles), offline: true);
 });
 
