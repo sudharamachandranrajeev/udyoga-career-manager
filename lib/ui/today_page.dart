@@ -565,7 +565,13 @@ class _NeedsYou extends StatelessWidget {
                   const SizedBox(width: 12),
                   const Expanded(child: Text('Nothing needs you today.')),
                   const SizedBox(width: 8),
-                  TextButton(onPressed: onNothing, child: Text(nothingLabel)),
+                  // At 320 px the label would push past the card; it wraps.
+                  Flexible(
+                    child: TextButton(
+                      onPressed: onNothing,
+                      child: Text(nothingLabel, textAlign: TextAlign.center),
+                    ),
+                  ),
                 ],
               ),
             ),

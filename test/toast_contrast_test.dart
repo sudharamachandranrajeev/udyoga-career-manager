@@ -26,9 +26,11 @@ void main() {
 
     test('filled button labels are readable in ${b.name} mode', () {
       final s = udyogaTheme(b).colorScheme;
-      // Dark mode was 2.7:1 (white on light blue). Light mode is white on
-      // the brand azure, 4.499:1: AA once rounded, kept as the brand colour.
-      expect(_contrast(s.primary, s.onPrimary), greaterThanOrEqualTo(b == Brightness.dark ? 4.5 : 4.49));
+      // Dark mode was 2.7:1 (white on light blue), light mode 4.499:1
+      // (white on #2F6BFF). Both must meet WCAG AA for normal text.
+      expect(_contrast(s.primary, s.onPrimary), greaterThanOrEqualTo(4.5));
+      final fab = udyogaTheme(b).floatingActionButtonTheme;
+      expect(_contrast(fab.backgroundColor!, fab.foregroundColor!), greaterThanOrEqualTo(4.5));
     });
   }
 }

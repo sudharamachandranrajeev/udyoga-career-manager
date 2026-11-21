@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:udyoga/db/database.dart';
 import 'package:udyoga/domain/book.dart';
@@ -363,14 +364,15 @@ void main() {
     await h.run();
     await h.go('Jobs');
     expect(find.text('Saved searches'), findsOneWidget);
-    expect(find.text('Clinical Informatics Nurse · 1 new'), findsOneWidget);
+    expect(find.text('Clinical Informatics Nurse'), findsWidgets);
+    expect(find.text(' · 1 new'), findsOneWidget);
     expect(find.text('Digital Nurse Specialist'), findsOneWidget);
 
     // Tap: search mode, filled in and run; the job no longer counts as new.
-    await h.tap(find.text('Clinical Informatics Nurse · 1 new'));
+    await h.tap(find.text(' · 1 new'));
     await h.settle();
     expect(find.text('Clinical Informatics Nurse'), findsWidgets);
-    expect(find.text('Clinical Informatics Nurse · 1 new'), findsNothing);
+    expect(find.text(' · 1 new'), findsNothing);
     expect(find.text('Update saved search'), findsOneWidget);
     expect(
       tester.widget<SwitchListTile>(find.widgetWithText(SwitchListTile, 'Exact title only')).value,
@@ -403,4 +405,61 @@ void main() {
     expect(saved.last.onTitles, isNotEmpty);
     await h.close();
   });
+
+  for (final size in const [Size(320, 640), Size(390, 844)]) {
+    testWidgets('a long saved search name gives way to its new count at ${size.width.toInt()} px', (
+      tester,
+    ) async {
+      final h = AppHarness(tester);
+      await h.open(
+        seed: (b) async {
+          await b.saveProfile(sampleProfile);
+          await b.importPostings([samplePosting()], sampleProfile, today: today);
+          await b.migrateSavedSearches(now: now);
+          final first = (await b.savedSearches()).firstWhere((s) => s.role == 'Clinical Informatics Nurse');
+          await b.saveSearch(first.copyWith(name: 'Clinical Informatics Nurse in hospitals near home'));
+        },
+      );
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await h.run();
+      await h.go('Jobs');
+      final count = find.text(' · 1 new');
+      expect(count, findsOneWidget);
+      await tester.ensureVisible(count);
+      await tester.pump();
+      // The count is drawn whole, and the name is the part that is cut.
+      final countText = tester.renderObject<RenderParagraph>(count);
+      expect(countText.didExceedMaxLines, isFalse);
+      expect(countText.size.width, closeTo(countText.getMaxIntrinsicWidth(double.infinity), 0.5));
+      final name = tester.renderObject<RenderParagraph>(
+        find.text('Clinical Informatics Nurse in hospitals near home'),
+      );
+      expect(name.didExceedMaxLines, isTrue);
+      expect(tester.getRect(count).right, lessThanOrEqualTo(size.width));
+      expect(tester.takeException(), isNull);
+      await h.close();
+    });
+
+    testWidgets('search mode leaves room under the results for "Add job" at ${size.width.toInt()} px', (
+      tester,
+    ) async {
+      final h = AppHarness(tester);
+      await h.open(seed: (b) => b.saveProfile(sampleProfile));
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await h.run();
+      await h.go('Jobs');
+      await h.tap(find.text('Search job sites'));
+      await tester.drag(find.byType(ListView).first, const Offset(0, -10000));
+      await h.settle();
+      // The page's content ends where the room starts: above the button.
+      final room = tester.getRect(find.byKey(const ValueKey('jobs.fabRoom')));
+      final fab = tester.getRect(find.widgetWithText(FloatingActionButton, 'Add job'));
+      expect(room.top, lessThanOrEqualTo(fab.top));
+      await h.close();
+    });
+  }
 }

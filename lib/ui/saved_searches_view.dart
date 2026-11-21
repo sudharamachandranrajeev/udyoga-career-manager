@@ -190,10 +190,14 @@ class _SearchChip extends StatelessWidget {
       child: InputChip(
         key: ValueKey('savedSearch.${s.id}'),
         avatar: Icon(s.exactOnly ? Icons.bookmark_outline : Icons.bookmarks_outlined, size: 18),
-        label: Text(
-          fresh > 0 ? '${s.name} · $fresh new' : s.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        // On a narrow screen the name gives way; the new count is never cut.
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            if (fresh > 0)
+              Text(' · $fresh new', key: ValueKey('savedSearch.${s.id}.new'), maxLines: 1, softWrap: false),
+          ],
         ),
         tooltip:
             '$news. ${s.exactOnly ? 'Exact title only.' : '${s.onTitles.length + 1} titles.'} Tap to search.',

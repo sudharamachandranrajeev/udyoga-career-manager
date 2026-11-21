@@ -15,7 +15,9 @@ import 'package:shadcn_ui/shadcn_ui.dart'
 // short, strong ease-out motion that stops when the system asks for reduced
 // motion.
 
-const azure = Color(0xFF2F6BFF);
+// One step darker than #2F6BFF, which gave white labels 4.499:1, just under
+// WCAG AA; this is 4.56:1 and looks the same.
+const azure = Color(0xFF2E6AFE);
 const ink = Color(0xFF0B1020);
 const mint = Color(0xFF12B886);
 
@@ -136,7 +138,7 @@ ThemeData udyogaTheme(Brightness b) {
   final scheme = base.colorScheme.copyWith(
     primary: p.primary,
     // White on the light dark-mode blue is 2.7:1, too faint for button
-    // labels; ink is 7:1.
+    // labels; ink is 7:1. White on light-mode azure is 4.56:1.
     onPrimary: dark ? ink : Colors.white,
     surface: p.surface,
     surfaceContainerLow: p.card,

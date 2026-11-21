@@ -220,6 +220,10 @@ class _JobsPageState extends ConsumerState<JobsPage> {
             },
           ),
         ],
+        // The page's own bottom room is taken by the floating dock, so the
+        // "Add job" button (56 high, 16 above the dock) would sit over the
+        // last result: room for it too, in both modes.
+        const SizedBox(key: ValueKey('jobs.fabRoom'), height: 72),
       ],
     );
   }
