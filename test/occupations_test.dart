@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:udyoga/domain/occupations.dart';
 import 'package:udyoga/domain/routes.dart';
@@ -14,8 +17,40 @@ void main() {
 
   test('close titles match on shared words; unrelated ones do not', () {
     expect(socMatches('Senior Clinical Systems Trainer').map((m) => m.soc), contains('3573'));
-    expect(socMatches('Staff Nurse'), isEmpty);
+    expect(socMatches('Chief Vibes Wrangler'), isEmpty);
     expect(socMatches(''), isEmpty);
+  });
+
+  test('the full index codes titles outside health admin and IT', () {
+    final nurse = socMatches('Staff Nurse');
+    expect(nurse.single.soc, '2237');
+    expect(nurse.single.exact, isTrue);
+    expect(loadedSocIndex!.entries.length, greaterThan(25000));
+  });
+
+  test('a head-noun synonym matches: a facilitator is a trainer', () {
+    final m = socMatches('Digital Training Facilitator');
+    expect(m.first.soc, '3573');
+    expect(m.every((o) => !o.exact), isTrue);
+    // Sharing only the head noun is not a match.
+    expect(
+      socMatches('Digital Training Facilitator').map((o) => o.socTitle),
+      isNot(contains(contains('animal'))),
+    );
+    // "training" is never "train": a training lead is not rail work.
+    expect(socMatches('Training Lead').first.soc, '3574');
+  });
+
+  test('the index loads from its asset once', () async {
+    final had = loadedSocIndex;
+    final bundle = _CountingBundle();
+    useSocIndex(null);
+    expect(socMatches('Clinical Coder'), isEmpty);
+    final first = loadSocIndex(bundle: bundle), second = loadSocIndex(bundle: bundle);
+    expect(identical(await first, await second), isTrue);
+    expect(bundle.loads, 1);
+    expect(socMatches('Clinical Coder').first.soc, '3549');
+    useSocIndex(had);
   });
 
   test('titles to code keep targets first and drop repeats', () {
@@ -51,4 +86,15 @@ void main() {
       expect(socTitle(soc), isNotEmpty, reason: soc);
     }
   });
+}
+
+/// Reads assets from disk and counts the reads.
+class _CountingBundle extends CachingAssetBundle {
+  int loads = 0;
+
+  @override
+  Future<ByteData> load(String key) async {
+    loads++;
+    return ByteData.sublistView(File(key).readAsBytesSync());
+  }
 }

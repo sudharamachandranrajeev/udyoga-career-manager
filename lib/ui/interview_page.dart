@@ -22,6 +22,7 @@ import 'interview_process_page.dart';
 import 'kit/kit.dart';
 import 'look.dart';
 import 'spoken_round_page.dart';
+import 'vidya_practice_ui.dart';
 
 const _ratings = {
   'outstanding': Status.good,
@@ -136,6 +137,7 @@ class InterviewPage extends ConsumerWidget {
         if (!hasAi) const InterviewNoAi(),
         // Confidence first (plan I4): what is ready, then what to work on.
         const ReadyForCard(),
+        const PractiseRequestsCard(),
         SectionCard(
           title: 'Answer aloud',
           child: Column(

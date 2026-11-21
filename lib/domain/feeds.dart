@@ -45,6 +45,7 @@ class FeedQuery {
     this.place = '',
     this.radiusMiles,
     this.remote = false,
+    this.keep,
   });
   final List<String> terms;
 
@@ -56,6 +57,22 @@ class FeedQuery {
   /// How far around [place]; null: the site's default.
   final int? radiusMiles;
   final bool remote;
+
+  /// The titles a feed that checks titles itself (NHS Jobs) accepts: a
+  /// result is kept when its title holds every word of one of them, so a
+  /// role search keeps any title in the role's family. Null: each search
+  /// term's own words, the strict check.
+  final List<String>? keep;
+
+  /// This query with other [terms] (and [keep]); the place stays.
+  FeedQuery withTerms(List<String> terms, {List<String>? keep}) => FeedQuery(
+    terms: terms,
+    country: country,
+    place: place,
+    radiusMiles: radiusMiles,
+    remote: remote,
+    keep: keep,
+  );
 }
 
 /// Free job-search APIs. Each says which countries it covers; keys (where
@@ -67,6 +84,12 @@ abstract class JobFeed {
   /// Searches around a town. A feed that does not is asked once per
   /// country, however many home areas the candidate has.
   bool get usesPlace => false;
+
+  /// The most search terms one run should send to the site: each term is
+  /// one request (or a few pages), so callers cap the terms they pass. Null:
+  /// the feed downloads one list and filters it here, so more terms cost
+  /// nothing more.
+  int? get maxTerms => 6;
   bool covers(FeedQuery q);
   Future<List<Posting>> search(FeedQuery q);
 }
@@ -113,6 +136,25 @@ String feedProblem(Object e) => switch (e) {
 /// True when [text] holds every word of at least one of [terms].
 bool mentionsAny(String text, List<String> terms) => _mentions(text, terms);
 
+/// True when [text] holds every word of at least one of [phrases] as a
+/// whole word (a plural "s", "es" or "ies" allowed), in any order and case.
+/// So a short family title such as "PA" keeps "Medical PA" but not
+/// "Paediatrics" or "Part time", which a plain substring check would.
+bool holdsWords(String text, List<String> phrases) => phrases.any((t) {
+  final words = t.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  return words.isNotEmpty &&
+      words.every((w) {
+        final y = w.length > 1 && w.toLowerCase().endsWith('y');
+        final word = y
+            ? '${RegExp.escape(w.substring(0, w.length - 1))}(?:y|ies)'
+            : '${RegExp.escape(w)}(?:e?s)?';
+        return RegExp(
+          '(?<![A-Za-z0-9\u00C0-\u024F])$word(?![A-Za-z0-9\u00C0-\u024F])',
+          caseSensitive: false,
+        ).hasMatch(text);
+      });
+});
+
 bool _mentions(String text, List<String> terms) {
   final t = text.toLowerCase();
   return terms.any((term) => term.toLowerCase().split(RegExp(r'\s+')).every(t.contains));
@@ -142,7 +184,7 @@ class AdzunaFeed extends JobFeed {
   Future<List<Posting>> search(FeedQuery q) async {
     final cc = Country.of(q.country)!.adzuna!;
     final out = <Posting>[];
-    for (final term in q.terms.take(4)) {
+    for (final term in q.terms) {
       final uri = Uri.https('api.adzuna.com', '/v1/api/jobs/$cc/search/1', {
         'app_id': appId,
         'app_key': appKey,
@@ -200,7 +242,7 @@ class ReedFeed extends JobFeed {
   Future<List<Posting>> search(FeedQuery q) async {
     final auth = 'Basic ${base64Encode(utf8.encode('$key:'))}';
     final out = <Posting>[];
-    for (final term in q.terms.take(4)) {
+    for (final term in q.terms) {
       final uri = Uri.https('www.reed.co.uk', '/api/1.0/search', {
         'keywords': term,
         if (q.place.isNotEmpty) 'locationName': q.place,
@@ -254,7 +296,7 @@ class NhsJobsFeed extends JobFeed {
   @override
   Future<List<Posting>> search(FeedQuery q) async {
     final out = <Posting>[];
-    for (final term in q.terms.take(4)) {
+    for (final term in q.terms) {
       for (var page = 1; page <= pages; page++) {
         final uri = Uri.https('www.jobs.nhs.uk', '/api/v1/search_xml', {
           'keyword': term,
@@ -270,7 +312,7 @@ class NhsJobsFeed extends JobFeed {
             .timeout(const Duration(seconds: 30));
         if (r.statusCode != 200) throw FeedException('error ${r.statusCode}');
         final found = parse(utf8.decode(r.bodyBytes));
-        out.addAll(found.where((p) => _mentions(p.title, [term])));
+        out.addAll(found.where((p) => holdsWords(p.title, q.keep ?? [term])));
         if (found.length < 10) break;
       }
     }
@@ -343,6 +385,10 @@ class RemotiveFeed extends JobFeed {
   @override
   String get name => 'Remotive';
 
+  /// A few searches a run: the site asks for few calls.
+  @override
+  int? get maxTerms => 3;
+
   /// Worldwide, so it answers only the country-less remote query.
   @override
   bool covers(FeedQuery q) => q.remote && q.country.isEmpty;
@@ -350,7 +396,7 @@ class RemotiveFeed extends JobFeed {
   @override
   Future<List<Posting>> search(FeedQuery q) async {
     final out = <Posting>[];
-    for (final term in q.terms.take(3)) {
+    for (final term in q.terms) {
       final uri = Uri.https('remotive.com', '/api/remote-jobs', {'search': term, 'limit': '30'});
       for (final r in objs(obj(await _getJson(client, uri))['jobs'])) {
         out.add(
@@ -383,6 +429,9 @@ class JobicyFeed extends JobFeed {
   @override
   String get name => 'Jobicy';
 
+  @override
+  int? get maxTerms => 3;
+
   static const _geo = {
     'GB': 'uk',
     'IE': 'ireland',
@@ -402,7 +451,7 @@ class JobicyFeed extends JobFeed {
   @override
   Future<List<Posting>> search(FeedQuery q) async {
     final out = <Posting>[];
-    for (final term in q.terms.take(3)) {
+    for (final term in q.terms) {
       final uri = Uri.https('jobicy.com', '/api/v2/remote-jobs', {
         'count': '30',
         'geo': _geo[q.country]!,
@@ -441,6 +490,10 @@ class ArbeitnowFeed extends JobFeed {
   String get id => 'arbeitnow';
   @override
   String get name => 'Arbeitnow';
+
+  /// One download filtered here, so any number of terms.
+  @override
+  int? get maxTerms => null;
 
   @override
   bool covers(FeedQuery q) => const {'DE', 'AT', 'CH'}.contains(q.country);
@@ -628,12 +681,14 @@ class JobTechFeed extends JobFeed {
   @override
   String get name => 'Platsbanken (JobTech)';
   @override
+  int? get maxTerms => 3;
+  @override
   bool covers(FeedQuery q) => q.country == 'SE';
 
   @override
   Future<List<Posting>> search(FeedQuery q) async {
     final out = <Posting>[];
-    for (final term in q.terms.take(3)) {
+    for (final term in q.terms) {
       final uri = Uri.https('jobsearch.api.jobtechdev.se', '/search', {'q': term, 'limit': '50'});
       out.addAll(parse(obj(await _getJson(client, uri))));
     }
@@ -686,6 +741,10 @@ class NavFeed extends JobFeed {
   String get id => 'nav';
   @override
   String get name => 'NAV (arbeidsplassen.no)';
+
+  /// One download filtered here, so any number of terms.
+  @override
+  int? get maxTerms => null;
   @override
   bool covers(FeedQuery q) => q.country == 'NO';
 
@@ -788,6 +847,8 @@ class UsaJobsFeed extends JobFeed {
   @override
   String get name => 'USAJOBS';
   @override
+  int? get maxTerms => 3;
+  @override
   bool get usesPlace => true;
   @override
   bool covers(FeedQuery q) => key.isNotEmpty && email.isNotEmpty && q.country == 'US';
@@ -795,7 +856,7 @@ class UsaJobsFeed extends JobFeed {
   @override
   Future<List<Posting>> search(FeedQuery q) async {
     final out = <Posting>[];
-    for (final term in q.terms.take(3)) {
+    for (final term in q.terms) {
       final uri = Uri.https('data.usajobs.gov', '/api/search', {
         'Keyword': term,
         'ResultsPerPage': '50',
@@ -862,6 +923,10 @@ class JoobleFeed extends JobFeed {
   String get id => 'jooble';
   @override
   String get name => 'Jooble';
+
+  /// Two searches a run: each key has 100 calls a day.
+  @override
+  int? get maxTerms => 2;
   @override
   bool get usesPlace => true;
   @override
@@ -883,7 +948,7 @@ class JoobleFeed extends JobFeed {
   @override
   Future<List<Posting>> search(FeedQuery q) async {
     final out = <Posting>[];
-    for (final term in q.terms.take(2)) {
+    for (final term in q.terms) {
       final r = await client
           .post(
             Uri.https(hostFor(q.country), '/api/${keys[q.country]}'),
@@ -941,6 +1006,10 @@ class UnVacanciesFeed extends JobFeed {
   @override
   String get name => 'UN jobs (unvacancies.org)';
 
+  /// One download filtered here, so any number of terms.
+  @override
+  int? get maxTerms => null;
+
   /// Not tied to a country, so it answers the country-less query.
   @override
   bool covers(FeedQuery q) => q.country.isEmpty;
@@ -953,7 +1022,7 @@ class UnVacanciesFeed extends JobFeed {
     if (r.statusCode != 200) throw FeedException('error ${r.statusCode}');
     return [
       for (final p in parse(utf8.decode(r.bodyBytes)))
-        if (_mentions('${p.title}\n${p.description}', q.terms)) p,
+        if (holdsWords('${p.title}\n${p.description}', q.terms)) p,
     ];
   }
 

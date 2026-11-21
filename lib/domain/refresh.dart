@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:drift/drift.dart' show BooleanExpressionOperators;
 import 'package:http/http.dart' as http;
@@ -12,7 +14,9 @@ import 'insights.dart';
 import 'json.dart';
 import 'profile.dart';
 import 'recipes.dart';
+import 'role_search.dart';
 import 'route_refresh.dart';
+import 'saved_searches.dart';
 import 'sponsors.dart';
 
 /// What a refresh did.
@@ -90,6 +94,7 @@ class Refresher {
     this.recipes,
     this.routes,
     this.leaseOnly = false,
+    this.feeds,
   });
   final CareerBook book;
   final http.Client client;
@@ -116,6 +121,9 @@ class Refresher {
   /// drawer does not start spending while the laptop is the one in use.
   final bool leaseOnly;
 
+  /// The job feeds to ask; null: every feed, with the person's keys.
+  final List<JobFeed>? feeds;
+
   /// Runs what is due; [force] runs the feeds (and, with [ai], the AI
   /// search) now regardless. A check that failed everywhere is not counted
   /// as done, so the next tick tries again.
@@ -133,7 +141,9 @@ class Refresher {
     }
     final p = await book.profile();
     report.ghosted = await book.markGhosted(today);
-    if (p.searchTerms.isEmpty) {
+    await book.migrateSavedSearches();
+    final searches = await book.savedSearches();
+    if (p.searchTerms.isEmpty && searches.isEmpty) {
       report.problems.add('add a current role or target roles to your profile first');
       return report;
     }
@@ -143,7 +153,7 @@ class Refresher {
     final checked = DateTime.tryParse(await db.localSetting(LocalKeys.feedsChecked) ?? '');
     if (force || checked == null || now.difference(checked) >= feedInterval) {
       onProgress?.call('Checking job sites…');
-      var (:added, :answered) = await _feeds(p, report, today);
+      var (:added, :answered) = await _feeds(p, report, today, searches: searches, now: now);
       if (watch != null) {
         final watched = await book.watchedEmployers();
         if (watched.isNotEmpty) {
@@ -245,46 +255,151 @@ class Refresher {
 
   /// One query per target country, or one per home area in it (each with
   /// its radius); then one not tied to a country, for remote work and the
-  /// UN jobs.
-  static List<FeedQuery> queries(CandidateProfile p) => [
-    for (final c in p.searchCountries)
-      ...switch ([
-        for (final a in p.targets.homeAreas)
-          if ((a.country.isEmpty ? p.country : a.country) == c) a,
-      ]) {
-        final areas when areas.isNotEmpty => [
-          for (final a in areas)
-            FeedQuery(
-              terms: p.searchTerms,
-              country: c,
-              place: a.place,
-              radiusMiles: a.radiusMiles,
-              remote: p.targets.remote,
-            ),
-        ],
-        _ => [FeedQuery(terms: p.searchTerms, country: c, remote: p.targets.remote)],
-      },
-    FeedQuery(terms: p.searchTerms, country: '', remote: p.targets.remote),
-  ];
+  /// UN jobs. The profile's search terms, unless [terms] (and [keep], see
+  /// [FeedQuery.keep]) are given, as a role search does; the profile's home
+  /// areas, unless [areas] are given, as a saved search may.
+  static List<FeedQuery> queries(
+    CandidateProfile p, {
+    List<String>? terms,
+    List<String>? keep,
+    List<HomeArea>? areas,
+  }) {
+    final t = terms ?? p.searchTerms;
+    FeedQuery q(String country, {String place = '', int? radiusMiles}) => FeedQuery(
+      terms: t,
+      country: country,
+      place: place,
+      radiusMiles: radiusMiles,
+      remote: p.targets.remote,
+      keep: keep,
+    );
+    return [
+      for (final c in p.searchCountries)
+        ...switch ([
+          for (final a in areas ?? p.targets.homeAreas)
+            if ((a.country.isEmpty ? p.country : a.country) == c) a,
+        ]) {
+          final areas when areas.isNotEmpty => [
+            for (final a in areas) q(c, place: a.place, radiusMiles: a.radiusMiles),
+          ],
+          _ => [q(c)],
+        },
+      q(''),
+    ];
+  }
 
-  /// Asks every feed that covers a query; a feed that does not search by
-  /// town is asked once per country. [answered] is false only when feeds
-  /// were asked and every one failed.
+  /// The most search terms a routine refresh sends to one feed.
+  static const refreshTerms = 4;
+
+  /// [q] with at most [most] terms, or fewer when [f] takes fewer. A feed
+  /// that filters one download here ([JobFeed.maxTerms] null) gets them all.
+  static FeedQuery capped(FeedQuery q, JobFeed f, int most) {
+    final n = f.maxTerms;
+    if (n == null) return q;
+    final cap = math.min(n, most);
+    return q.terms.length <= cap ? q : q.withTerms(q.terms.take(cap).toList(), keep: q.keep);
+  }
+
+  /// One feed's request in a refresh: the query, and the saved search it
+  /// is for (null: the profile's search terms).
+  static ({FeedQuery query, SavedSearch? search}) _ask(FeedQuery q, [SavedSearch? s]) =>
+      (query: q, search: s);
+
+  /// What a refresh asks each feed. With no saved searches, one query per
+  /// place with the profile's search terms, [capped] at [refreshTerms] as
+  /// always. With saved searches, each one's titles (closest first, the
+  /// typed role always first), NOT words and places; a feed that caps its
+  /// terms gets no more per place than before ([refreshTerms], or fewer when
+  /// the feed takes fewer), shared out among the searches in turns (each
+  /// search's role first), so more searches never means more requests to
+  /// one site. [turn] picks which
+  /// search goes first, so with more searches than room each gets its turn
+  /// over the day. A feed that does not search by town is asked once per
+  /// country.
+  static Map<JobFeed, List<({FeedQuery query, SavedSearch? search})>> plan(
+    CandidateProfile p,
+    List<JobFeed> feeds,
+    List<SavedSearch> searches, {
+    int turn = 0,
+  }) {
+    final out = <JobFeed, List<({FeedQuery query, SavedSearch? search})>>{};
+    if (searches.isEmpty) {
+      final once = <String>{};
+      for (final q in queries(p)) {
+        for (final f in feeds.where((f) => f.covers(q))) {
+          if (!f.usesPlace && !once.add('${f.id}:${q.country}')) continue;
+          out.putIfAbsent(f, () => []).add(_ask(capped(q, f, refreshTerms)));
+        }
+      }
+      return out;
+    }
+    final start = turn % searches.length;
+    final ordered = [...searches.skip(start), ...searches.take(start)];
+    // Per feed and place: each search's query and the terms it wants.
+    final wants = <JobFeed, Map<String, List<(SavedSearch, FeedQuery, List<String>)>>>{};
+    for (final s in ordered) {
+      final q = s.query;
+      final once = <String>{};
+      for (final fq in queries(
+        p,
+        terms: q.termsFor(null),
+        keep: q.keep,
+        areas: s.places.isEmpty ? null : s.places,
+      )) {
+        for (final f in feeds.where((f) => f.covers(fq))) {
+          if (!f.usesPlace && !once.add('${f.id}:${fq.country}')) continue;
+          final cap = f.maxTerms == null ? null : math.min(f.maxTerms!, refreshTerms);
+          final where = f.usesPlace ? '${fq.country}|${fq.place}|${fq.radiusMiles}' : fq.country;
+          wants.putIfAbsent(f, () => {}).putIfAbsent(where, () => []).add((s, fq, q.termsFor(cap)));
+        }
+      }
+    }
+    for (final MapEntry(key: f, value: places) in wants.entries) {
+      final room = f.maxTerms == null ? null : math.min(f.maxTerms!, refreshTerms);
+      for (final each in places.values) {
+        final taken = [for (final _ in each) <String>[]];
+        var used = 0;
+        for (var round = 0; ; round++) {
+          var more = false;
+          for (final (i, (_, _, terms)) in each.indexed) {
+            if (round >= terms.length) continue;
+            if (room != null && used >= room) break;
+            taken[i].add(terms[round]);
+            used++;
+            more = true;
+          }
+          if (!more || (room != null && used >= room)) break;
+        }
+        for (final (i, (s, fq, _)) in each.indexed) {
+          if (taken[i].isEmpty) continue;
+          out.putIfAbsent(f, () => []).add(_ask(fq.withTerms(taken[i], keep: s.query.keep), s));
+        }
+      }
+    }
+    return out;
+  }
+
+  /// Asks every feed in [plan]. A saved search's NOT words and employers
+  /// drop its results before they are added. [answered] is false only when
+  /// feeds were asked and every one failed.
   Future<({List<String> added, bool answered})> _feeds(
     CandidateProfile p,
     RefreshReport report,
-    String today,
-  ) async {
-    final feeds = allFeeds(client, await (await book.feedKeys()).withSecrets(secrets));
+    String today, {
+    List<SavedSearch> searches = const [],
+    DateTime? now,
+  }) async {
+    final all = feeds ?? allFeeds(client, await (await book.feedKeys()).withSecrets(secrets));
+    final turn = (now ?? DateTime.now()).millisecondsSinceEpoch ~/ feedInterval.inMilliseconds;
     final postings = <Posting>[];
     var asked = 0, failed = 0;
-    final once = <String>{};
-    for (final q in queries(p)) {
-      for (final f in feeds.where((f) => f.covers(q))) {
-        if (!f.usesPlace && !once.add('${f.id}:${q.country}')) continue;
+    for (final MapEntry(key: f, value: asks) in plan(p, all, searches, turn: turn).entries) {
+      for (final (:query, :search) in asks) {
         asked++;
         try {
-          postings.addAll(await f.search(q));
+          final got = await f.search(query);
+          final q = search?.query;
+          postings.addAll(q == null ? got : got.where((x) => !RoleSearch.excluded(x.title, x.company, p, q)));
         } on Object catch (e) {
           failed++;
           report.problems.add('${f.name}: ${feedProblem(e)}');

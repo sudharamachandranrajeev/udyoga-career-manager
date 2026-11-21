@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../domain/book.dart';
 import '../domain/ai.dart';
 import '../domain/background.dart';
+import '../domain/career_data.dart';
 import '../domain/career_file_sync.dart';
 import '../domain/feeds.dart';
 import '../domain/gemini.dart';
@@ -17,6 +18,7 @@ import '../domain/update.dart';
 import '../ui/accounts_page.dart';
 import '../ui/common.dart';
 import '../ui/interview_lab_page.dart';
+import '../ui/role_insight_page.dart';
 import 'background.dart';
 import 'check_in_reminder.dart';
 import 'page_tools.dart';
@@ -48,6 +50,7 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(_aiSettingsProvider).value;
+    final careerKeys = ref.watch(careerDataKeysProvider).value ?? const CareerDataKeys();
     final keys = s?.keys ?? const <AiProvider, String>{};
     final model = s == null ? null : effectiveModel(s.model, keys);
     return PageScaffold(
@@ -170,6 +173,34 @@ class SettingsPage extends ConsumerWidget {
                   'from the Jobs page.',
             ].join(' '),
           ),
+        ),
+        SectionCard(
+          title: 'Career data (optional)',
+          trailing: TextButton(
+            key: const ValueKey('settings.careerData'),
+            onPressed: s == null ? null : () => _editCareerData(context, ref),
+            child: const Text('Keys'),
+          ),
+          child: Text(
+            [
+              'Approach this role can add entry routes, pay and progression from the National Careers Service '
+                  "and Skills England's occupational maps, with your own free key for each. Both are off "
+                  'without a key. Keys stay on this device and are never synced.',
+              (careerKeys.ncs.isNotEmpty ? 'National Careers Service is on.' : ''),
+              (careerKeys.skillsEngland.isNotEmpty ? 'Skills England is on.' : ''),
+            ].where((x) => x.isNotEmpty).join(' '),
+          ),
+        ),
+        SectionCard(
+          title: 'Data sources',
+          trailing: TextButton(
+            key: const ValueKey('settings.dataSources'),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute<void>(builder: (_) => const DataSourcesPage())),
+            child: const Text('Show'),
+          ),
+          child: const Text('Where job titles, skills, pay and career data come from, with each credit and licence.'),
         ),
         SectionCard(
           title: 'n8n lead workflow',
@@ -303,6 +334,39 @@ class SettingsPage extends ConsumerWidget {
         }
         await ref.mutate(
           (s) => s.book.setPref(PrefKeys.n8n, N8nLink(url: u, secret: secret.text.trim()).toJson()),
+        );
+        return null;
+      },
+    );
+  }
+
+  Future<void> _editCareerData(BuildContext context, WidgetRef ref) async {
+    final store = ref.read(sessionProvider).keys.store;
+    final k = await CareerDataKeys.read(store);
+    if (!context.mounted) return;
+    final ncs = TextEditingController(text: k.ncs);
+    final se = TextEditingController(text: k.skillsEngland);
+    await showFormDialog(
+      context,
+      title: 'Career data keys',
+      fields: (_) => [
+        const Subhead('Kept on this device only, never synced'),
+        Field(
+          ncs,
+          'National Careers Service key',
+          obscure: true,
+          helper: 'Job profiles API subscription key, from the Department for Education API catalogue',
+        ),
+        Field(
+          se,
+          'Skills England key',
+          obscure: true,
+          helper: 'Occupational maps API key, from Skills England',
+        ),
+      ],
+      onSave: () async {
+        await ref.mutate(
+          (_) => CareerDataKeys.save(store, ncs: ncs.text, skillsEngland: se.text),
         );
         return null;
       },

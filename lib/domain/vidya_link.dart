@@ -12,8 +12,10 @@ import 'book.dart';
 import 'companion.dart';
 import 'companion_book.dart';
 import 'insights.dart';
+import 'job_identity.dart';
 import 'json.dart';
 import 'profile.dart';
+import 'role_insight.dart';
 import 'todos.dart';
 
 /// A Vidya study plan ("vidya-curriculum", version 1) from the candidate's
@@ -153,6 +155,123 @@ Json vidyaPlan({
 
 String _clip(String s, int max) => s.length > max ? s.substring(0, max) : s;
 
+/// The Vidya plan row id for a role ("Study for this role"): one per role,
+/// beside Udyoga's main plan, so sending again replaces it.
+String rolePlanId(String role) => 'udyoga.role.${normalJobTitle(role).replaceAll(' ', '-')}';
+
+/// Where a criterion came from, in Vidya's words.
+String _sourceName(InsightFrom f) => switch (f) {
+  InsightFrom.esco => 'ESCO',
+  InsightFrom.ai => 'AI',
+  InsightFrom.ncs => 'National Careers Service',
+  InsightFrom.skillsEngland => 'Skills England',
+  InsightFrom.profile => 'You',
+  _ => 'Udyoga',
+};
+
+/// A role insight as a Vidya study plan ("vidya-curriculum", version 1):
+/// the gaps and the first moves as topics, each linked to the criteria it
+/// works on, and the role's criteria for Vidya's readiness view.
+///
+/// Fields added to version 1 (Vidya's reader skips fields it does not know,
+/// so the current Vidya imports this as an ordinary plan):
+/// - "role": the role's title.
+/// - "criteria": [{id, text, essential, kind, source, shown}], every
+///   criterion of the role; "shown" is true or false when Udyoga checked it
+///   against the profile, null when it did not.
+/// - per topic "criteria": the ids it works on, and "items": study items
+///   [{type, title, required, source}] (practice tasks for now).
+Json roleVidyaPlan(RoleInsight i) {
+  Json task(String title, InsightFrom from) => {
+    'type': 'practice task',
+    'title': _clip(title, 200),
+    'required': true,
+    'source': _sourceName(from),
+  };
+  const minutes = {'blocker': 60, 'major': 45, 'minor': 20};
+  final gaps = [
+    for (final g in i.gaps)
+      {
+        'title': _clip(g.text, 200),
+        'minutes': minutes[g.severity] ?? 30,
+        'details': [
+          'Severity: ${g.severity}.',
+          if (g.howToClose.isNotEmpty) '${g.from.isAi ? 'AI suggestion: ' : ''}${g.howToClose}',
+        ].join(' '),
+        'criteria': [if (g.criterion.isNotEmpty) g.criterion],
+        'items': [if (g.howToClose.isNotEmpty) task(g.howToClose, g.from)],
+      },
+  ];
+  final moves = [
+    for (final m in i.moves)
+      {
+        'title': _clip(m.text, 200),
+        'minutes': 30,
+        'details': 'A first move for the next 30 days${m.from.isAi ? ' (AI suggestion)' : ''}.',
+        'criteria': [if (m.criterion.isNotEmpty) m.criterion],
+        'items': [task(m.text, m.from)],
+      },
+  ];
+  return {
+    'format': 'vidya-curriculum',
+    'version': 1,
+    'part': '1 of 1',
+    'program': {
+      'title': _clip('Approach: ${i.role}', 200),
+      'goal': 'Close the gaps for ${i.role} and make the first moves, with evidence for each criterion.',
+    },
+    'role': i.role,
+    'criteria': [
+      for (final c in i.criteria.take(80))
+        {
+          'id': c.id,
+          'text': _clip(c.text, 200),
+          'essential': c.essential,
+          'kind': c.kind,
+          'source': _sourceName(c.from),
+          'shown': c.shown,
+        },
+    ],
+    'courses': [
+      if (gaps.isNotEmpty)
+        {
+          'title': _clip('Gaps for ${i.role}', 200),
+          'kind': 'course',
+          'startWeek': 0,
+          'dueWeek': 6,
+          'summary': 'What ${i.role} asks for that your CV does not show yet, most serious first.',
+          'topics': gaps.take(60).toList(),
+        },
+      if (moves.isNotEmpty)
+        {
+          'title': _clip('First moves: ${i.role}', 200),
+          'kind': 'practice',
+          'startWeek': 0,
+          'dueWeek': 4,
+          'summary': 'Things to do in the next 30 days.',
+          'topics': moves,
+        },
+    ],
+    'skills': const [],
+    'cards': const [],
+    'notes': [
+      {
+        'title': _clip('From Udyoga: ${i.role}', 200),
+        'body': [
+          'Made by Udyoga from its role insight for ${i.role} (${i.updated}).',
+          if (i.fit != null) 'Fit today: ${i.fit}%${i.fitAi != null ? ' (AI)' : ' (skills shown in your profile)'}.',
+          if (i.timeToReach.isNotEmpty) 'Time to reach: ${i.timeToReach} (AI).',
+          '',
+          'Criteria:',
+          for (final c in i.criteria.take(80))
+            '- ${c.text} (${c.essential ? 'essential' : 'optional'}${c.shown == true ? ', shown in your CV' : ''})',
+        ].join('\n'),
+        'tags': ['udyoga', 'role'],
+      },
+    ],
+  };
+}
+
 /// What Vidya says was finished, from its portfolio Markdown: completed
 /// learning and rated skills.
 typedef VidyaDone = ({
@@ -245,6 +364,18 @@ extension VidyaLink on CareerBook {
       ),
       studyPlanId,
     );
+  }
+
+  /// Sends [i] to Vidya as its own study plan ("Study for this role"),
+  /// beside the main one, which it does not touch. Returns the row id.
+  Future<String> sendRoleToVidya(RoleInsight i, {required String now}) async {
+    final id = rolePlanId(i.role);
+    await save(
+      db.bridgeStudyPlans,
+      BridgeStudyPlansCompanion.insert(id: id, source: 'udyoga', plan: jsonEncode(roleVidyaPlan(i)), updated: now),
+      id,
+    );
+    return id;
   }
 
   Future<VidyaBridge> vidyaBridge() async {

@@ -24,6 +24,7 @@ import 'look.dart' hide Pace;
 import 'offer_checks.dart';
 import 'today_hero.dart';
 import 'todos.dart';
+import 'vidya_practice_ui.dart' show pendingPractiseProvider;
 import '../domain/tracks.dart';
 
 /// Next steps, from setting up to the day's chasing.
@@ -98,6 +99,7 @@ class TodayPage extends ConsumerWidget {
         .where((q) => q.status == 'open')
         .length;
     final checkInTime = ref.watch(checkInSettingsProvider).value?.time ?? '18:30';
+    final fromVidya = (ref.watch(pendingPractiseProvider).value ?? const []).length;
     final eveningNow = nowLocal().substring(11).compareTo(checkInTime) >= 0;
 
     final open = apps.where((a) => Stage.of(a.stage).open).toList();
@@ -384,7 +386,7 @@ class TodayPage extends ConsumerWidget {
           nothingLabel: fresh.isEmpty ? 'Open Jobs' : 'See new matches',
           onNothing: () => goToPage(ref, 'jobs'),
         ),
-        if ((eveningNow && (checkIn == null || checkIn.entry.isEmpty)) || toConfirm > 0)
+        if ((eveningNow && (checkIn == null || checkIn.entry.isEmpty)) || toConfirm > 0 || fromVidya > 0)
           SectionCard(
             title: 'Your coach',
             child: Column(
@@ -396,6 +398,17 @@ class TodayPage extends ConsumerWidget {
                     title: const Text('How was your day? Two minutes for today\'s check-in.'),
                     onTap: () =>
                         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CoachPage())),
+                  ),
+                if (fromVidya > 0)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.school_outlined),
+                    title: Text(
+                      fromVidya == 1
+                          ? 'Vidya asked you to practise 1 interview question aloud.'
+                          : 'Vidya asked you to practise $fromVidya interview questions aloud.',
+                    ),
+                    onTap: () => goToPage(ref, 'interview'),
                   ),
                 if (toConfirm > 0)
                   ListTile(
@@ -552,7 +565,13 @@ class _NeedsYou extends StatelessWidget {
                   const SizedBox(width: 12),
                   const Expanded(child: Text('Nothing needs you today.')),
                   const SizedBox(width: 8),
-                  TextButton(onPressed: onNothing, child: Text(nothingLabel)),
+                  // At 320 px the label would push past the card; it wraps.
+                  Flexible(
+                    child: TextButton(
+                      onPressed: onNothing,
+                      child: Text(nothingLabel, textAlign: TextAlign.center),
+                    ),
+                  ),
                 ],
               ),
             ),

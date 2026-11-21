@@ -11,12 +11,15 @@ import '../domain/json.dart';
 import '../domain/listing_check.dart';
 import '../domain/pipeline.dart';
 import '../domain/profile.dart';
+import '../domain/saved_searches.dart';
 import 'common.dart';
 import 'eligibility_view.dart';
 import 'employers_page.dart';
 import 'job_page.dart';
 import 'kit/kit.dart';
 import 'look.dart';
+import 'role_search_view.dart';
+import 'saved_searches_view.dart';
 import 'site_page.dart';
 
 class JobsPage extends ConsumerStatefulWidget {
@@ -30,6 +33,13 @@ class _JobsPageState extends ConsumerState<JobsPage> {
   var status = 'new';
   var byFit = true;
   final search = TextEditingController();
+
+  /// The search box asks the job sites for a role, rather than filtering
+  /// the jobs already saved.
+  var siteSearch = false;
+
+  /// The role search, so a saved search can be run in it.
+  final _roleSearch = GlobalKey<RoleSearchViewState>();
 
   @override
   void dispose() {
@@ -100,95 +110,128 @@ class _JobsPageState extends ConsumerState<JobsPage> {
               refresh.last?.summary ?? refresh.status,
             ),
           ),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            for (final e in jobStatuses.entries)
-              ChoiceChip(
-                label: Text(e.value),
-                selected: status == e.key,
-                onSelected: (_) => setState(() => status = e.key),
-              ),
-            const SizedBox(width: 8),
-            Hint(
-              'jobs.fit',
-              child: FilterChip(
-                label: const Text('Best fit first'),
-                selected: byFit,
-                onSelected: (v) => setState(() => byFit = v),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: search,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.search),
-            hintText: 'Filter by title, employer or place',
+        Align(
+          alignment: Alignment.centerLeft,
+          child: SegmentedButton<bool>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: false, label: Text('Filter my jobs')),
+              ButtonSegment(value: true, label: Text('Search job sites')),
+            ],
+            selected: {siteSearch},
+            onSelectionChanged: (s) => setState(() => siteSearch = s.first),
           ),
-          onChanged: (_) => setState(() {}),
         ),
+        SavedSearchesRow(onOpen: _openSearch),
         const SizedBox(height: 12),
-        AsyncList(
-          ref.watch(jobsProvider),
-          builder: (everything) {
-            final q = search.text.trim().toLowerCase();
-            // The user's exclusions are a hard rule: those jobs never show.
-            final all = notExcluded(everything, ref.watch(profileProvider).value);
-            final hidden =
-                everything.where((j) => j.status == status).length -
-                all.where((j) => j.status == status).length;
-            final jobs = all
-                .where((j) => j.status == status)
-                .where((j) => q.isEmpty || '${j.title} ${j.company} ${j.location}'.toLowerCase().contains(q))
-                .toList();
-            if (byFit) jobs.sort((a, b) => (b.fit ?? -1).compareTo(a.fit ?? -1));
-            if (jobs.isEmpty) {
-              // One next step that fits the list on show.
-              if (q.isNotEmpty) {
+        // Kept while hidden, so switching back and forth keeps the search.
+        Offstage(
+          offstage: !siteSearch,
+          child: RoleSearchView(key: _roleSearch),
+        ),
+        if (!siteSearch) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              for (final e in jobStatuses.entries)
+                ChoiceChip(
+                  label: Text(e.value),
+                  selected: status == e.key,
+                  onSelected: (_) => setState(() => status = e.key),
+                ),
+              const SizedBox(width: 8),
+              Hint(
+                'jobs.fit',
+                child: FilterChip(
+                  label: const Text('Best fit first'),
+                  selected: byFit,
+                  onSelected: (v) => setState(() => byFit = v),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: search,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: 'Filter by title, employer or place',
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 12),
+          AsyncList(
+            ref.watch(jobsProvider),
+            builder: (everything) {
+              final q = search.text.trim().toLowerCase();
+              // The user's exclusions are a hard rule: those jobs never show.
+              final all = notExcluded(everything, ref.watch(profileProvider).value);
+              final hidden =
+                  everything.where((j) => j.status == status).length -
+                  all.where((j) => j.status == status).length;
+              final jobs = all
+                  .where((j) => j.status == status)
+                  .where(
+                    (j) => q.isEmpty || '${j.title} ${j.company} ${j.location}'.toLowerCase().contains(q),
+                  )
+                  .toList();
+              if (byFit) jobs.sort((a, b) => (b.fit ?? -1).compareTo(a.fit ?? -1));
+              if (jobs.isEmpty) {
+                // One next step that fits the list on show.
+                if (q.isNotEmpty) {
+                  return EmptyState(
+                    icon: Icons.search_off,
+                    title: 'No jobs match "${search.text.trim()}"',
+                    actions: [
+                      TextButton(
+                        onPressed: () => setState(search.clear),
+                        child: const Text('Clear the filter'),
+                      ),
+                    ],
+                  );
+                }
                 return EmptyState(
-                  icon: Icons.search_off,
-                  title: 'No jobs match "${search.text.trim()}"',
+                  icon: Icons.work_outline,
+                  title: status == 'new' ? 'No new jobs' : 'No ${jobStatuses[status]?.toLowerCase()} jobs',
+                  message: status == 'new'
+                      ? 'Udyoga checks the job sites for your target roles every few hours.'
+                      : 'Jobs you mark ${jobStatuses[status]?.toLowerCase()} show here.',
                   actions: [
-                    TextButton(
-                      onPressed: () => setState(search.clear),
-                      child: const Text('Clear the filter'),
-                    ),
+                    if (status == 'new')
+                      FilledButton.icon(
+                        onPressed: refresh.running ? null : () => _run(),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Check the job sites now'),
+                      )
+                    else
+                      TextButton(
+                        onPressed: () => setState(() => status = 'new'),
+                        child: const Text('See new jobs'),
+                      ),
                   ],
                 );
               }
-              return EmptyState(
-                icon: Icons.work_outline,
-                title: status == 'new' ? 'No new jobs' : 'No ${jobStatuses[status]?.toLowerCase()} jobs',
-                message: status == 'new'
-                    ? 'Udyoga checks the job sites for your target roles every few hours.'
-                    : 'Jobs you mark ${jobStatuses[status]?.toLowerCase()} show here.',
-                actions: [
-                  if (status == 'new')
-                    FilledButton.icon(
-                      onPressed: refresh.running ? null : () => _run(),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Check the job sites now'),
-                    )
-                  else
-                    TextButton(
-                      onPressed: () => setState(() => status = 'new'),
-                      child: const Text('See new jobs'),
-                    ),
-                ],
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [for (final j in jobs) JobTile(j), if (hidden > 0) _HiddenNote(hidden)],
               );
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [for (final j in jobs) JobTile(j), if (hidden > 0) _HiddenNote(hidden)],
-            );
-          },
-        ),
+            },
+          ),
+        ],
+        // The page's own bottom room is taken by the floating dock, so the
+        // "Add job" button (56 high, 16 above the dock) would sit over the
+        // last result: room for it too, in both modes.
+        const SizedBox(key: ValueKey('jobs.fabRoom'), height: 72),
       ],
     );
+  }
+
+  /// Runs saved search [s] in "Search job sites".
+  void _openSearch(SavedSearch s) {
+    setState(() => siteSearch = true);
+    _roleSearch.currentState?.open(s);
   }
 
   Future<void> _run({bool ai = false, bool hasAi = true}) async {
@@ -366,14 +409,18 @@ class _HiddenNote extends StatelessWidget {
 }
 
 /// Pay in a few characters ("£32k–38k"), else the advert's own short wording.
-String shortSalary(Job j) {
+String shortSalary(Job j) =>
+    shortPay(currency: j.currency, min: j.salaryMin, max: j.salaryMax, text: j.salaryText);
+
+/// [shortSalary] from the parts, for an advert not saved yet.
+String shortPay({required String currency, int? min, int? max, String text = ''}) {
   // 1.3m, 45k, 38.5k: short enough for a card at any size of pay.
   String k(int v) => switch (v) {
     >= 1000000 => '${(v / 1000000).toStringAsFixed(v % 1000000 == 0 ? 0 : 1)}m',
     >= 1000 => '${(v / 1000).toStringAsFixed(v % 1000 == 0 || v >= 100000 ? 0 : 1)}k',
     _ => '$v',
   };
-  final sym = switch (j.currency.toUpperCase()) {
+  final sym = switch (currency.toUpperCase()) {
     'GBP' => '£',
     'EUR' => '€',
     'USD' || 'CAD' || 'AUD' => r'$',
@@ -381,11 +428,11 @@ String shortSalary(Job j) {
     '' => '',
     final c => '$c ',
   };
-  if (j.salaryMax != null || j.salaryMin != null) {
-    final lo = j.salaryMin ?? j.salaryMax!, hi = j.salaryMax ?? j.salaryMin!;
+  if (max != null || min != null) {
+    final lo = min ?? max!, hi = max ?? min!;
     return lo == hi ? '$sym${k(lo)}' : '$sym${k(lo)}–${k(hi)}';
   }
-  return j.salaryText.length <= 24 ? j.salaryText : '';
+  return text.length <= 24 ? text : '';
 }
 
 String sourceName(String source) => switch (source) {

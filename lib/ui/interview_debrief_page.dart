@@ -23,6 +23,7 @@ import 'common.dart';
 import 'interview_device_ui.dart' show OfflineBadge;
 import 'kit/kit.dart';
 import 'spoken_round_page.dart';
+import 'vidya_practice_ui.dart' show RoleReadinessLine;
 
 Future<void> openRoleProfile(BuildContext context, {String? id, Job? job}) => Navigator.of(context).push(
   MaterialPageRoute(
@@ -291,6 +292,7 @@ class _RoleProfilePageState extends ConsumerState<RoleProfilePage> {
                   ),
                 ],
               ),
+              RoleReadinessLine(_profile.title),
             ],
           ),
         ),

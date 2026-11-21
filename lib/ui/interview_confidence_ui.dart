@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
 import '../domain/interview_confidence.dart';
+import '../domain/vidya_practice.dart' show VidyaPractice;
 import 'common.dart';
 
 /// "How nervous do you feel?", one tap, optional. Tapping the chosen one
@@ -170,7 +171,13 @@ final readyForProvider = FutureProvider<ReadyFor>((ref) {
 
 final _drillsProvider =
     FutureProvider<
-      ({List<String> questions, bool reappraisal, ({String? sent, bool added}) link, List<DrillResult> results})
+      ({
+        List<String> questions,
+        bool reappraisal,
+        ({String? sent, bool added}) link,
+        List<DrillResult> results,
+        int readinessDrills,
+      })
     >((ref) async {
       ref.watch(revisionProvider);
       final book = ref.watch(sessionProvider).book;
@@ -179,6 +186,7 @@ final _drillsProvider =
         reappraisal: await book.reappraisal(),
         link: await book.drillsSent(),
         results: await book.drillResults(),
+        readinessDrills: (await book.vidyaReadiness()).fold(0, (n, r) => n + r.essentialGaps.length),
       );
     });
 
@@ -266,6 +274,13 @@ class DrillsCard extends ConsumerWidget {
             value: d.reappraisal,
             onChanged: (v) => ref.mutate((s) => s.book.setReappraisal(v)),
           ),
+          if (d.readinessDrills > 0)
+            Text(
+              d.readinessDrills == 1
+                  ? 'Also 1 drill for an essential criterion Vidya counts weak or missing.'
+                  : 'Also ${d.readinessDrills} drills for essential criteria Vidya counts weak or missing.',
+              style: muted,
+            ),
           if (d.link.sent != null)
             Text(
               'Sent ${d.link.sent!.substring(0, 10)}. '

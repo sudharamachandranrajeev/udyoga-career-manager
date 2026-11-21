@@ -11,6 +11,7 @@ import '../domain/json.dart';
 import '../domain/profile.dart';
 import 'common.dart';
 import 'look.dart';
+import 'role_insight_page.dart';
 
 const _directions = {
   'vertical': ('Up', Icons.north),
@@ -70,6 +71,19 @@ class CareerPage extends ConsumerWidget {
                   sources: SourcesList.fromJson(map.sources),
                   versions: reports.where((r) => r.kind == 'career_map').length,
                 ),
+        ),
+        SectionCard(
+          title: 'Approach a role',
+          trailing: TextButton(
+            key: const ValueKey('career.approach'),
+            onPressed: () => openRoleInsights(context, roles: p.targets.roles.take(1).toList()),
+            child: const Text('Open'),
+          ),
+          child: const Text(
+            'Pick up to three roles to see what each is, how you fit and your gaps, the ways in, stepping-stone '
+            'roles, pay, how others got in, your first moves for the next 30 days and a path with timeframes. '
+            'The titles and skills come from public data with no AI; the AI fills in the rest, labelled AI.',
+          ),
         ),
         SectionCard(
           title: 'Where you stand',
@@ -145,14 +159,14 @@ class _MapView extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         Center(
-          child: _Node(
+          child: MapNode(
             title: map.current.ifEmpty('You now'),
             subtitle: 'Now',
             color: scheme.primaryContainer,
             onColor: scheme.onPrimaryContainer,
           ),
         ),
-        _Line(color: scheme.outlineVariant),
+        MapLine(color: scheme.outlineVariant),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -187,16 +201,19 @@ class _MapView extends ConsumerWidget {
   }
 }
 
-class _Line extends StatelessWidget {
-  const _Line({required this.color});
+/// The short line joining two stops on a path drawing.
+class MapLine extends StatelessWidget {
+  const MapLine({super.key, required this.color});
   final Color color;
 
   @override
   Widget build(BuildContext context) => Center(child: Container(width: 2, height: 16, color: color));
 }
 
-class _Node extends StatelessWidget {
-  const _Node({
+/// One stop on a path drawing: a role with a line under it.
+class MapNode extends StatelessWidget {
+  const MapNode({
+    super.key,
     required this.title,
     required this.subtitle,
     required this.color,
@@ -290,8 +307,8 @@ class _Branch extends ConsumerWidget {
           ),
         ),
         for (final step in path.steps) ...[
-          _Line(color: scheme.outlineVariant),
-          _Node(
+          MapLine(color: scheme.outlineVariant),
+          MapNode(
             title: step.role,
             subtitle: [step.timeframe, if (step.likelihood > 0) '${step.likelihood}% likely'].join(' · '),
             color: scheme.surfaceContainerHighest,

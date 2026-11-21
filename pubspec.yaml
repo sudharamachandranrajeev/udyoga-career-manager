@@ -53,6 +53,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # The full ONS SOC 2020 coding index (Open Government Licence v3.0), made
+  # by tool/gen_soc_index.dart and loaded once on first use.
+  assets:
+    - assets/soc/soc2020_index.tsv.gz
   # Inter for reading (built for screens, sharp at small sizes); Plus Jakarta
   # Sans for headings. Both SIL OFL 1.1, bundled so no font is fetched.
   fonts:

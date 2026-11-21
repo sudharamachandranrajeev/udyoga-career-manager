@@ -11,6 +11,7 @@ import 'eligibility.dart';
 import 'feeds.dart';
 import 'insights.dart';
 import 'interview_plan.dart' show CoachPrefs, InterviewDevice, RoundSettings;
+import 'job_identity.dart';
 import 'json.dart';
 import 'linkedin_export.dart';
 import 'linkedin_messages.dart';
@@ -20,6 +21,7 @@ import 'pay.dart';
 import 'pipeline.dart';
 import 'profile.dart';
 import 'resume.dart';
+import 'saved_searches.dart';
 import 'subscription.dart';
 import 'work_rights.dart';
 
@@ -55,6 +57,10 @@ abstract final class PrefKeys {
   /// "until": ISO time, "ran": ISO time of the last successful run}. Synced,
   /// so only one device spends on it.
   static const aiLease = 'udyoga.ai.lease';
+
+  /// True once the profile's search terms have become saved searches
+  /// (lib/domain/saved_searches.dart). Synced, so it runs on one device.
+  static const searchesMoved = 'udyoga.searches.moved';
 }
 
 /// Device-only settings (local_settings).
@@ -307,9 +313,12 @@ class CareerBook {
   });
 
   /// Saves the profile (not its rights, notes or stories, which live apart)
-  /// and rescores the jobs against it.
+  /// and rescores the jobs against it. A search term added to it becomes a
+  /// saved search for that exact title (see [SavedSearchBook.followProfileTerms]).
   Future<void> saveProfile(CandidateProfile p) async {
+    final before = CandidateProfile.fromJson(await pref<Map<String, Object?>>(PrefKeys.profile, const {}));
     await setPref(PrefKeys.profile, p.toJson());
+    await followProfileTerms(before, p);
     await rescoreJobs();
   }
 
@@ -411,7 +420,9 @@ class CareerBook {
   /// untouched rows; the user's status, notes, dismissal and the AI's
   /// scores are never written over, and a job the user dismissed or
   /// deleted is left alone. Jobs the user's exclusions rule out are not
-  /// added. Returns the ids of the new ones.
+  /// added, nor is the same job from another board, matched on [jobKey]
+  /// and the closing date (the saved copy keeps its own link). Returns the
+  /// ids of the new ones.
   Future<List<String>> importPostings(List<Posting> postings, CandidateProfile p, {required String today}) =>
       db.transaction(() async {
         final existing = await db.select(db.jobListings).get();
@@ -424,6 +435,14 @@ class CareerBook {
           for (final j in existing)
             if (j.company.isNotEmpty) _key(j.title, j.company): j,
         };
+        // The same job from another board, written a little differently.
+        final byJob = <String, List<Job>>{};
+        void addJob(Job j) {
+          final k = jobKey(title: j.title, company: j.company, location: j.location);
+          if (k.isNotEmpty) byJob.putIfAbsent(k, () => []).add(j);
+        }
+
+        existing.forEach(addJob);
         final added = <String>[];
         for (final post in postings) {
           if (post.title.isEmpty) continue;
@@ -434,6 +453,17 @@ class CareerBook {
           // A deleted job stays deleted, unless the user adds it again by hand.
           if (match != null && match.deleted && post.source == 'manual') match = null;
           if (match != null && (match.deleted || match.status == 'dismissed')) continue;
+          // Already saved from another board: skipped, so it is not on the
+          // list twice. (A deleted one added again by hand is let through.)
+          if (match == null) {
+            final k = jobKey(title: post.title, company: post.company, location: post.location);
+            final twin = byJob[k]?.where(
+              (j) =>
+                  (j.closing == null || post.closing == null || j.closing == post.closing) &&
+                  !(j.deleted && post.source == 'manual'),
+            );
+            if (twin != null && twin.isNotEmpty) continue;
+          }
           if (match == null &&
               excludedBy(p.targets.exclusions, title: post.title, company: post.company) != null) {
             continue;
@@ -502,6 +532,7 @@ class CareerBook {
             bySource['${post.source}:${post.sourceId}'] = saved;
             if (post.url.isNotEmpty) byUrl[post.url] = saved;
             if (post.company.isNotEmpty) byName[_key(post.title, post.company)] = saved;
+            addJob(saved);
           }
         }
         return added;

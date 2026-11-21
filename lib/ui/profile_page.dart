@@ -124,7 +124,8 @@ class ProfilePage extends ConsumerWidget {
                 child: Text(
                   [
                     'Roles: ${p.targets.roles.join(', ').ifEmpty('not set')}',
-                    'Search terms: ${p.searchTerms.join(', ').ifEmpty('not set')}',
+                    'Search terms: ${p.searchTerms.join(', ').ifEmpty('not set')}'
+                        '${p.searchTerms.isEmpty ? '' : ' (each new one becomes a saved search on the Jobs page, exact title only)'}',
                     'Countries: ${p.searchCountries.map(Country.nameOf).join(', ').ifEmpty('not set')}',
                     if (p.targets.homeAreas.isNotEmpty)
                       'Home areas: ${p.targets.homeAreas.map((a) => [a.place, if (a.radiusMiles != null) '${a.radiusMiles} miles', if (a.commuteTowns.isNotEmpty) 'commute ${a.commuteTowns.join(', ')}'].join(', ')).join('; ')}',

@@ -586,6 +586,7 @@ class _Codes extends ConsumerWidget {
     final p = await ref.read(profileProvider.future);
     final titles = titlesOf(p);
     final esco = EscoLookup(ref.read(httpClientProvider), ref.read(sessionProvider).db);
+    await loadSocIndex();
     final out = await esco.complete(titles, codeTitles(titles));
     ref.invalidate(occupationsProvider);
     if (context.mounted) {

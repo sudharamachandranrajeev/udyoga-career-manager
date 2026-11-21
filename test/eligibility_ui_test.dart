@@ -7,6 +7,7 @@ import 'package:udyoga/domain/feeds.dart';
 import 'package:udyoga/domain/todos.dart';
 import 'package:udyoga/domain/work_rights.dart';
 import 'package:udyoga/ui/job_page.dart';
+import 'package:udyoga/ui/jobs_page.dart' show JobTile;
 
 import 'app_harness.dart';
 import 'support.dart';
@@ -100,7 +101,8 @@ void main() {
     );
     await app.run();
     await app.go('Jobs');
-    expect(find.text('Clinical Informatics Nurse'), findsOneWidget);
+    // Its saved search chip shows the role name too.
+    expect(find.widgetWithText(JobTile, 'Clinical Informatics Nurse'), findsOneWidget);
     expect(find.text('Bank Staff Nurse'), findsNothing);
     expect(find.text('1 job hidden by your exclusions (Profile, Targets).'), findsOneWidget);
     await app.close();
