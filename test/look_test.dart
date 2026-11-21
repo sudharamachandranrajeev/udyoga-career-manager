@@ -38,6 +38,8 @@ void main() {
       expect(ShadTheme.of(context).brightness, brightness);
       expect(ShadTheme.of(context).colorScheme.primary, palette(brightness).primary);
       expect(Theme.of(context).colorScheme.primary, palette(brightness).primary);
+      // The shared kit paints in azure through the installed KitPalette.
+      expect(KitPalette.of(context), same(palette(brightness)));
       expect(tester.takeException(), isNull);
     });
   }

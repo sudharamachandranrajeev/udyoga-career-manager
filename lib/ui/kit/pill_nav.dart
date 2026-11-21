@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../look.dart';
-import 'glass.dart';
+
+import 'package:ui_kit/ui_kit.dart' show Glass;
 
 /// One choice in a [PillNav].
 class PillNavItem<T> {

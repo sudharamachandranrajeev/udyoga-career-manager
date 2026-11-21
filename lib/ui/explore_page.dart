@@ -18,8 +18,7 @@ import '../domain/tracks.dart';
 import '../domain/world.dart';
 import 'common.dart';
 import 'job_page.dart';
-import 'kit/status_pill.dart';
-import 'kit/toast.dart';
+import 'kit/status_bridge.dart';
 
 Status tierStatus(Tier t) => switch (t) {
   Tier.ready => Status.good,
