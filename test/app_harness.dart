@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:udyoga/app/app.dart';
 import 'package:udyoga/app/background.dart';
 import 'package:udyoga/app/modules.dart';
@@ -44,12 +45,13 @@ class AppHarness {
   }
 
   /// Starts the app; [overrides] stand in for more (a fake mail server),
-  /// and [home] shows one widget in place of the shell.
-  Future<void> run({List<Override> overrides = const [], Widget? home}) async {
+  /// [home] shows one widget in place of the shell, and [client] answers
+  /// the app's web requests (by default, [quietClient]).
+  Future<void> run({List<Override> overrides = const [], Widget? home, http.Client? client}) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          ...udyogaOverrides(session, client: quietClient()),
+          ...udyogaOverrides(session, client: client ?? quietClient()),
           siteBrowserProvider.overrideWithValue(() => browser),
           backgroundSchedulerProvider.overrideWithValue(scheduler),
           ...overrides,

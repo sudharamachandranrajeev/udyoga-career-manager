@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:drift/drift.dart' show BooleanExpressionOperators;
 import 'package:http/http.dart' as http;
@@ -245,27 +247,44 @@ class Refresher {
 
   /// One query per target country, or one per home area in it (each with
   /// its radius); then one not tied to a country, for remote work and the
-  /// UN jobs.
-  static List<FeedQuery> queries(CandidateProfile p) => [
-    for (final c in p.searchCountries)
-      ...switch ([
-        for (final a in p.targets.homeAreas)
-          if ((a.country.isEmpty ? p.country : a.country) == c) a,
-      ]) {
-        final areas when areas.isNotEmpty => [
-          for (final a in areas)
-            FeedQuery(
-              terms: p.searchTerms,
-              country: c,
-              place: a.place,
-              radiusMiles: a.radiusMiles,
-              remote: p.targets.remote,
-            ),
-        ],
-        _ => [FeedQuery(terms: p.searchTerms, country: c, remote: p.targets.remote)],
-      },
-    FeedQuery(terms: p.searchTerms, country: '', remote: p.targets.remote),
-  ];
+  /// UN jobs. The profile's search terms, unless [terms] (and [keep], see
+  /// [FeedQuery.keep]) are given, as a role search does.
+  static List<FeedQuery> queries(CandidateProfile p, {List<String>? terms, List<String>? keep}) {
+    final t = terms ?? p.searchTerms;
+    FeedQuery q(String country, {String place = '', int? radiusMiles}) => FeedQuery(
+      terms: t,
+      country: country,
+      place: place,
+      radiusMiles: radiusMiles,
+      remote: p.targets.remote,
+      keep: keep,
+    );
+    return [
+      for (final c in p.searchCountries)
+        ...switch ([
+          for (final a in p.targets.homeAreas)
+            if ((a.country.isEmpty ? p.country : a.country) == c) a,
+        ]) {
+          final areas when areas.isNotEmpty => [
+            for (final a in areas) q(c, place: a.place, radiusMiles: a.radiusMiles),
+          ],
+          _ => [q(c)],
+        },
+      q(''),
+    ];
+  }
+
+  /// The most search terms a routine refresh sends to one feed.
+  static const refreshTerms = 4;
+
+  /// [q] with at most [most] terms, or fewer when [f] takes fewer. A feed
+  /// that filters one download here ([JobFeed.maxTerms] null) gets them all.
+  static FeedQuery capped(FeedQuery q, JobFeed f, int most) {
+    final n = f.maxTerms;
+    if (n == null) return q;
+    final cap = math.min(n, most);
+    return q.terms.length <= cap ? q : q.withTerms(q.terms.take(cap).toList(), keep: q.keep);
+  }
 
   /// Asks every feed that covers a query; a feed that does not search by
   /// town is asked once per country. [answered] is false only when feeds
@@ -284,7 +303,7 @@ class Refresher {
         if (!f.usesPlace && !once.add('${f.id}:${q.country}')) continue;
         asked++;
         try {
-          postings.addAll(await f.search(q));
+          postings.addAll(await f.search(capped(q, f, refreshTerms)));
         } on Object catch (e) {
           failed++;
           report.problems.add('${f.name}: ${feedProblem(e)}');
