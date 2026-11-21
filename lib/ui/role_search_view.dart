@@ -23,7 +23,11 @@ import 'site_page.dart';
 /// role, the chosen titles and the exclusions as a saved search, which the
 /// routine refresh then runs.
 class RoleSearchView extends ConsumerStatefulWidget {
-  const RoleSearchView({super.key});
+  const RoleSearchView({super.key, this.initial});
+
+  /// A search to fill in and run at once (a stepping stone's "Search these
+  /// jobs"); null starts empty.
+  final RoleQuery? initial;
 
   @override
   ConsumerState<RoleSearchView> createState() => RoleSearchViewState();
@@ -61,6 +65,13 @@ class RoleSearchViewState extends ConsumerState<RoleSearchView> {
 
   /// The saved search on show, which "Save" updates; null: a new search.
   SavedSearch? editing;
+
+  @override
+  void initState() {
+    super.initState();
+    final q = widget.initial;
+    if (q != null) WidgetsBinding.instance.addPostFrameCallback((_) => openQuery(q));
+  }
 
   @override
   void dispose() {
@@ -196,6 +207,35 @@ class RoleSearchViewState extends ConsumerState<RoleSearchView> {
         ..addAll(s.skills);
     });
     await ref.mutate((x) => x.book.markLooked(s.id));
+    await _run();
+  }
+
+  /// Fills the search from [q] (its titles added to the role's family and
+  /// switched on, so every one shows as a chip that can be switched off)
+  /// and runs it.
+  Future<void> openQuery(RoleQuery q) async {
+    final index = await loadSocIndex();
+    if (!mounted) return;
+    final base = offlineFamily(q.role, index: index).plus(q.titles);
+    setState(() {
+      editing = null;
+      role.text = q.role;
+      notWords.text = q.notWords.join(', ');
+      notEmployers.text = q.notEmployers.join(', ');
+      exactOnly = q.exactOnly;
+      family = base;
+      on
+        ..clear()
+        ..addAll([
+          for (final t in base.titles)
+            if (t.closeness == Closeness.close) normalJobTitle(t.title),
+          for (final t in q.titles) normalJobTitle(t.title),
+        ]);
+      skills = q.skills.isEmpty ? null : List.of(q.skills);
+      skillsOn
+        ..clear()
+        ..addAll(q.skills);
+    });
     await _run();
   }
 
@@ -709,4 +749,19 @@ class _HitCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Role search on a page of its own, filled in from [query] and run at
+/// once: where a stepping stone's "Search these jobs" goes.
+class RoleSearchPage extends StatelessWidget {
+  const RoleSearchPage({super.key, required this.query});
+  final RoleQuery query;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text('Jobs: ${query.role}')),
+    body: SafeArea(
+      child: ListView(padding: const EdgeInsets.all(16), children: [RoleSearchView(initial: query)]),
+    ),
+  );
 }

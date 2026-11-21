@@ -16,6 +16,7 @@ import 'occupations.dart';
 import 'page_reader.dart';
 import 'profile.dart';
 import 'resume.dart';
+import 'role_insight.dart';
 import 'schema.dart';
 
 typedef Progress = void Function(String status);
@@ -161,6 +162,35 @@ Map every realistic career progression from the candidate's current role: up the
     schema: CareerMap.schema,
     web: true,
     searches: 10,
+    onProgress: onProgress,
+  );
+
+  /// How to approach one target [role] (role search plan U4): fit and
+  /// gaps, ways in, stepping stones, pay, how people got in, first moves,
+  /// honest CV wording and the career path. [known] is what the device and
+  /// any keyed sources already found ([knownForAi]); the AI fills the rest.
+  /// Works with any provider: a local model answers without web search.
+  Future<AiResult> roleInsight(
+    CandidateProfile p, {
+    required String role,
+    required Json known,
+    Progress? onProgress,
+  }) => ai.ask(
+    system: _system(p),
+    content: [
+      _candidate(p),
+      _text('<known>\n${jsonEncode(known)}\n</known>'),
+      _text(
+        '''
+The candidate wants to move into the role of "${_attr(role)}". Show the realistic way in from where they are now.
+
+Cover: what the role is; how ready they are (fit 0 to 100) and every gap against the role's essential and optional criteria (start from known_criteria, which says what the CV already shows), each gap marked blocker, major or minor with a concrete way to close it; the real entry routes in their country (apprenticeship, internal move, qualification, bank or temporary work, secondment); two or three concrete stepping-stone roles with real titles they are advertised under and how long people stay in them; pay with its source and year (the NHS Agenda for Change band where the role is on NHS pay) and where it leads; a checklist for studying people who hold the title now; three to five first moves for the next 30 days, each tied to a gap; honest CV wording that says what they really did in the target role's terms (never add experience they do not have); and a career path from their current role through the stepping stones to the target and one step beyond, each step with a timeframe and likelihood. Name real titles, routes and bodies; say plainly when the move is a long shot.''',
+      ),
+    ],
+    schema: RoleInsight.aiSchema,
+    web: true,
+    searches: 6,
+    effort: 'medium',
     onProgress: onProgress,
   );
 

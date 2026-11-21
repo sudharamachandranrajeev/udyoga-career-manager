@@ -13,6 +13,7 @@ import '../domain/advisor.dart';
 import '../domain/bluesky.dart';
 import '../domain/career_file_sync.dart';
 import '../domain/book.dart';
+import '../domain/career_data.dart';
 import '../domain/ai.dart';
 import '../domain/ats.dart';
 import '../domain/background.dart';
@@ -34,6 +35,7 @@ import '../domain/profile.dart';
 import '../domain/recipes.dart';
 import '../domain/refresh.dart';
 import '../domain/route_refresh.dart';
+import '../domain/role_insight.dart';
 import '../domain/saved_searches.dart';
 import '../domain/sponsors.dart';
 import '../domain/n8n.dart';
@@ -397,6 +399,19 @@ final savedSearchesProvider = FutureProvider<List<SavedSearch>>((ref) async {
   final book = ref.watch(sessionProvider).book;
   await book.migrateSavedSearches();
   return book.savedSearches();
+});
+
+/// The saved role insights ("Approach this role"), newest first.
+final roleInsightsProvider = FutureProvider<List<RoleInsight>>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.roleInsights();
+});
+
+/// The person's own keys for the National Careers Service and Skills
+/// England, from this device's keychain; empty when not set (both off).
+final careerDataKeysProvider = FutureProvider<CareerDataKeys>((ref) {
+  ref.watch(revisionProvider);
+  return CareerDataKeys.read(ref.watch(sessionProvider).keys.store);
 });
 
 final profileProvider = FutureProvider<CandidateProfile>((ref) {

@@ -630,6 +630,21 @@ class CareerSavedSearches extends Table with SyncedRow {
   TextColumn get seen => text().withDefault(const Constant('[]'))();
 }
 
+/// A role insight ("Approach this role", role search plan U4): one row per
+/// role, its id taken from the role's title, so asking again on any device
+/// replaces the same row instead of adding a second.
+@DataClassName('RoleInsightRow')
+class CareerRoleInsights extends Table with SyncedRow {
+  /// The role as typed.
+  TextColumn get role => text()();
+
+  /// The whole insight as JSON (lib/domain/role_insight.dart): every
+  /// section with its source and date, AI-written parts marked.
+  TextColumn get content => text()();
+  TextColumn get created => text()();
+  TextColumn get updated => text()();
+}
+
 @DataClassName('Pref')
 class Prefs extends Table with SyncedRow, PrefColumns {}
 

@@ -35,6 +35,7 @@ part 'database.g.dart';
     BridgeStudyProgress,
     CareerFileDocs,
     CareerSavedSearches,
+    CareerRoleInsights,
     Prefs,
     Outbox,
     SyncCursors,
@@ -75,11 +76,12 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     'bridge_study_progress',
     'career_file_docs',
     'career_saved_searches',
+    'career_role_insights',
     'prefs',
   ];
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -191,6 +193,10 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
       if (from < 12) {
         // Saved role searches. CREATE TABLE IF NOT EXISTS, so it can run again.
         await m.createTable(careerSavedSearches);
+      }
+      if (from < 13) {
+        // Role insights. CREATE TABLE IF NOT EXISTS, so it can run again.
+        await m.createTable(careerRoleInsights);
       }
     },
     // The background refresh opens the same file from another process (or

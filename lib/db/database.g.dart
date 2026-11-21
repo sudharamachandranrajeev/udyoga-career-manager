@@ -17727,6 +17727,463 @@ class CareerSavedSearchesCompanion extends UpdateCompanion<SavedSearchRow> {
   }
 }
 
+class $CareerRoleInsightsTable extends CareerRoleInsights
+    with TableInfo<$CareerRoleInsightsTable, RoleInsightRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CareerRoleInsightsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hlcMeta = const VerificationMeta('hlc');
+  @override
+  late final GeneratedColumn<String> hlc = GeneratedColumn<String>(
+    'hlc',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta(
+    'deleted',
+  );
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdMeta = const VerificationMeta(
+    'created',
+  );
+  @override
+  late final GeneratedColumn<String> created = GeneratedColumn<String>(
+    'created',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedMeta = const VerificationMeta(
+    'updated',
+  );
+  @override
+  late final GeneratedColumn<String> updated = GeneratedColumn<String>(
+    'updated',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    hlc,
+    deleted,
+    role,
+    content,
+    created,
+    updated,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'career_role_insights';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RoleInsightRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('hlc')) {
+      context.handle(
+        _hlcMeta,
+        hlc.isAcceptableOrUnknown(data['hlc']!, _hlcMeta),
+      );
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(
+        _deletedMeta,
+        deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta),
+      );
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+        _roleMeta,
+        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_roleMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('created')) {
+      context.handle(
+        _createdMeta,
+        created.isAcceptableOrUnknown(data['created']!, _createdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdMeta);
+    }
+    if (data.containsKey('updated')) {
+      context.handle(
+        _updatedMeta,
+        updated.isAcceptableOrUnknown(data['updated']!, _updatedMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RoleInsightRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RoleInsightRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      hlc: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hlc'],
+      )!,
+      deleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}deleted'],
+      )!,
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      created: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created'],
+      )!,
+      updated: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}updated'],
+      )!,
+    );
+  }
+
+  @override
+  $CareerRoleInsightsTable createAlias(String alias) {
+    return $CareerRoleInsightsTable(attachedDatabase, alias);
+  }
+}
+
+class RoleInsightRow extends DataClass implements Insertable<RoleInsightRow> {
+  final String id;
+  final String hlc;
+  final bool deleted;
+
+  /// The role as typed.
+  final String role;
+
+  /// The whole insight as JSON (lib/domain/role_insight.dart): every
+  /// section with its source and date, AI-written parts marked.
+  final String content;
+  final String created;
+  final String updated;
+  const RoleInsightRow({
+    required this.id,
+    required this.hlc,
+    required this.deleted,
+    required this.role,
+    required this.content,
+    required this.created,
+    required this.updated,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['hlc'] = Variable<String>(hlc);
+    map['deleted'] = Variable<bool>(deleted);
+    map['role'] = Variable<String>(role);
+    map['content'] = Variable<String>(content);
+    map['created'] = Variable<String>(created);
+    map['updated'] = Variable<String>(updated);
+    return map;
+  }
+
+  CareerRoleInsightsCompanion toCompanion(bool nullToAbsent) {
+    return CareerRoleInsightsCompanion(
+      id: Value(id),
+      hlc: Value(hlc),
+      deleted: Value(deleted),
+      role: Value(role),
+      content: Value(content),
+      created: Value(created),
+      updated: Value(updated),
+    );
+  }
+
+  factory RoleInsightRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RoleInsightRow(
+      id: serializer.fromJson<String>(json['id']),
+      hlc: serializer.fromJson<String>(json['hlc']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
+      role: serializer.fromJson<String>(json['role']),
+      content: serializer.fromJson<String>(json['content']),
+      created: serializer.fromJson<String>(json['created']),
+      updated: serializer.fromJson<String>(json['updated']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'hlc': serializer.toJson<String>(hlc),
+      'deleted': serializer.toJson<bool>(deleted),
+      'role': serializer.toJson<String>(role),
+      'content': serializer.toJson<String>(content),
+      'created': serializer.toJson<String>(created),
+      'updated': serializer.toJson<String>(updated),
+    };
+  }
+
+  RoleInsightRow copyWith({
+    String? id,
+    String? hlc,
+    bool? deleted,
+    String? role,
+    String? content,
+    String? created,
+    String? updated,
+  }) => RoleInsightRow(
+    id: id ?? this.id,
+    hlc: hlc ?? this.hlc,
+    deleted: deleted ?? this.deleted,
+    role: role ?? this.role,
+    content: content ?? this.content,
+    created: created ?? this.created,
+    updated: updated ?? this.updated,
+  );
+  RoleInsightRow copyWithCompanion(CareerRoleInsightsCompanion data) {
+    return RoleInsightRow(
+      id: data.id.present ? data.id.value : this.id,
+      hlc: data.hlc.present ? data.hlc.value : this.hlc,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+      role: data.role.present ? data.role.value : this.role,
+      content: data.content.present ? data.content.value : this.content,
+      created: data.created.present ? data.created.value : this.created,
+      updated: data.updated.present ? data.updated.value : this.updated,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RoleInsightRow(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('role: $role, ')
+          ..write('content: $content, ')
+          ..write('created: $created, ')
+          ..write('updated: $updated')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, hlc, deleted, role, content, created, updated);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RoleInsightRow &&
+          other.id == this.id &&
+          other.hlc == this.hlc &&
+          other.deleted == this.deleted &&
+          other.role == this.role &&
+          other.content == this.content &&
+          other.created == this.created &&
+          other.updated == this.updated);
+}
+
+class CareerRoleInsightsCompanion extends UpdateCompanion<RoleInsightRow> {
+  final Value<String> id;
+  final Value<String> hlc;
+  final Value<bool> deleted;
+  final Value<String> role;
+  final Value<String> content;
+  final Value<String> created;
+  final Value<String> updated;
+  final Value<int> rowid;
+  const CareerRoleInsightsCompanion({
+    this.id = const Value.absent(),
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.role = const Value.absent(),
+    this.content = const Value.absent(),
+    this.created = const Value.absent(),
+    this.updated = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CareerRoleInsightsCompanion.insert({
+    required String id,
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    required String role,
+    required String content,
+    required String created,
+    required String updated,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       role = Value(role),
+       content = Value(content),
+       created = Value(created),
+       updated = Value(updated);
+  static Insertable<RoleInsightRow> custom({
+    Expression<String>? id,
+    Expression<String>? hlc,
+    Expression<bool>? deleted,
+    Expression<String>? role,
+    Expression<String>? content,
+    Expression<String>? created,
+    Expression<String>? updated,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (hlc != null) 'hlc': hlc,
+      if (deleted != null) 'deleted': deleted,
+      if (role != null) 'role': role,
+      if (content != null) 'content': content,
+      if (created != null) 'created': created,
+      if (updated != null) 'updated': updated,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CareerRoleInsightsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? hlc,
+    Value<bool>? deleted,
+    Value<String>? role,
+    Value<String>? content,
+    Value<String>? created,
+    Value<String>? updated,
+    Value<int>? rowid,
+  }) {
+    return CareerRoleInsightsCompanion(
+      id: id ?? this.id,
+      hlc: hlc ?? this.hlc,
+      deleted: deleted ?? this.deleted,
+      role: role ?? this.role,
+      content: content ?? this.content,
+      created: created ?? this.created,
+      updated: updated ?? this.updated,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (hlc.present) {
+      map['hlc'] = Variable<String>(hlc.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (created.present) {
+      map['created'] = Variable<String>(created.value);
+    }
+    if (updated.present) {
+      map['updated'] = Variable<String>(updated.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CareerRoleInsightsCompanion(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('role: $role, ')
+          ..write('content: $content, ')
+          ..write('created: $created, ')
+          ..write('updated: $updated, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PrefsTable extends Prefs with TableInfo<$PrefsTable, Pref> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -18744,6 +19201,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CareerFileDocsTable careerFileDocs = $CareerFileDocsTable(this);
   late final $CareerSavedSearchesTable careerSavedSearches =
       $CareerSavedSearchesTable(this);
+  late final $CareerRoleInsightsTable careerRoleInsights =
+      $CareerRoleInsightsTable(this);
   late final $PrefsTable prefs = $PrefsTable(this);
   late final $OutboxTable outbox = $OutboxTable(this);
   late final $SyncCursorsTable syncCursors = $SyncCursorsTable(this);
@@ -18779,6 +19238,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     bridgeStudyProgress,
     careerFileDocs,
     careerSavedSearches,
+    careerRoleInsights,
     prefs,
     outbox,
     syncCursors,
@@ -27586,6 +28046,262 @@ typedef $$CareerSavedSearchesTableProcessedTableManager =
       SavedSearchRow,
       PrefetchHooks Function()
     >;
+typedef $$CareerRoleInsightsTableCreateCompanionBuilder =
+    CareerRoleInsightsCompanion Function({
+      required String id,
+      Value<String> hlc,
+      Value<bool> deleted,
+      required String role,
+      required String content,
+      required String created,
+      required String updated,
+      Value<int> rowid,
+    });
+typedef $$CareerRoleInsightsTableUpdateCompanionBuilder =
+    CareerRoleInsightsCompanion Function({
+      Value<String> id,
+      Value<String> hlc,
+      Value<bool> deleted,
+      Value<String> role,
+      Value<String> content,
+      Value<String> created,
+      Value<String> updated,
+      Value<int> rowid,
+    });
+
+class $$CareerRoleInsightsTableFilterComposer
+    extends Composer<_$AppDatabase, $CareerRoleInsightsTable> {
+  $$CareerRoleInsightsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hlc => $composableBuilder(
+    column: $table.hlc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get created => $composableBuilder(
+    column: $table.created,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get updated => $composableBuilder(
+    column: $table.updated,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CareerRoleInsightsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CareerRoleInsightsTable> {
+  $$CareerRoleInsightsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hlc => $composableBuilder(
+    column: $table.hlc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get role => $composableBuilder(
+    column: $table.role,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get created => $composableBuilder(
+    column: $table.created,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get updated => $composableBuilder(
+    column: $table.updated,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CareerRoleInsightsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CareerRoleInsightsTable> {
+  $$CareerRoleInsightsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => column);
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get created =>
+      $composableBuilder(column: $table.created, builder: (column) => column);
+
+  GeneratedColumn<String> get updated =>
+      $composableBuilder(column: $table.updated, builder: (column) => column);
+}
+
+class $$CareerRoleInsightsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CareerRoleInsightsTable,
+          RoleInsightRow,
+          $$CareerRoleInsightsTableFilterComposer,
+          $$CareerRoleInsightsTableOrderingComposer,
+          $$CareerRoleInsightsTableAnnotationComposer,
+          $$CareerRoleInsightsTableCreateCompanionBuilder,
+          $$CareerRoleInsightsTableUpdateCompanionBuilder,
+          (
+            RoleInsightRow,
+            BaseReferences<
+              _$AppDatabase,
+              $CareerRoleInsightsTable,
+              RoleInsightRow
+            >,
+          ),
+          RoleInsightRow,
+          PrefetchHooks Function()
+        > {
+  $$CareerRoleInsightsTableTableManager(
+    _$AppDatabase db,
+    $CareerRoleInsightsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CareerRoleInsightsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CareerRoleInsightsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CareerRoleInsightsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<String> role = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<String> created = const Value.absent(),
+                Value<String> updated = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CareerRoleInsightsCompanion(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                role: role,
+                content: content,
+                created: created,
+                updated: updated,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                required String role,
+                required String content,
+                required String created,
+                required String updated,
+                Value<int> rowid = const Value.absent(),
+              }) => CareerRoleInsightsCompanion.insert(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                role: role,
+                content: content,
+                created: created,
+                updated: updated,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CareerRoleInsightsTable, RoleInsightRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $CareerRoleInsightsTable,
+                    RoleInsightRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CareerRoleInsightsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CareerRoleInsightsTable,
+      RoleInsightRow,
+      $$CareerRoleInsightsTableFilterComposer,
+      $$CareerRoleInsightsTableOrderingComposer,
+      $$CareerRoleInsightsTableAnnotationComposer,
+      $$CareerRoleInsightsTableCreateCompanionBuilder,
+      $$CareerRoleInsightsTableUpdateCompanionBuilder,
+      (
+        RoleInsightRow,
+        BaseReferences<_$AppDatabase, $CareerRoleInsightsTable, RoleInsightRow>,
+      ),
+      RoleInsightRow,
+      PrefetchHooks Function()
+    >;
 typedef $$PrefsTableCreateCompanionBuilder = PrefsCompanion Function({
   required String id,
   Value<String> hlc,
@@ -28285,6 +29001,8 @@ class $AppDatabaseManager {
       $$CareerFileDocsTableTableManager(_db, _db.careerFileDocs);
   $$CareerSavedSearchesTableTableManager get careerSavedSearches =>
       $$CareerSavedSearchesTableTableManager(_db, _db.careerSavedSearches);
+  $$CareerRoleInsightsTableTableManager get careerRoleInsights =>
+      $$CareerRoleInsightsTableTableManager(_db, _db.careerRoleInsights);
   $$PrefsTableTableManager get prefs =>
       $$PrefsTableTableManager(_db, _db.prefs);
   $$OutboxTableTableManager get outbox =>

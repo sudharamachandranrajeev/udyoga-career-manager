@@ -9,6 +9,7 @@ import '../domain/role_family.dart';
 import '../domain/saved_searches.dart';
 import 'common.dart';
 import 'kit/kit.dart';
+import 'role_insight_page.dart';
 
 /// The saved role searches on the Jobs page, as a row of chips: each with
 /// how many listed jobs are new since it was last opened. Tap one to run
@@ -69,6 +70,7 @@ class SavedSearchesRow extends ConsumerWidget {
             const SizedBox(height: 8),
             for (final (id, icon, label) in [
               ('open', Icons.search, 'Open and search now'),
+              ('approach', Icons.route_outlined, 'Approach this role'),
               ('edit', Icons.edit_outlined, 'Edit or rename'),
               ('delete', Icons.delete_outline, 'Delete'),
             ])
@@ -86,6 +88,8 @@ class SavedSearchesRow extends ConsumerWidget {
     switch (choice) {
       case 'open':
         onOpen(s);
+      case 'approach':
+        await openRoleInsights(context, roles: [s.role]);
       case 'edit':
         await editSavedSearch(context, ref, s);
       case 'delete':
