@@ -197,6 +197,8 @@ void main() {
       expect(feed.covers(const FeedQuery(terms: [], country: 'GB')), isFalse);
       final jobs = await feed.search(const FeedQuery(terms: ['cataloguer'], country: ''));
       expect(jobs.single.title, 'Cataloguer');
+      // Whole words only: "PA" and "Pro" are not the letters inside other words.
+      expect(await feed.search(const FeedQuery(terms: ['PA', 'Pro'], country: '')), isEmpty);
     });
 
     test('a page that is not a feed is a feed problem', () {

@@ -136,6 +136,25 @@ String feedProblem(Object e) => switch (e) {
 /// True when [text] holds every word of at least one of [terms].
 bool mentionsAny(String text, List<String> terms) => _mentions(text, terms);
 
+/// True when [text] holds every word of at least one of [phrases] as a
+/// whole word (a plural "s", "es" or "ies" allowed), in any order and case.
+/// So a short family title such as "PA" keeps "Medical PA" but not
+/// "Paediatrics" or "Part time", which a plain substring check would.
+bool holdsWords(String text, List<String> phrases) => phrases.any((t) {
+  final words = t.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  return words.isNotEmpty &&
+      words.every((w) {
+        final y = w.length > 1 && w.toLowerCase().endsWith('y');
+        final word = y
+            ? '${RegExp.escape(w.substring(0, w.length - 1))}(?:y|ies)'
+            : '${RegExp.escape(w)}(?:e?s)?';
+        return RegExp(
+          '(?<![A-Za-z0-9\u00C0-\u024F])$word(?![A-Za-z0-9\u00C0-\u024F])',
+          caseSensitive: false,
+        ).hasMatch(text);
+      });
+});
+
 bool _mentions(String text, List<String> terms) {
   final t = text.toLowerCase();
   return terms.any((term) => term.toLowerCase().split(RegExp(r'\s+')).every(t.contains));
@@ -293,7 +312,7 @@ class NhsJobsFeed extends JobFeed {
             .timeout(const Duration(seconds: 30));
         if (r.statusCode != 200) throw FeedException('error ${r.statusCode}');
         final found = parse(utf8.decode(r.bodyBytes));
-        out.addAll(found.where((p) => _mentions(p.title, q.keep ?? [term])));
+        out.addAll(found.where((p) => holdsWords(p.title, q.keep ?? [term])));
         if (found.length < 10) break;
       }
     }
@@ -1003,7 +1022,7 @@ class UnVacanciesFeed extends JobFeed {
     if (r.statusCode != 200) throw FeedException('error ${r.statusCode}');
     return [
       for (final p in parse(utf8.decode(r.bodyBytes)))
-        if (_mentions('${p.title}\n${p.description}', q.terms)) p,
+        if (holdsWords('${p.title}\n${p.description}', q.terms)) p,
     ];
   }
 

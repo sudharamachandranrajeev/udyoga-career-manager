@@ -155,6 +155,29 @@ void main() {
       expect(strict, isEmpty);
     });
 
+    test('a short family title keeps whole words only, not the same letters inside other words', () {
+      const keep = ['PA', 'Medical Secretary', "Doctor's Secretary"];
+      for (final t in [
+        'Medical PA',
+        'PA to the Chief Executive',
+        'Medical Secretary/PA',
+        'Medical Secretaries (Band 4)',
+      ]) {
+        expect(holdsWords(t, keep), isTrue, reason: t);
+      }
+      for (final t in [
+        'Consultant Histopathologist',
+        'Healthcare Technician - Part Time',
+        'Trust Grade Doctor Paediatrics',
+        'Principal Clinical Scientist',
+      ]) {
+        expect(holdsWords(t, keep), isFalse, reason: t);
+      }
+      expect(holdsWords("Doctor's Secretary - Surgery", keep), isTrue);
+      expect(holdsWords('IT Trainer', const ['IT Trainer']), isTrue);
+      expect(holdsWords('Facilities Trainer', const ['IT Trainer']), isFalse);
+    });
+
     test('a role search finds the clinical systems trainer for the trainer family only', () async {
       final search = RoleSearch(book, _nhsClient(), feeds: [NhsJobsFeed(_nhsClient())]);
       final found = await search.run(
