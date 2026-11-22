@@ -6,14 +6,17 @@ import 'dart:convert';
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:drift/drift.dart';
+import 'package:interview_engine/interview_engine.dart' show RoleProfile;
 
 import '../db/database.dart';
 import 'book.dart';
 import 'companion.dart';
 import 'companion_book.dart';
 import 'insights.dart';
+import 'interview_book.dart';
 import 'job_identity.dart';
 import 'json.dart';
+import 'pipeline.dart';
 import 'profile.dart';
 import 'role_insight.dart';
 import 'todos.dart';
@@ -181,6 +184,8 @@ String _sourceName(InsightFrom f) => switch (f) {
 ///   against the profile, null when it did not.
 /// - per topic "criteria": the ids it works on, and "items": study items
 ///   [{type, title, required, source}] (practice tasks for now).
+/// - "journey": the job journey of Vidya's plan format 3 (see
+///   [jobJourney]); Vidya fills in the stages from its own templates.
 Json roleVidyaPlan(RoleInsight i) {
   Json task(String title, InsightFrom from) => {
     'type': 'practice task',
@@ -221,6 +226,7 @@ Json roleVidyaPlan(RoleInsight i) {
       'goal': 'Close the gaps for ${i.role} and make the first moves, with evidence for each criterion.',
     },
     'role': i.role,
+    'journey': jobJourney(role: i.role, sector: i.nhs ? 'nhs' : 'other'),
     'criteria': [
       for (final c in i.criteria.take(80))
         {
@@ -267,6 +273,118 @@ Json roleVidyaPlan(RoleInsight i) {
             '- ${c.text} (${c.essential ? 'essential' : 'optional'}${c.shown == true ? ', shown in your CV' : ''})',
         ].join('\n'),
         'tags': ['udyoga', 'role'],
+      },
+    ],
+  };
+}
+
+/// A job journey for Vidya (plan format 3's `journey`): only the job's own
+/// data. The generic, dated stage templates live in Vidya, so nothing here
+/// teaches. Empty fields are left out.
+Json jobJourney({
+  required String role,
+  String employer = '',
+  required String sector,
+  String advertUrl = '',
+  String? closes,
+  String applicationStage = '',
+}) => {
+  'role': _clip(role, 200),
+  if (employer.isNotEmpty) 'employer': _clip(employer, 200),
+  'sector': sector,
+  if (advertUrl.startsWith('http')) 'advertUrl': _clip(advertUrl, 500),
+  if (closes != null && isValidIsoDate(closes)) 'closes': closes,
+  if (applicationStage.isNotEmpty) 'applicationStage': applicationStage,
+};
+
+/// The kind of employer a job is with, for Vidya's templates: `nhs`,
+/// `university`, `civil-service`, `private` or `other`. The interview
+/// framework (when a role profile names one) wins; otherwise the
+/// employer's name is read. A guess: the learner can see it in Vidya.
+String journeySector({String employer = '', String framework = ''}) {
+  switch (framework) {
+    case 'nhs_values' || 'hsc_ni':
+      return 'nhs';
+    case 'civil_service':
+      return 'civil-service';
+  }
+  final e = ' ${employer.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ')} ';
+  bool has(String words) => RegExp(' ($words) ').hasMatch(e);
+  if (has('nhs|hsc|health and social care|health board|ambulance service') ||
+      has('health') && has('trust')) {
+    return 'nhs';
+  }
+  if (has('university|college')) return 'university';
+  if (has('hm|ministry of|department for|civil service')) return 'civil-service';
+  if (has('ltd|limited|plc|llp|inc|group')) return 'private';
+  return 'other';
+}
+
+/// The Vidya plan row id for a saved job ("Prepare this job").
+String jobPlanId(String jobId) => 'udyoga.job.$jobId';
+
+/// A saved job as a Vidya plan with a journey ("Prepare this job"): the
+/// job's criteria (from its role profile, checked by the candidate, else
+/// the AI fit assessment's requirements), its employer, a sector guess,
+/// the advert's link and closing date, and where the application stands.
+/// A version 1 plan with a note, so an older Vidya still imports it.
+Json jobVidyaPlan(Job j, {RoleProfile? profile, JobApplication? application}) {
+  final fit = j.assessment.isEmpty ? null : FitAssessment(decodeObject(j.assessment));
+  final where = j.company.isEmpty ? j.title : '${j.title} at ${j.company}';
+  final criteria = <Json>[
+    if (profile != null && profile.criteria.isNotEmpty)
+      for (final c in profile.criteria.take(80))
+        {
+          'id': c.id,
+          'text': _clip(c.text, 200),
+          'essential': c.essential,
+          'kind': c.kind.name,
+          'source': profile.source == 'ai' ? 'Advert (read by AI, checked by you)' : 'Advert',
+        }
+    else if (fit != null)
+      for (final (k, r) in [
+        ...fit.matched.map((m) => str(m['requirement'])),
+        ...fit.gaps.map((g) => str(g['requirement'])),
+      ].where((r) => r.isNotEmpty).take(80).indexed)
+        {'id': 'a${k + 1}', 'text': _clip(r, 200), 'essential': true, 'source': 'AI'},
+  ];
+  final closes = j.closing ?? (fit != null && isValidIsoDate(fit.closing) ? fit.closing : null);
+  return {
+    'format': 'vidya-curriculum',
+    'version': 1,
+    'part': '1 of 1',
+    'program': {
+      'title': _clip('Prepare: $where', 200),
+      'goal': 'Every stage of $where, from deciding to apply to the first months in the post.',
+      if (closes != null && isValidIsoDate(closes)) 'targetDate': closes,
+    },
+    'role': _clip(j.title, 200),
+    'journey': jobJourney(
+      role: j.title,
+      employer: j.company,
+      sector: journeySector(employer: j.company, framework: profile?.frameworkId ?? ''),
+      advertUrl: j.url,
+      closes: closes,
+      applicationStage: application?.stage ?? '',
+    ),
+    'criteria': criteria,
+    'courses': const [],
+    'skills': const [],
+    'cards': const [],
+    'notes': [
+      {
+        'title': _clip('From Udyoga: $where', 200),
+        'body': [
+          'Sent by Udyoga from your saved job.',
+          if (j.url.startsWith('http')) 'Advert: ${j.url}',
+          if (closes != null) 'Closes: ${niceDate(closes)}',
+          if (application != null) 'Application: ${Stage.of(application.stage).label}',
+          if (criteria.isEmpty)
+            '',
+          if (criteria.isEmpty)
+            'No criteria yet: read them from the advert on Udyoga\'s interview page, or add them in Vidya.',
+        ].join('\n'),
+        'tags': ['udyoga', 'job'],
       },
     ],
   };
@@ -376,6 +494,49 @@ extension VidyaLink on CareerBook {
       id,
     );
     return id;
+  }
+
+  /// The Vidya plan for saved job [j], with the criteria of its latest
+  /// role profile and its application's stage.
+  Future<Json> _jobPlan(Job j) async {
+    final profile = (await roleProfileRows()).where((r) => r.jobId == j.id).firstOrNull;
+    final application =
+        await (db.select(db.jobApplications)
+              ..where((a) => a.jobId.equals(j.id) & a.deleted.not())
+              ..limit(1))
+            .getSingleOrNull();
+    return jobVidyaPlan(
+      j,
+      profile: profile == null ? null : InterviewBook.roleProfileOf(profile),
+      application: application,
+    );
+  }
+
+  /// Sends [j] to Vidya as a plan with a journey ("Prepare this job").
+  /// Returns the row id.
+  Future<String> sendJobToVidya(Job j, {required String now}) async {
+    final id = jobPlanId(j.id);
+    await save(
+      db.bridgeStudyPlans,
+      BridgeStudyPlansCompanion.insert(id: id, source: 'udyoga', plan: jsonEncode(await _jobPlan(j)), updated: now),
+      id,
+    );
+    return id;
+  }
+
+  /// Sends the job's journey again when it was sent before and has
+  /// changed (the application moved on, say), so Vidya can suggest the
+  /// next stage. Nothing happens otherwise.
+  Future<void> refreshJobJourney(String? jobId, {required String now}) async {
+    if (jobId == null) return;
+    final sent = await (db.select(
+      db.bridgeStudyPlans,
+    )..where((p) => p.id.equals(jobPlanId(jobId)) & p.deleted.not())).getSingleOrNull();
+    if (sent == null) return;
+    final j = await (db.select(db.jobListings)..where((x) => x.id.equals(jobId))).getSingleOrNull();
+    if (j == null) return;
+    final plan = jsonEncode(await _jobPlan(j));
+    if (plan != sent.plan) await save(db.bridgeStudyPlans, sent.copyWith(plan: plan, updated: now), sent.id);
   }
 
   Future<VidyaBridge> vidyaBridge() async {

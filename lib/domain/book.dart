@@ -23,6 +23,7 @@ import 'profile.dart';
 import 'resume.dart';
 import 'saved_searches.dart';
 import 'subscription.dart';
+import 'vidya_link.dart';
 import 'work_rights.dart';
 
 /// Pref keys. The prefs table is shared by every Brahma app, so Udyoga's
@@ -694,6 +695,8 @@ class CareerBook {
         await _event(id, kind, summary.isNotEmpty ? summary : stage.label, at ?? '${date}T${_clock()}');
         if (stage == Stage.checks && from != Stage.checks) await startChecks(id, date);
         if (stage == Stage.accepted) await _flagOthers(a, date);
+        // A journey sent to Vidya hears where the application now stands.
+        if (stage != from) await refreshJobJourney(a.jobId, now: DateTime.now().toUtc().toIso8601String());
       });
 
   /// When to remind about an unsent application: two days before [closing]

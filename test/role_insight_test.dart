@@ -473,6 +473,8 @@ void main() {
     expect(plan['format'], 'vidya-curriculum');
     expect(plan['version'], 1);
     expect(plan['role'], role);
+    // A job journey with only the role's data; Vidya fills in the stages.
+    expect(plan['journey'], {'role': role, 'sector': i.nhs ? 'nhs' : 'other'});
     final criteria = objs(plan['criteria']);
     final ids = {for (final c in criteria) str(c['id'])};
     expect(criteria.map((c) => c['text']), containsAll(['ensure patient safety', 'Teaching qualification']));
