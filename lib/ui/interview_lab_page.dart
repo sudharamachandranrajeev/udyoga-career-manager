@@ -39,11 +39,28 @@ final modelManagerProvider = FutureProvider<ModelManager>((ref) async {
       // Left where they are; the lab offers the download again.
     }
   }
-  return ModelManager(
+  final mm = ModelManager(
     shared ?? own,
     client: ref.watch(httpClientProvider),
     voiceCache: Directory('${base.path}/voice-cache'),
   );
+  if (shared != null) {
+    try {
+      // So Vidya's screens can say the models are shared with Udyoga.
+      await mm.registerUser('udyoga');
+    } on FileSystemException {
+      // Only a note for the other app; nothing depends on it.
+    }
+  }
+  return mm;
+});
+
+/// What the models list and a delete confirmation say about Vidya, which
+/// shares the desktop model folder.
+final modelSharingProvider = FutureProvider<String>((ref) async {
+  final mm = await ref.watch(modelManagerProvider.future);
+  final shared = sharedModelFolder() != null;
+  return modelSharingNote(app: 'udyoga', shared: shared, users: shared ? await mm.users() : const []);
 });
 
 class InterviewLabPage extends ConsumerStatefulWidget {
@@ -116,8 +133,22 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
   }
 
   Future<void> _delete(SpeechModel m) async {
+    final note = await ref.read(modelSharingProvider.future);
+    if (!mounted) return;
+    final ok = await confirm(
+      context,
+      title: 'Delete ${m.label}?',
+      message: '$note You can download it again later.',
+      action: 'Delete',
+      destructive: true,
+    );
+    if (!ok || !mounted) return;
     final mm = await ref.read(modelManagerProvider.future);
-    await mm.delete(m);
+    try {
+      await mm.delete(m);
+    } on ModelException catch (e) {
+      if (mounted) showError(context, e);
+    }
     await _refresh();
   }
 
@@ -188,6 +219,8 @@ class _InterviewLabPageState extends ConsumerState<InterviewLabPage> {
               const Text(
                 'Nothing is included with Udyoga. Download what you want to test; delete it any time.',
               ),
+              if (ref.watch(modelSharingProvider).value case final note?)
+                Text(note, style: Theme.of(context).textTheme.bodySmall),
               if (offlinePractice(ref))
                 Text(offlineDownloadMessage, style: TextStyle(color: Status.warning.color)),
               for (final m in speechModels)
