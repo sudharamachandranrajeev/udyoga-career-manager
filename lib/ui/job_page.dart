@@ -26,6 +26,7 @@ import 'kit/kit.dart';
 import 'look.dart';
 import 'resume_page.dart';
 import 'site_page.dart';
+import 'vidya_practice_ui.dart' show JobReadinessCard;
 
 const _verdicts = {
   'strong': ('Strong fit', Status.good),
@@ -168,6 +169,7 @@ class JobPage extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 16),
+        JobReadinessCard(id),
         if (j.notes.isNotEmpty) SectionCard(title: 'Notes', child: SelectableText(j.notes)),
         SectionCard(
           title: 'Fit assessment',

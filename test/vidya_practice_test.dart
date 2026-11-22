@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:interview_engine/interview_engine.dart' show Criterion, RoleProfile;
 import 'package:udyoga/db/database.dart';
 import 'package:udyoga/domain/book.dart';
 import 'package:udyoga/domain/career_file_sync.dart';
@@ -371,6 +372,108 @@ void main() {
       )..where((p) => p.id.equals(planId))).getSingle();
       await book.save(book.db.bridgeStudyPlans, plan.copyWith(deleted: true), planId);
       expect(gapCards(await book.drillsPlanNow()), isEmpty);
+    });
+
+    group('for a job plan ("Prepare this job")', () {
+      late String jobId;
+      late String jobPlan;
+
+      Future<void> sendJobPlan() async {
+        jobId = (await book.importPostings([samplePosting()], sampleProfile, today: '2026-11-15')).single;
+        await book.saveRoleProfile(
+          RoleProfile(
+            id: '',
+            title: 'Clinical Informatics Nurse',
+            jobId: jobId,
+            criteria: const [
+              Criterion(id: 'e2', text: 'Handle a difficult learner calmly'),
+              Criterion(id: 'e3', text: 'Keep training records.'),
+              Criterion(id: 'e4', text: 'Explain EPR changes to ward staff'),
+              Criterion(id: 'd1', text: 'Write short guides', essential: false),
+            ],
+          ),
+          at: '2026-11-21T09:00',
+        );
+        final j = await (book.db.select(book.db.jobListings)..where((x) => x.id.equals(jobId))).getSingle();
+        jobPlan = await book.sendJobToVidya(j, now: '2026-11-21T09:00:00Z');
+      }
+
+      test('the job reads Vidya\'s readiness per criterion; nothing before Vidya reports', () async {
+        await sendJobPlan();
+        expect(jobPlan, jobPlanId(jobId));
+        expect(await book.jobReadiness(jobId), isNull);
+        await vidyaWrites(jobPlan, progress(weakAndMissing));
+        final r = (await book.jobReadiness(jobId))!;
+        expect(
+          (r.jobId, r.role, r.employer, r.where),
+          (
+            jobId,
+            'Clinical Informatics Nurse',
+            'Example Health Trust',
+            'Clinical Informatics Nurse at Example Health Trust',
+          ),
+        );
+        expect(r.text, 'Vidya readiness: 2 weak, 2 missing');
+        expect(r.criteria, [
+          (text: 'Handle a difficult learner calmly', status: 'weak', essential: true),
+          (text: 'Keep training records.', status: 'missing', essential: true),
+          (text: 'Explain EPR changes to ward staff', status: 'covered', essential: true),
+          (text: 'Write short guides', status: 'weak', essential: false),
+          (text: 'Full UK driving licence', status: 'missing', essential: true),
+        ], reason: 'the job\'s criteria in plan order, then the one typed in Vidya');
+        await vidyaWrites(jobPlan, progress(const []));
+        expect((await book.jobReadiness(jobId))!.criteria.map((c) => c.status).toSet(), {'covered'});
+        expect(
+          await book.roleReadiness('Clinical Informatics Nurse'),
+          isNull,
+          reason: 'a job is not a role plan',
+        );
+      });
+
+      test(
+        'its essential gaps become drill cards beside the role plan\'s, which stay as they were',
+        () async {
+          await sendRolePlan();
+          await vidyaWrites(planId, progress(weakAndMissing));
+          await sendJobPlan();
+          await vidyaWrites(jobPlan, progress(weakAndMissing.take(2).toList()));
+          final cards = [
+            for (final c in ((await book.drillsPlanNow())['cards'] as List).cast<Map>())
+              if ((c['id'] as String).startsWith('udyoga.drill.readiness.')) c,
+          ];
+          final ids = cards.map((c) => c['id'] as String).toList();
+          expect(
+            ids.where((i) => i.startsWith('udyoga.drill.readiness.clinical-systems-trainer.')).length,
+            3,
+          );
+          expect(ids.where((i) => i.startsWith('udyoga.drill.readiness.job-$jobId.')), [
+            'udyoga.drill.readiness.job-$jobId.e2',
+            'udyoga.drill.readiness.job-$jobId.e3',
+          ]);
+          final job = cards.firstWhere((c) => c['id'] == 'udyoga.drill.readiness.job-$jobId.e3');
+          expect(
+            job['back'],
+            contains('Vidya readiness for Clinical Informatics Nurse at Example Health Trust: missing'),
+          );
+          expect(
+            job['front'],
+            'This role needs keep training records. Tell us about a time you showed this.',
+          );
+
+          // A job plan taken back takes its cards with it; the role's stay.
+          final row = await (book.db.select(
+            book.db.bridgeStudyPlans,
+          )..where((p) => p.id.equals(jobPlan))).getSingle();
+          await book.save(book.db.bridgeStudyPlans, row.copyWith(deleted: true), jobPlan);
+          expect(await book.jobReadiness(jobId), isNull);
+          final left = [
+            for (final c in ((await book.drillsPlanNow())['cards'] as List).cast<Map>())
+              if ((c['id'] as String).startsWith('udyoga.drill.readiness.')) c['id'] as String,
+          ];
+          expect(left.length, 3);
+          expect(left.every((i) => i.startsWith('udyoga.drill.readiness.clinical-systems-trainer.')), isTrue);
+        },
+      );
     });
 
     test('ids stay the same for the same role and criterion', () {

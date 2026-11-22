@@ -4,8 +4,9 @@
 ///   simulator (a `bridge_study_progress` row, [practiseRequestsId]).
 /// - Udyoga runs it as a one-question round, scores it its own way and
 ///   sends the score back (a `bridge_study_plans` row, [practiseResultsId]).
-/// - Vidya's readiness per role plan (the `readiness` list on that plan's
-///   progress row) comes back as drill cards in the next drills plan.
+/// - Vidya's readiness per role plan and per job plan (the `readiness` list
+///   on that plan's progress row) comes back as drill cards in the next
+///   drills plan, and shows on the role, the job and its application.
 ///
 /// Neither row is a study plan or a progress report: Udyoga's readers of
 /// those look rows up by their own plan ids ([studyPlanId], [drillsPlanId],
@@ -23,7 +24,7 @@ import 'book.dart';
 import 'insights.dart';
 import 'interview_book.dart';
 import 'json.dart';
-import 'vidya_link.dart' show rolePlanId;
+import 'vidya_link.dart' show jobPlanId, rolePlanId;
 
 // ---- requests from Vidya ----
 
@@ -48,6 +49,9 @@ const vidyaDrillKey = 'vidyaDrill';
 
 /// The prefix of the role plans' ids ([rolePlanId]).
 const rolePlanPrefix = 'udyoga.role.';
+
+/// The prefix of the job plans' ids ([jobPlanId]).
+const jobPlanPrefix = 'udyoga.job.';
 
 /// A drill Vidya asked Udyoga to practise.
 class PractiseRequest {
@@ -235,7 +239,7 @@ PractiseResult? practiseResultOf(Debrief d, {required String id, required String
 
 // ---- readiness from Vidya ----
 
-/// A weak or missing criterion in Vidya's readiness for a role plan.
+/// A weak or missing criterion in Vidya's readiness for a role or job plan.
 class VidyaReadinessRow {
   const VidyaReadinessRow({
     required this.criterionId,
@@ -256,14 +260,62 @@ class VidyaReadinessRow {
   bool get missing => status == 'missing';
 }
 
-/// Vidya's readiness for one role plan.
+/// One criterion of a sent plan with Vidya's status for it: covered, weak
+/// or missing.
+typedef VidyaCriterionStatus = ({String text, String status, bool essential});
+
+/// Vidya's readiness for one role plan or one job plan.
 class VidyaReadiness {
-  const VidyaReadiness({required this.planId, required this.role, required this.rows});
+  const VidyaReadiness({
+    required this.planId,
+    required this.role,
+    required this.rows,
+    this.employer = '',
+    this.sent = const [],
+  });
   final String planId;
   final String role;
 
+  /// The job's employer ('' for a role plan, or a job without one).
+  final String employer;
+
   /// Weak and missing rows only, in plan order; empty when all is covered.
   final List<VidyaReadinessRow> rows;
+
+  /// The criteria as sent in the plan (`id`, `text`, `essential`).
+  final List<({String id, String text, bool essential})> sent;
+
+  /// The saved job's id for a job plan, '' for a role plan.
+  String get jobId => planId.startsWith(jobPlanPrefix) ? planId.substring(jobPlanPrefix.length) : '';
+
+  /// "Trainer at Acme" for a job plan with an employer, else the role.
+  String get where => employer.isEmpty ? role : '$role at $employer';
+
+  /// Every criterion with its status: the sent ones in plan order (covered
+  /// unless Vidya counts them weak or missing), then those the learner
+  /// typed in Vidya, which only show while weak or missing.
+  List<VidyaCriterionStatus> get criteria {
+    String norm(String s) => s.toLowerCase().trim();
+    final used = <VidyaReadinessRow>{};
+    VidyaReadinessRow? rowFor(({String id, String text, bool essential}) c) {
+      for (final r in rows) {
+        if (used.contains(r)) continue;
+        if (r.criterionId.isNotEmpty ? r.criterionId == c.id : norm(r.text) == norm(c.text)) return r;
+      }
+      return null;
+    }
+
+    final out = <VidyaCriterionStatus>[];
+    for (final c in sent) {
+      final r = rowFor(c);
+      if (r != null) used.add(r);
+      out.add((text: c.text, status: r?.status ?? 'covered', essential: c.essential));
+    }
+    for (final r in rows) {
+      if (!used.contains(r)) out.add((text: r.text, status: r.status, essential: r.essential));
+    }
+    return out;
+  }
 
   int get weak => rows.where((r) => r.weak).length;
   int get missing => rows.where((r) => r.missing).length;
@@ -308,11 +360,16 @@ String _hash(String s) {
 
 String _slug(String s) => s.replaceAll(RegExp(r'[^A-Za-z0-9_-]+'), '-');
 
-/// The stable card id of a readiness drill: the same role and criterion
-/// always give the same id, so a re-sent card updates in place in Vidya,
-/// and a covered one drops out of the plan (Vidya sets it aside).
+/// The stable card id of a readiness drill: the same role (or job) and
+/// criterion always give the same id, so a re-sent card updates in place in
+/// Vidya, and a covered one drops out of the plan (Vidya sets it aside).
+/// A job plan's cards are `udyoga.drill.readiness.job-<job id>.<key>`.
 String readinessDrillId(String planId, VidyaReadinessRow r) {
-  final role = planId.startsWith(rolePlanPrefix) ? planId.substring(rolePlanPrefix.length) : planId;
+  final role = planId.startsWith(rolePlanPrefix)
+      ? planId.substring(rolePlanPrefix.length)
+      : planId.startsWith(jobPlanPrefix)
+      ? 'job-${planId.substring(jobPlanPrefix.length)}'
+      : planId;
   final key = r.criterionId.isNotEmpty ? _slug(r.criterionId) : 't${_hash(r.text.toLowerCase().trim())}';
   return 'udyoga.drill.readiness.${_slug(role)}.$key';
 }
@@ -333,7 +390,7 @@ List<Json> readinessDrillCards(List<VidyaReadiness> readiness, {required String 
             'This role needs ${_lowerFirst(row.text.replaceAll(RegExp(r'[.;:]+$'), ''))}. Tell us about a time you '
             'showed this.',
         'back': [
-          'Vidya readiness for ${r.role}: ${row.missing ? 'missing (nothing linked to it yet)' : 'weak'}.',
+          'Vidya readiness for ${r.where}: ${row.missing ? 'missing (nothing linked to it yet)' : 'weak'}.',
           'One specific example: the situation, what you yourself did, and how it turned out. Then link it back '
               'to the criterion.',
         ].join('\n'),
@@ -413,19 +470,21 @@ extension VidyaPractice on CareerBook {
     return result;
   }
 
-  /// Vidya's readiness for each role plan it has reported on (plan order
-  /// of the sends, newest first).
+  /// Vidya's readiness for each role plan and job plan it has reported on
+  /// (plan order of the sends, newest first).
   Future<List<VidyaReadiness>> vidyaReadiness() async {
+    Expression<bool> ours(GeneratedColumn<String> id) =>
+        id.like('$rolePlanPrefix%') | id.like('$jobPlanPrefix%');
     final progress =
         await (db.select(db.bridgeStudyProgress)
-              ..where((p) => p.id.like('$rolePlanPrefix%') & p.deleted.not())
+              ..where((p) => ours(p.id) & p.deleted.not())
               ..orderBy([(p) => OrderingTerm.desc(p.updated), (p) => OrderingTerm.asc(p.id)]))
             .get();
     if (progress.isEmpty) return const [];
     final plans = {
       for (final p in await (db.select(
         db.bridgeStudyPlans,
-      )..where((p) => p.id.like('$rolePlanPrefix%') & p.deleted.not())).get())
+      )..where((p) => ours(p.id) & p.deleted.not())).get())
         p.id: p,
     };
     final out = <VidyaReadiness>[];
@@ -434,16 +493,31 @@ extension VidyaPractice on CareerBook {
       if (plan == null) continue; // A plan taken back: its readiness goes with it.
       final rows = parseVidyaReadiness(p.progress);
       if (rows == null) continue;
-      final role = str(decodeObject(plan.plan)['role']);
+      final j = decodeObject(plan.plan);
+      final role = str(j['role']);
+      final prefix = p.id.startsWith(jobPlanPrefix) ? jobPlanPrefix : rolePlanPrefix;
       out.add(
         VidyaReadiness(
           planId: p.id,
-          role: role.isEmpty ? p.id.substring(rolePlanPrefix.length) : role,
+          role: role.isEmpty ? p.id.substring(prefix.length) : role,
+          employer: prefix == jobPlanPrefix ? str(obj(j['journey'])['employer']) : '',
           rows: rows,
+          sent: [
+            for (final c in objs(j['criteria']))
+              if (str(c['text']).isNotEmpty)
+                (id: str(c['id']), text: str(c['text']), essential: c['essential'] == true),
+          ],
         ),
       );
     }
     return out;
+  }
+
+  /// Vidya's readiness for saved job [jobId] ("Prepare this job"), or null
+  /// when Vidya has not reported on its plan.
+  Future<VidyaReadiness?> jobReadiness(String jobId) async {
+    final id = jobPlanId(jobId);
+    return (await vidyaReadiness()).where((r) => r.planId == id).firstOrNull;
   }
 
   /// Vidya's readiness for [role], or null when Vidya has not reported on

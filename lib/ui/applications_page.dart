@@ -18,6 +18,7 @@ import 'offer_checks.dart';
 import 'job_page.dart';
 import 'resume_page.dart';
 import 'site_page.dart';
+import 'vidya_practice_ui.dart' show JobReadinessCard;
 
 const _eventIcons = {
   'applied': Icons.send_outlined,
@@ -619,6 +620,7 @@ class ApplicationPage extends ConsumerWidget {
             ],
           ),
         ),
+        if (a.jobId != null) JobReadinessCard(a.jobId!),
         // Closed applications keep a reminder too: ask for feedback after a
         // rejection, withdraw the others after accepting.
         if (stage.open || a.followUp != null)
