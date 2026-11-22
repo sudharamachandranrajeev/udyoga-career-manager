@@ -1,5 +1,11 @@
 # Interview simulator: I0 spike
 
+> **Moved (2026-11-22).** The voice, vision and interview code named on this
+> page (`lib/voice`, `lib/vision`, `lib/domain/interview_*.dart`,
+> `offline_guard.dart`) now lives in the shared `interview_engine` package
+> (pariksha-interview-kit, `packages/interview_engine/lib/src/`). Paths below
+> are as they were when measured.
+
 > **Updated for I1 (2026-11-19).** The transcriber is now Moonshine through
 > sherpa-onnx, and `whisper_ggml` and its FFmpeg are gone. See
 > [I1: speech-to-text without FFmpeg](#i1-speech-to-text-without-ffmpeg) at
