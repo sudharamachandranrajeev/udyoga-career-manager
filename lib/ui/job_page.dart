@@ -14,6 +14,7 @@ import '../domain/matching.dart';
 import '../domain/n8n.dart';
 import '../domain/pipeline.dart';
 import '../domain/resume.dart';
+import '../domain/vidya_link.dart';
 import 'applications_page.dart';
 import 'common.dart';
 import 'contacts_page.dart';
@@ -144,6 +145,23 @@ class JobPage extends ConsumerWidget {
                 onPressed: () => ref.mutate((s) => s.book.setJobStatus(id, 'saved')),
                 icon: const Icon(Icons.undo),
                 label: const Text('Restore'),
+              ),
+            if (j.status == 'saved' || application != null)
+              OutlinedButton.icon(
+                key: const Key('job-prepare'),
+                onPressed: () async {
+                  await ref.mutate((s) => s.book.sendJobToVidya(j, now: DateTime.now().toUtc().toIso8601String()));
+                  if (!context.mounted) return;
+                  showMessage(
+                    context,
+                    ref.read(syncProvider).phase == SyncPhase.signedOut
+                        ? 'Kept for Vidya. It goes there once both apps sync with your account.'
+                        : 'Sent to Vidya. It offers a journey for this job, from deciding to apply to your '
+                              'first months, the next time it opens.',
+                  );
+                },
+                icon: const Icon(Icons.route_outlined),
+                label: const Text('Prepare this job'),
               ),
           ],
         ),

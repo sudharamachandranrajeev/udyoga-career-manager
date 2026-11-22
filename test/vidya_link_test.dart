@@ -3,13 +3,21 @@ import 'dart:io';
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/material.dart' show Key;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:interview_engine/interview_engine.dart' show Criterion, CriterionKind, RoleProfile;
 import 'package:udyoga/db/database.dart';
 import 'package:udyoga/domain/book.dart';
 import 'package:udyoga/domain/companion.dart';
 import 'package:udyoga/domain/companion_book.dart';
 import 'package:udyoga/domain/insights.dart';
+import 'package:udyoga/domain/interview_book.dart';
+import 'package:udyoga/domain/json.dart';
+import 'package:udyoga/domain/pipeline.dart';
 import 'package:udyoga/domain/vidya_link.dart';
+import 'package:udyoga/ui/job_page.dart';
+
+import 'app_harness.dart';
 
 import 'support.dart';
 
@@ -34,6 +42,7 @@ const _portfolio = '''
 ''';
 
 void main() {
+  group('job journeys', journeyTests);
   late CareerBook book;
   setUp(() async {
     book = CareerBook(await Store.open(memoryDatabase()));
@@ -172,14 +181,174 @@ void main() {
     );
     // Story ids are random: the fixture has a fixed one.
     final id = (await book.stories()).single.id;
-    final plan = const JsonEncoder.withIndent(
-      '  ',
-    ).convert(await book.vidyaPlanNow()).replaceAll(id, 'fixture-story');
+    final plan = const JsonEncoder.withIndent('  ')
+        .convert(await book.vidyaPlanNow())
+        .replaceAll(id, 'fixture-story');
     final fixture = File('test/fixtures/udyoga-plan.json');
     if (!fixture.existsSync() || Platform.environment['UPDATE_FIXTURES'] == '1') {
       await fixture.parent.create(recursive: true);
       await fixture.writeAsString('$plan\n');
     }
     expect(await fixture.readAsString(), '$plan\n');
+  });
+}
+
+void journeyTests() {
+  late CareerBook book;
+  setUp(() async {
+    book = CareerBook(await Store.open(memoryDatabase()));
+    await book.saveProfile(sampleProfile);
+  });
+
+  Future<Job> job() async {
+    final id = (await book.importPostings(
+      [samplePosting(url: 'https://example.org/jobs/123', closing: '2026-12-10')],
+      sampleProfile,
+      today: '2026-11-15',
+    )).single;
+    return (await (book.db.select(book.db.jobListings)..where((j) => j.id.equals(id))).getSingle());
+  }
+
+  test('the sector guess reads the interview framework, then the employer\'s name', () {
+    expect(journeySector(framework: 'nhs_values'), 'nhs');
+    expect(journeySector(framework: 'hsc_ni', employer: 'Example Ltd'), 'nhs');
+    expect(journeySector(framework: 'civil_service'), 'civil-service');
+    expect(journeySector(employer: 'Example Health Trust'), 'nhs');
+    expect(journeySector(employer: 'NHS Example'), 'nhs');
+    expect(journeySector(employer: 'Example Trust'), 'other');
+    expect(journeySector(employer: 'University of Exampleton'), 'university');
+    expect(journeySector(employer: 'Department for Examples'), 'civil-service');
+    expect(journeySector(employer: 'Example Widgets Ltd'), 'private');
+    expect(journeySector(employer: 'Exampleton'), 'other');
+  });
+
+  test(
+    '"Prepare this job" sends only the job\'s data: role, employer, criteria, sector, advert, closing date',
+    () async {
+      final j = await job();
+      // Without a role profile the AI fit assessment's requirements are the criteria.
+      await book.saveAssessment(
+        j.id,
+        const FitAssessment({
+          'fit': 60,
+          'matched': [
+            {'requirement': 'Registered nurse'},
+          ],
+          'gaps': [
+            {'requirement': 'SystmOne experience', 'severity': 'major'},
+          ],
+        }),
+      );
+      final fresh = await (book.db.select(book.db.jobListings)..where((x) => x.id.equals(j.id))).getSingle();
+      final id = await book.sendJobToVidya(fresh, now: '2026-11-21T09:00:00Z');
+      expect(id, jobPlanId(j.id));
+      var plan = decodeObject((await book.db.select(book.db.bridgeStudyPlans).get()).single.plan);
+      expect((plan['format'], plan['version']), ('vidya-curriculum', 1));
+      expect(plan['journey'], {
+        'role': 'Clinical Informatics Nurse',
+        'employer': 'Example Health Trust',
+        'sector': 'nhs',
+        'advertUrl': 'https://example.org/jobs/123',
+        'closes': '2026-12-10',
+      });
+      expect(
+        [for (final c in plan['criteria'] as List) (c as Map)['text']],
+        ['Registered nurse', 'SystmOne experience'],
+      );
+      // Nothing to teach: the templates live in Vidya.
+      expect(plan['courses'], isEmpty);
+      expect(jsonEncode(plan), isNot(contains('teach')));
+      expect((plan['notes'] as List).single.toString(), contains('Closes: 10 Dec 2026'));
+
+      // A checked role profile wins over the AI's list, and its framework sets the sector.
+      await book.saveRoleProfile(
+        RoleProfile(
+          id: '',
+          title: 'Clinical Informatics Nurse',
+          frameworkId: 'civil_service',
+          jobId: j.id,
+          criteria: const [
+            Criterion(id: 'c1', text: 'Excellent written communication'),
+            Criterion(id: 'c2', text: 'Knowledge of NHS systems', essential: false),
+          ],
+        ),
+        at: '2026-11-21T09:00',
+      );
+      await book.sendJobToVidya(j, now: '2026-11-21T10:00:00Z');
+      plan = decodeObject((await book.db.select(book.db.bridgeStudyPlans).get()).single.plan);
+      expect((plan['journey'] as Map)['sector'], 'civil-service');
+      expect(
+        [for (final c in plan['criteria'] as List) ((c as Map)['id'], c['essential'])],
+        [('c1', true), ('c2', false)],
+      );
+    },
+  );
+
+  test('moving the application on sends the journey again, only once it was sent', () async {
+    final j = await job();
+    final app = await book.applyFor(j, today: '2026-11-15');
+    await book.moveTo(app, Stage.applied, date: '2026-11-16');
+    expect(await book.db.select(book.db.bridgeStudyPlans).get(), isEmpty);
+
+    await book.sendJobToVidya(j, now: '2026-11-21T09:00:00Z');
+    Future<Object?> sent() async =>
+        (decodeObject((await book.db.select(book.db.bridgeStudyPlans).get()).single.plan)['journey']
+            as Map)['applicationStage'];
+    expect(await sent(), 'applied');
+    await book.moveTo(app, Stage.interview, date: '2026-11-25');
+    expect(await sent(), 'interview');
+    expect(await book.db.select(book.db.bridgeStudyPlans).get(), hasLength(1));
+  });
+
+  test('the job plan fixture shared with Vidya is current', () async {
+    // Vidya's tests parse this file. Job ids are random: the fixture has a fixed one.
+    final j = await job();
+    final app = await book.applyFor(j, today: '2026-11-15');
+    await book.moveTo(app, Stage.applied, date: '2026-11-16');
+    final id = await book.saveRoleProfile(
+      RoleProfile(
+        id: '',
+        title: 'Clinical Informatics Nurse',
+        frameworkId: 'nhs_values',
+        jobId: j.id,
+        criteria: const [
+          Criterion(id: 'c1', text: 'Excellent written communication'),
+          Criterion(id: 'c2', text: 'Experience of managing a diary'),
+          Criterion(id: 'c3', text: 'Working together', kind: CriterionKind.value, essential: false),
+        ],
+      ),
+      at: '2026-11-21T09:00',
+    );
+    expect(id, isNotEmpty);
+    await book.sendJobToVidya(j, now: '2026-11-21T09:00:00Z');
+    final plan = const JsonEncoder.withIndent('  ')
+        .convert(decodeObject((await book.db.select(book.db.bridgeStudyPlans).get()).single.plan))
+        .replaceAll(j.id, 'fixture-job');
+    final fixture = File('test/fixtures/udyoga-job-plan.json');
+    if (!fixture.existsSync() || Platform.environment['UPDATE_FIXTURES'] == '1') {
+      await fixture.parent.create(recursive: true);
+      await fixture.writeAsString('$plan\n');
+    }
+    expect(await fixture.readAsString(), '$plan\n');
+  });
+
+  testWidgets('a saved job\'s page has "Prepare this job", which sends it to Vidya', (tester) async {
+    final app = AppHarness(tester)..phone();
+    late String id;
+    await app.open(
+      seed: (b) async {
+        await b.saveProfile(sampleProfile);
+        id = (await b.importPostings([samplePosting()], sampleProfile, today: '2026-11-15')).single;
+      },
+    );
+    await app.run(home: JobPage(id));
+    expect(find.byKey(const Key('job-prepare')), findsNothing, reason: 'not saved yet');
+    await app.tapText('Save');
+    await app.tap(find.byKey(const Key('job-prepare')));
+    expect(find.textContaining('Vidya'), findsWidgets);
+    final rows = await tester.runAsync(() => app.book.db.select(app.book.db.bridgeStudyPlans).get());
+    expect(rows!.single.id, jobPlanId(id));
+    expect(tester.takeException(), isNull);
+    await app.close();
   });
 }
