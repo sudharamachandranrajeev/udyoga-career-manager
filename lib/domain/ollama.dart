@@ -4,10 +4,11 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+export 'package:interview_engine/interview_engine.dart' show isLoopbackHost;
+
 import 'ai.dart';
 import 'json.dart';
 
-export 'offline_guard.dart' show isLoopbackHost;
 import 'schema.dart';
 
 /// Where Ollama listens unless the user says otherwise.

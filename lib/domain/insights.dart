@@ -1,3 +1,5 @@
+import 'package:interview_engine/interview_engine.dart' show EngineQuestion;
+
 import 'json.dart';
 import 'schema.dart';
 
@@ -342,28 +344,24 @@ const practiceModes = {
   'ai': 'AI and change: how the role is changing and how you will keep up',
 };
 
-class PracticeQuestion {
-  const PracticeQuestion(this.j);
-  final Json j;
-  String get question => str(j['question']);
-  String get category => str(j['category']);
-  String get why => str(j['why']);
-  List<String> get lookFor => strs(j['lookFor']);
-  String get difficulty => str(j['difficulty']);
+/// A practice question. Udyoga's questions have the same JSON shape as the
+/// interview engine's, so the engine type is used as is: keys Udyoga adds
+/// (`criteria`, `seconds`, the Vidya drill) travel in its JSON.
+typedef PracticeQuestion = EngineQuestion;
 
-  static final schema = object({
-    'questions': array(
-      object({
-        'question': string(),
-        'category': string('e.g. Behavioural, Values, Technical, Situational, Motivation, AI'),
-        'why': string('What the panel is testing'),
-        'lookFor': strings('What a top answer includes'),
-        'difficulty': oneOf(['standard', 'hard', 'toughest']),
-      }),
-    ),
-    'sources': sourcesSchema,
-  });
-}
+/// The AI's reply when it writes a practice round's questions.
+final practiceQuestionsSchema = object({
+  'questions': array(
+    object({
+      'question': string(),
+      'category': string('e.g. Behavioural, Values, Technical, Situational, Motivation, AI'),
+      'why': string('What the panel is testing'),
+      'lookFor': strings('What a top answer includes'),
+      'difficulty': oneOf(['standard', 'hard', 'toughest']),
+    }),
+  ),
+  'sources': sourcesSchema,
+});
 
 /// The dimensions every answer is scored on, 0 to 10.
 const reviewDimensions = [

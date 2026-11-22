@@ -195,12 +195,13 @@ class SettingsPage extends ConsumerWidget {
           title: 'Data sources',
           trailing: TextButton(
             key: const ValueKey('settings.dataSources'),
-            onPressed: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute<void>(builder: (_) => const DataSourcesPage())),
+            onPressed: () =>
+                Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const DataSourcesPage())),
             child: const Text('Show'),
           ),
-          child: const Text('Where job titles, skills, pay and career data come from, with each credit and licence.'),
+          child: const Text(
+            'Where job titles, skills, pay and career data come from, with each credit and licence.',
+          ),
         ),
         SectionCard(
           title: 'n8n lead workflow',
@@ -365,9 +366,7 @@ class SettingsPage extends ConsumerWidget {
         ),
       ],
       onSave: () async {
-        await ref.mutate(
-          (_) => CareerDataKeys.save(store, ncs: ncs.text, skillsEngland: se.text),
-        );
+        await ref.mutate((_) => CareerDataKeys.save(store, ncs: ncs.text, skillsEngland: se.text));
         return null;
       },
     );

@@ -5,13 +5,13 @@ import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, che
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:interview_engine/interview_engine.dart';
 import 'package:udyoga/db/database.dart';
 import 'package:udyoga/domain/book.dart';
 import 'package:udyoga/domain/companion.dart';
 import 'package:udyoga/domain/companion_book.dart';
 import 'package:udyoga/domain/interview_book.dart';
 import 'package:udyoga/domain/interview_confidence.dart';
-import 'package:udyoga/domain/interview_scoring.dart';
 import 'package:udyoga/domain/vidya_link.dart' show studyPlanId;
 
 import 'support.dart';
@@ -108,7 +108,10 @@ void main() {
       final ids = [for (final c in cards) c['id'] as String];
       expect(ids.toSet().length, ids.length, reason: 'unique');
       expect(ids, everyElement(startsWith('udyoga.')));
-      expect(ids, containsAll(['udyoga.drill.settler', 'udyoga.drill.story.${s.id}', 'udyoga.drill.questions']));
+      expect(
+        ids,
+        containsAll(['udyoga.drill.settler', 'udyoga.drill.story.${s.id}', 'udyoga.drill.questions']),
+      );
       expect(ids.where((i) => i.startsWith('udyoga.drill.recovery.')).length, recoveryDrills.length);
       expect(ids, isNot(contains('udyoga.drill.reappraisal')), reason: 'off unless asked for');
 
@@ -145,10 +148,14 @@ void main() {
 
     test('the reappraisal note is optional and always carries its evidence label', () {
       final plan = interviewDrills(stories: const [], questionsForThem: const [], reappraisal: true);
-      final card = (plan['cards'] as List).cast<Map>().firstWhere((c) => c['id'] == 'udyoga.drill.reappraisal');
+      final card = (plan['cards'] as List).cast<Map>().firstWhere(
+        (c) => c['id'] == 'udyoga.drill.reappraisal',
+      );
       expect(card['back'], contains(reappraisalLabel));
       expect(reappraisalLabel, 'Small effect in studies; try it, keep it if it helps.');
-      final routine = (plan['courses'] as List).cast<Map>().firstWhere((c) => c['title'] == 'Pre-interview routine');
+      final routine = (plan['courses'] as List).cast<Map>().firstWhere(
+        (c) => c['title'] == 'Pre-interview routine',
+      );
       expect((routine['topics'] as List).cast<Map>().last['details'], contains(reappraisalLabel));
       // No questions set: no empty card.
       expect((plan['cards'] as List).cast<Map>().any((c) => c['id'] == 'udyoga.drill.questions'), isFalse);
@@ -160,15 +167,21 @@ void main() {
       expect(await book.questionsForThem(), ['How is the team supported in its first month?']);
       await book.setReappraisal(true);
       await book.sendDrills(now: '2026-11-19T10:00');
-      final row = await (book.db.select(book.db.bridgeStudyPlans)..where((p) => p.id.equals(drillsPlanId))).getSingle();
+      final row = await (book.db.select(
+        book.db.bridgeStudyPlans,
+      )..where((p) => p.id.equals(drillsPlanId))).getSingle();
       expect((row.source, row.updated), ('udyoga', '2026-11-19T10:00'));
       final plan = jsonDecode(row.plan) as Map;
-      final questions = (plan['cards'] as List).cast<Map>().firstWhere((c) => c['id'] == 'udyoga.drill.questions');
+      final questions = (plan['cards'] as List).cast<Map>().firstWhere(
+        (c) => c['id'] == 'udyoga.drill.questions',
+      );
       expect(questions['back'], '- How is the team supported in its first month?');
       expect((plan['cards'] as List).cast<Map>().any((c) => c['id'] == 'udyoga.drill.reappraisal'), isTrue);
       // The study plan row is not touched.
       expect(
-        await (book.db.select(book.db.bridgeStudyPlans)..where((p) => p.id.equals(studyPlanId))).getSingleOrNull(),
+        await (book.db.select(
+          book.db.bridgeStudyPlans,
+        )..where((p) => p.id.equals(studyPlanId))).getSingleOrNull(),
         isNull,
       );
       expect(await book.drillsSent(), (sent: '2026-11-19T10:00', added: false));

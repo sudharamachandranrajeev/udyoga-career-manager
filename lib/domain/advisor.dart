@@ -1,16 +1,16 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:interview_engine/interview_engine.dart';
+
 import '../db/database.dart';
-import 'answer_metrics.dart';
 import 'avenues.dart';
 import 'companion.dart';
 import 'ai.dart';
 import 'countries.dart';
 import 'explore.dart';
 import 'insights.dart';
-import 'interview_plan.dart';
-import 'interview_scoring.dart';
+import 'interview_brain.dart';
 import 'json.dart';
 import 'occupations.dart';
 import 'page_reader.dart';
@@ -502,12 +502,16 @@ Kind of interview: ${practiceModes[mode] ?? mode}.
 Research how this employer or sector interviews now (competency frameworks, values, panel formats, assessment centres, current hot topics including AI adoption) and ask what a real panel would ask in $today's market. Make at least a third of them hard, and include questions that probe the gaps in the candidate's CV. For each, say what the panel is testing and what a top answer includes.''',
       ),
     ],
-    schema: PracticeQuestion.schema,
+    schema: practiceQuestionsSchema,
     web: true,
     searches: 5,
     effort: 'medium',
     onProgress: onProgress,
   );
+
+  /// The interview engine's AI steps (question plans, criteria, scoring)
+  /// over this adviser's AI, with the engine's own instructions.
+  InterviewBrain get interviewBrain => AiInterviewBrain(ai);
 
   /// Writes the round's question plan (interview plan I2): for each
   /// question, the criterion it tests, the elements a full answer has and
@@ -516,73 +520,14 @@ Research how this employer or sector interviews now (competency frameworks, valu
   Future<List<QuestionPlan>> questionPlan({
     required String role,
     required List<PracticeQuestion> questions,
-  }) async {
-    final r = await ai.ask(
-      system:
-          'You plan structured interview questions the way a trained UK panel does: each question tests one '
-          'pre-agreed criterion, and follow-up probes are chosen by what an answer leaves out. Use plain UK '
-          'English. Probes are short, neutral and open; never leading, never two questions in one.',
-      content: [
-        _text(
-          '<round role="${_attr(role)}">\n'
-          '${[for (final (i, q) in questions.indexed) '<question n="${i + 1}" kind="${_attr(q.category)}">${q.question}</question>'].join('\n')}\n'
-          '</round>',
-        ),
-        _text('''
-For each question, in order, give:
-- criterion: what it tests, in a few words.
-- expected: the elements a full answer has, from: situation (one specific example), ownAction (what the candidate did themselves), measure (how they measured it or knew it worked), result (the outcome), learning (what they learned or would do differently), others (who else was involved). Settler, motivation, strengths and "any questions for us" questions expect none.
-- probes: one or two short follow-ups for each expected element, worded for this question.'''),
-      ],
-      schema: object({
-        'questions': array(
-          object({
-            'criterion': string(),
-            'expected': array(oneOf([for (final e in AnswerElement.values) e.name])),
-            'probes': array(
-              object({
-                'element': oneOf([for (final e in AnswerElement.values) e.name]),
-                'text': string(),
-              }),
-            ),
-          }),
-        ),
-      }),
-      effort: 'low',
-      maxTokens: 6000,
-    );
-    return [for (final q in objs(r.data['questions'])) QuestionPlan.fromJson(q)];
-  }
+  }) => interviewBrain.planRound(role: role, questions: questions);
 
   /// Reads an advert and person specification into the criteria a panel
   /// agrees in advance (interview plan I3). Only the advert goes: no
   /// profile. The reply is checked and parsed by [parseCriteria]; the user
   /// edits it before it is used.
-  Future<Json> readCriteria({required String advert, String title = ''}) async {
-    final r = await ai.ask(
-      system:
-          'You read job adverts and person specifications the way a UK or Irish recruiting panel does before '
-          'shortlisting. List only criteria the text states; never add your own. Keep each criterion in the '
-          "document's own words, shortened. Use plain UK English.",
-      content: [
-        _text('<advert title="${_attr(title)}">\n$advert\n</advert>'),
-        _text(
-          '''
-List every essential and desirable criterion in the person specification (and any the advert states as required), one per item:
-- text: the criterion, short, in the document's words.
-- essential: true when the document calls it essential or required; false when desirable.
-- kind: experience, skill, knowledge, value, behaviour or qualification.
-- assessBy: how it is assessed when the document says (A application, I interview, T test, P presentation); [] when it does not say.
-- question: one open, neutral interview question that tests it. Values: "What does … mean to you, and when have you shown it?". Experience and behaviours: "Tell us about a time…".
-Also give the job title, the employer, and the framework this employer most likely scores with (nhs_values for NHS England, Scotland and Wales; hsc_ni for Health and Social Care Northern Ireland; civil_service for the UK Civil Service; hse_ie for the HSE in Ireland; private otherwise).''',
-        ),
-      ],
-      schema: criteriaSchema,
-      effort: 'low',
-      maxTokens: 8000,
-    );
-    return r.data;
-  }
+  Future<Json> readCriteria({required String advert, String title = ''}) =>
+      interviewBrain.readCriteria(advert: advert, title: title);
 
   /// Scores a whole round against the agreed criteria (interview plan I3):
   /// only the transcripts and the criteria go, no profile. Every score must
@@ -592,46 +537,8 @@ Also give the job title, the employer, and the framework this employer most like
     required String role,
     required Framework framework,
     required List<Criterion> criteria,
-    required List<({int index, String question, List<String> criteria, String answer})> answers,
-  }) async {
-    final scale = framework.scale;
-    final r = await ai.ask(
-      system:
-          'You are a trained interview panel member scoring a practice interview. You score only what the '
-          'candidate said, against criteria agreed in advance, on the panel\'s own scale. Never guess: if the '
-          'transcript has no evidence for a criterion, give the "no evidence" level. Every other level must quote '
-          'the candidate\'s exact words that it rests on. Feedback is about the task, never the person: no '
-          'judgements of confidence or personality, no percentages.',
-      content: [
-        _text(
-          '<scale name="${_attr(scale.name)}">\n'
-          '${[for (final l in scale.levels) '<level code="${l.code}" label="${_attr(l.label)}">${l.anchor}</level>'].join('\n')}\n'
-          '</scale>\n'
-          '<criteria role="${_attr(role)}">\n'
-          '${[for (final c in criteria) '<criterion id="${c.id}" essential="${c.essential}">${c.text}</criterion>'].join('\n')}\n'
-          '</criteria>',
-        ),
-        _text(
-          '<round>\n'
-          '${[for (final a in answers) '<answer question="${a.index + 1}" tests="${a.criteria.join(',')}">\n<asked>${a.question}</asked>\n<said>\n${a.answer}\n</said>\n</answer>'].join('\n')}\n'
-          '</round>',
-        ),
-        _text(
-          '''
-For each answer, score each criterion it tests (its "tests" ids) on the scale:
-- level: a code from the scale. "${scale.noEvidence.code}" when the answer has no evidence for it, or only a bare claim.
-- quote: the candidate's exact words (one sentence or part of one, copied character for character) that the level rests on; "" for "${scale.noEvidence.code}".
-A claim without an example is "${scale.noEvidence.code}": "I am a good team player", "I always…" or "I would…" with no real instance of something the candidate did.
-Then one strength of the answer and one fix: a concrete thing to do differently in the answer next time.
-The strength and the fix never mention scores, levels, the scale or its numbers (not "move toward a 3", not "to score higher"). Say what to do, for example "Say how you knew it worked: a number, a check or feedback."''',
-        ),
-      ],
-      schema: scoringSchema(scale, [for (final c in criteria) c.id]),
-      effort: 'medium',
-      maxTokens: 12000,
-    );
-    return parseScoring(r.data);
-  }
+    required List<RoundAnswer> answers,
+  }) => interviewBrain.scoreRound(role: role, framework: framework, criteria: criteria, answers: answers);
 
   /// Scores an answer on every dimension, with a better version.
   Future<AnswerReview> review(

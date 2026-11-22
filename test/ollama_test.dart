@@ -2,11 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:interview_engine/interview_engine.dart';
 import 'package:udyoga/domain/advisor.dart';
 import 'package:udyoga/domain/ai.dart';
 import 'package:udyoga/domain/insights.dart';
-import 'package:udyoga/domain/interview_plan.dart';
-import 'package:udyoga/domain/interview_scoring.dart';
 import 'package:udyoga/domain/ollama.dart';
 import 'package:udyoga/domain/schema.dart';
 
@@ -284,6 +283,7 @@ void main() {
                 {'criterion': 'c2', 'level': '4', 'quote': 'I ran a daily team huddle'},
               ],
               'strength': 'A measured result.',
+              'strengthQuote': 'I rang each patient on the list',
               'fix': 'Say what you learned.',
             },
           ],

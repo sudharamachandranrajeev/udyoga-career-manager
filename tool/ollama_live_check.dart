@@ -18,9 +18,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:interview_engine/interview_engine.dart';
 import 'package:udyoga/domain/advisor.dart';
 import 'package:udyoga/domain/insights.dart';
-import 'package:udyoga/domain/interview_scoring.dart';
 import 'package:udyoga/domain/ollama.dart';
 
 const advert = '''

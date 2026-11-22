@@ -116,7 +116,10 @@ class _FakeAi implements Ai {
   }) async {
     asked++;
     this.schema = schema;
-    return AiResult(answer, sources: [(title: 'Example careers page', url: 'https://careers.example.org/it-trainer')]);
+    return AiResult(
+      answer,
+      sources: [(title: 'Example careers page', url: 'https://careers.example.org/it-trainer')],
+    );
   }
 }
 
@@ -139,7 +142,12 @@ final Json aiAnswer = {
     },
   ],
   'waysIn': [
-    {'kind': 'internal', 'title': 'Super-user role on a system roll-out', 'detail': 'Ask your ward manager.', 'url': ''},
+    {
+      'kind': 'internal',
+      'title': 'Super-user role on a system roll-out',
+      'detail': 'Ask your ward manager.',
+      'url': '',
+    },
     {'kind': 'secondment', 'title': 'Secondment to the digital team', 'detail': 'Six months.', 'url': ''},
   ],
   'steppingStones': [
@@ -220,7 +228,12 @@ final _seOccupation = {
     {'name': 'IT trainer', 'isGreen': false},
   ],
   'products': [
-    {'name': 'Example teacher apprenticeship', 'level': 5, 'typeName': 'Apprenticeship', 'productCode': 'ST9001'},
+    {
+      'name': 'Example teacher apprenticeship',
+      'level': 5,
+      'typeName': 'Apprenticeship',
+      'productCode': 'ST9001',
+    },
   ],
 };
 final _seProgression = {
@@ -311,7 +324,10 @@ void main() {
     // The AI's gap on a known ESCO skill replaces the device's.
     final materials = i.gaps.where((g) => g.text.toLowerCase() == 'create training materials').toList();
     expect(materials.single.from, InsightFrom.ai);
-    expect(materials.single.criterion, i.criteria.firstWhere((c) => c.text == 'create training materials').id);
+    expect(
+      materials.single.criterion,
+      i.criteria.firstWhere((c) => c.text == 'create training materials').id,
+    );
     // A new requirement becomes a criterion, and moves point at gaps' criteria.
     final teaching = i.criteria.firstWhere((c) => c.text == 'Teaching qualification');
     expect(teaching.from, InsightFrom.ai);
@@ -393,14 +409,19 @@ void main() {
     final se = MockClient((r) async {
       asked.add(r);
       if (r.url.path.endsWith('/OccupationsBySOC')) return http.Response(jsonEncode([_seOccupation]), 200);
-      if (r.url.path.endsWith('/OccupationalProgression/OCC9001')) return http.Response(jsonEncode(_seProgression), 200);
+      if (r.url.path.endsWith('/OccupationalProgression/OCC9001')) {
+        return http.Response(jsonEncode(_seProgression), 200);
+      }
       return http.Response('[]', 404);
     });
     final source = SkillsEnglandMaps(se, key: 'made-up-key', today: today);
     final base = fixedInsight(withAiParts: false);
     final b = await _book();
-    final i = await RoleInsightBuilder(families: RoleFamilies(_Web().client, b.db), keyed: [source], today: today)
-        .addKeyed(base);
+    final i = await RoleInsightBuilder(
+      families: RoleFamilies(_Web().client, b.db),
+      keyed: [source],
+      today: today,
+    ).addKeyed(base);
     expect(asked.first.headers['X-API-KEY'], 'made-up-key');
     expect(asked.first.url.queryParameters['SOCCode'], '3573');
     expect(asked.first.url.queryParameters['SOCVersion'], '2020');
@@ -473,6 +494,8 @@ void main() {
     expect(plan['format'], 'vidya-curriculum');
     expect(plan['version'], 1);
     expect(plan['role'], role);
+    // A job journey with only the role's data; Vidya fills in the stages.
+    expect(plan['journey'], {'role': role, 'sector': i.nhs ? 'nhs' : 'other'});
     final criteria = objs(plan['criteria']);
     final ids = {for (final c in criteria) str(c['id'])};
     expect(criteria.map((c) => c['text']), containsAll(['ensure patient safety', 'Teaching qualification']));
@@ -563,7 +586,11 @@ void main() {
     expect(find.byType(RoleInsightCard), findsWidgets);
     expect(find.byType(AiTag), findsWidgets);
     expect(find.textContaining('Source: ONS SOC 2020'), findsWidgets);
-    expect(find.text('Refresh', skipOffstage: false), findsOneWidget, reason: 'the AI was asked for one role');
+    expect(
+      find.text('Refresh', skipOffstage: false),
+      findsOneWidget,
+      reason: 'the AI was asked for one role',
+    );
 
     // A stepping stone's "Search these jobs" opens role search, filled in.
     final stone = find.byKey(ValueKey('stone.search.${normalJobTitle('Clinical Systems Trainer')}'));
@@ -579,7 +606,11 @@ void main() {
 
     // Further down: the LinkedIn button, and the second role, not asked yet.
     final scroll = find.byType(Scrollable).first;
-    await tester.scrollUntilVisible(find.text('People with this title on LinkedIn').first, 300, scrollable: scroll);
+    await tester.scrollUntilVisible(
+      find.text('People with this title on LinkedIn').first,
+      300,
+      scrollable: scroll,
+    );
     await tester.scrollUntilVisible(find.text('Ask the AI'), 300, scrollable: scroll);
     expect(find.text('Ask the AI'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -606,7 +637,11 @@ void main() {
     expect(find.textContaining('ESCO'), findsWidgets);
     expect(find.textContaining('National Careers Service · off', skipOffstage: false), findsOneWidget);
     expect(find.textContaining('NHS Health Careers · link only', skipOffstage: false), findsOneWidget);
-    await tester.scrollUntilVisible(find.textContaining('Skills England · off'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(
+      find.textContaining('Skills England · off'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.textContaining('Skills England · off'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

@@ -1,5 +1,6 @@
 /// What Vidya asked to practise, on the Interview page, and Vidya's
-/// readiness for a role, where the role is prepared for.
+/// readiness for a role, where the role is prepared for, and for a saved
+/// job ("Prepare this job"), on the job and its application.
 library;
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
@@ -22,6 +23,12 @@ final pendingPractiseProvider = FutureProvider<List<PractiseRequest>>((ref) {
 final roleReadinessProvider = FutureProvider.family<VidyaReadiness?, String>((ref, role) {
   ref.watch(revisionProvider);
   return ref.watch(sessionProvider).book.roleReadiness(role);
+});
+
+/// Vidya's readiness for a saved job's plan, null until Vidya reports on it.
+final jobReadinessProvider = FutureProvider.family<VidyaReadiness?, String>((ref, jobId) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.jobReadiness(jobId);
 });
 
 /// Runs [r] as a one-question spoken round, then sends the score to Vidya.
@@ -100,12 +107,51 @@ class RoleReadinessLine extends ConsumerWidget {
       padding: const EdgeInsets.only(top: 8),
       child: StatusLabelWrap(
         r.rows.isEmpty ? Status.good : (r.missing > 0 ? Status.warning : Status.info),
-        [
-          r.text,
-          if (drills > 0)
-            '${drills == 1 ? '1 essential criterion becomes an interview drill' : '$drills essential criteria become interview drills'} '
-                'in your next drills send to Vidya',
-        ].join(' · '),
+        [r.text, if (drills > 0) _drillsText(drills)].join(' · '),
+      ),
+    );
+  }
+}
+
+/// How many essential gaps become drill cards, in words.
+String _drillsText(int drills) =>
+    '${drills == 1 ? '1 essential criterion becomes an interview drill' : '$drills essential criteria become interview drills'} '
+    'in your next drills send to Vidya';
+
+/// Vidya's readiness for a saved job, per criterion of the job: covered,
+/// weak or missing. Nothing until Vidya has reported on the job's plan.
+class JobReadinessCard extends ConsumerWidget {
+  const JobReadinessCard(this.jobId, {super.key});
+  final String jobId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final r = ref.watch(jobReadinessProvider(jobId)).value;
+    if (r == null) return const SizedBox.shrink();
+    final drills = r.essentialGaps.length;
+    final muted = Theme.of(context).textTheme.bodySmall;
+    return SectionCard(
+      key: ValueKey('vidya.job-readiness.$jobId'),
+      title: 'Vidya readiness',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          StatusLabelWrap(
+            r.rows.isEmpty ? Status.good : (r.missing > 0 ? Status.warning : Status.info),
+            [r.text, if (drills > 0) _drillsText(drills)].join(' · '),
+          ),
+          const SizedBox(height: 8),
+          for (final c in r.criteria)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: StatusLabelWrap(switch (c.status) {
+                'covered' => Status.good,
+                'missing' => Status.warning,
+                _ => Status.info,
+              }, '${c.text} (${c.status}${c.essential ? ', essential' : ''})'),
+            ),
+          Text('From the job\'s plan in Vidya, as of its last report through sync.', style: muted),
+        ],
       ),
     );
   }

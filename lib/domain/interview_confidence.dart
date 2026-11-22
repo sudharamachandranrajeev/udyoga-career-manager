@@ -7,12 +7,12 @@ library;
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:interview_engine/interview_engine.dart';
 
 import '../db/database.dart';
 import 'book.dart';
 import 'companion_book.dart';
 import 'interview_book.dart';
-import 'interview_scoring.dart';
 import 'json.dart';
 import 'vidya_link.dart' show studyPlanId;
 import 'vidya_practice.dart';
@@ -65,7 +65,9 @@ String nervesSummary(List<NervesPoint> points) {
   if (pairs.isNotEmpty) {
     final calmer = pairs.where((d) => d > 0).length;
     if (calmer > 0) {
-      lines.add('You felt calmer after $calmer of ${pairs.length} round${pairs.length == 1 ? '' : 's'} than before.');
+      lines.add(
+        'You felt calmer after $calmer of ${pairs.length} round${pairs.length == 1 ? '' : 's'} than before.',
+      );
     }
   }
   return lines.join(' ');
@@ -154,10 +156,16 @@ const _videoSetup = [
   (title: 'Connection', details: 'Use a wired or strong connection; close other apps that use the network.'),
   (title: 'Sound', details: 'Headphones or a headset; test the microphone in the meeting app first.'),
   (title: 'Light and framing', details: 'Light in front of you, not behind; head and shoulders in frame.'),
-  (title: 'Eye line', details: 'Camera at eye height. Looking at the camera when you make a point is optional.'),
+  (
+    title: 'Eye line',
+    details: 'Camera at eye height. Looking at the camera when you make a point is optional.',
+  ),
   (title: 'Notes', details: 'A few keywords near the camera at most: reading a script shows on video.'),
   (title: 'Interruptions', details: 'Phone on silent, door closed, notifications off.'),
-  (title: 'If it drops', details: 'Have the panel\'s phone number ready; rejoin, then say where you were up to.'),
+  (
+    title: 'If it drops',
+    details: 'Have the panel\'s phone number ready; rejoin, then say where you were up to.',
+  ),
 ];
 
 /// The first sentence of [s], at most [max] characters.
@@ -276,7 +284,13 @@ Json interviewDrills({
 
 /// One card or checklist item Vidya reports on.
 class DrillResult {
-  const DrillResult({required this.id, required this.title, this.done = '', this.rating = '', this.times = 0});
+  const DrillResult({
+    required this.id,
+    required this.title,
+    this.done = '',
+    this.rating = '',
+    this.times = 0,
+  });
 
   /// The card id, or 'course/topic' for a checklist item.
   final String id;
@@ -405,7 +419,12 @@ extension InterviewConfidence on CareerBook {
     final plan = await drillsPlanNow();
     await save(
       db.bridgeStudyPlans,
-      BridgeStudyPlansCompanion.insert(id: drillsPlanId, source: 'udyoga', plan: jsonEncode(plan), updated: now),
+      BridgeStudyPlansCompanion.insert(
+        id: drillsPlanId,
+        source: 'udyoga',
+        plan: jsonEncode(plan),
+        updated: now,
+      ),
       drillsPlanId,
     );
   }

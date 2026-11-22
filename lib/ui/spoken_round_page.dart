@@ -13,25 +13,17 @@ import 'dart:io';
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:interview_engine/interview_engine.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../app/interview_providers.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
-import '../domain/delivery.dart';
 import '../domain/insights.dart';
 import '../domain/interview_book.dart';
 import '../domain/interview_confidence.dart';
-import '../domain/interview_plan.dart';
-import '../domain/interview_process.dart';
-import '../domain/interview_scoring.dart';
 import '../domain/json.dart';
-import '../domain/offline_guard.dart' show offlineDownloadMessage;
 import '../domain/ollama.dart' show Ollama;
-import '../vision/camera_coach.dart';
-import '../voice/models.dart';
-import '../voice/round.dart';
-import '../voice/spoken_engines.dart';
 import 'common.dart';
 import 'interview_confidence_ui.dart' show NervesRating;
 import 'interview_debrief_page.dart' show openDebrief;
@@ -62,8 +54,10 @@ class _BookSink implements AnswerSink {
       ref.mutate((s) => s.book.saveTranscript(roundId, question, text, at: nowLocal()));
 }
 
-/// The existing AI review, cut to its first strength and first fix. The
-/// full review is saved with the round, as for a typed answer.
+/// The existing AI review, cut to one fix; the strength is the one read on
+/// the device with the line that earned it (honesty rule 9: a strength
+/// quotes the answer). The full review is saved with the round, as for a
+/// typed answer.
 class _AdvisorCoach implements ContentCoach {
   _AdvisorCoach(this.ref, this.round, this.questions);
   final WidgetRef ref;
@@ -82,13 +76,10 @@ class _AdvisorCoach implements ContentCoach {
       answer: answer,
     );
     await ref.mutate((s) => s.book.saveAnswer(round.id, question, answer, review, at: nowLocal()));
-    // Task-level wording only: the first of each with no talk of scores.
-    String first(List<String> items, String none) =>
-        items.map(taskLevelText).where((t) => t.isNotEmpty).firstOrNull ?? none;
-    return ContentNote(
-      first(review.strengths, 'No clear strength was found in this answer.'),
-      first(review.improvements, 'Nothing specific to fix.'),
-    );
+    // Task-level wording only: one fix, one sentence, no talk of scores.
+    final fix = review.improvements.map(oneFix).where((t) => t.isNotEmpty).firstOrNull;
+    final strength = quotedStrength(answer);
+    return ContentNote(strength.text, fix ?? 'Nothing specific to fix.', quote: strength.quote);
   }
 }
 
@@ -957,6 +948,11 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
           children: [
             if (s.note case final n?) ...[
               Bullets([n.strength], icon: Icons.check, color: Status.good.color),
+              if (n.quote.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(left: 28),
+                  child: Text('"${n.quote}"', style: const TextStyle(fontStyle: FontStyle.italic)),
+                ),
               Bullets([n.fix], icon: Icons.arrow_upward),
             ] else if (!hasAi)
               Text(

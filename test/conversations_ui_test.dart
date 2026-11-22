@@ -1,7 +1,13 @@
 // The Conversations page, its own navigation entry: the header that always says
-// who and where, logging a hand-sent message, and the Screener. Every person
-// is made up.
+// who and where, logging a hand-sent message, drafts from Vidya, and the
+// Screener. Every person is made up.
+import 'dart:io';
+
+import 'package:drift/drift.dart' show Value;
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:udyoga/db/database.dart';
+import 'package:udyoga/domain/vidya_drafts.dart';
 import 'package:udyoga/ui/conversations_page.dart';
 import 'package:udyoga/ui/kit/kit.dart';
 
@@ -43,12 +49,46 @@ void main() {
     await app.close();
   });
 
+  testWidgets('a draft from Vidya goes into the message box, and nothing is sent', (tester) async {
+    // Written by Vidya's tests (test/fixtures/vidya-email-drafts.json there).
+    final drafts = File('test/fixtures/vidya-email-drafts.json').readAsStringSync();
+    final app = AppHarness(tester)..desktop();
+    await app.open(
+      seed: (b) async {
+        await seedConversations(b);
+        await b.db
+            .into(b.db.bridgeStudyProgress)
+            .insert(
+              BridgeStudyProgressCompanion.insert(
+                id: emailDraftsId,
+                progress: Value(drafts),
+                updated: '2026-12-06T09:00:00Z',
+              ),
+            );
+      },
+    );
+    await app.run();
+    await openConversations(app);
+    await app.tap(find.text('Jordan Example').first);
+    await app.tap(find.byKey(const Key('composer-from-vidya')));
+    expect(find.text('Ask for feedback by criterion'), findsOneWidget);
+    expect(find.textContaining('Example Officer at Example Health Trust'), findsWidgets);
+    await app.tap(find.byKey(const Key('vidya-draft-fixture-feedback')));
+    final box = tester.widget<TextField>(find.widgetWithText(TextField, 'Message'));
+    expect(box.controller!.text, 'Dear Hiring Manager,\n\nThank you for interviewing me.');
+    final sent = await tester.runAsync(() => app.book.db.select(app.book.db.messages).get());
+    expect(sent!.where((m) => m.body.contains('Thank you for interviewing me')), isEmpty);
+    expect(tester.takeException(), isNull);
+    await app.close();
+  });
+
   testWidgets('Copy & open, then "Did you send it?" logs the message as sent by hand', (tester) async {
     final app = AppHarness(tester)..desktop();
     await app.open(seed: seedConversations);
     await app.run();
     await openConversations(app);
     await app.tap(find.text('Jordan Example').first);
+    expect(find.byKey(const Key('composer-from-vidya')), findsNothing, reason: 'no drafts from Vidya');
     await app.enter('Message', 'Tuesday at ten works for me.');
     await app.tap(find.text('Copy & open'));
     expect(find.text('Did you send it?'), findsOneWidget);

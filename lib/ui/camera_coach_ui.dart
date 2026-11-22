@@ -9,13 +9,10 @@ import 'dart:async';
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:interview_engine/interview_engine.dart';
 
 import '../app/interview_providers.dart';
 import '../app/providers.dart';
-import '../domain/offline_guard.dart' show offlineDownloadMessage;
-import '../vision/camera_coach.dart';
-import '../vision/setup_check.dart';
-import '../voice/models.dart';
 import 'common.dart';
 import 'interview_device_ui.dart' show OfflineBadge;
 import 'interview_lab_page.dart' show modelManagerProvider;

@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:interview_engine/interview_engine.dart';
+import 'package:interview_engine/testing.dart';
 import 'package:udyoga/domain/book.dart';
 import 'package:udyoga/domain/common_questions.dart';
-import 'package:udyoga/domain/interview_plan.dart' show CoachPrefs;
 import 'package:udyoga/ui/camera_coach_ui.dart';
 import 'package:udyoga/ui/spoken_round_page.dart';
-import 'package:udyoga/vision/setup_check.dart';
 
 import 'app_harness.dart';
-import 'camera_coach_test.dart' show FakeCamera, m;
 import 'spoken_round_ui_test.dart' show FakeEngines;
 
 void main() {
@@ -86,7 +85,7 @@ void main() {
       final (without, _) = await round(tester);
 
       final camera = FakeCamera();
-      final backlit = List.generate(15, (_) => m(face: 60, back: 200));
+      final backlit = List.generate(15, (_) => frameMeasure(face: 60, back: 200));
       final (withCamera, outbox) = await round(tester, camera: camera, frames: backlit);
       expect(
         withCamera,
@@ -111,7 +110,7 @@ void main() {
     expect(find.text('Camera on'), findsNothing);
     expect(find.textContaining('never saved, sent or synced'), findsOneWidget);
     await app.tapText('Turn the camera on');
-    for (final f in List.generate(15, (_) => m(face: 60, back: 200))) {
+    for (final f in List.generate(15, (_) => frameMeasure(face: 60, back: 200))) {
       camera.feeds.last.value.value = f;
     }
     await tester.pump();
@@ -130,7 +129,7 @@ void main() {
     await app.tap(selfView);
     expect(tester.widget<SwitchListTile>(selfView).value, isFalse);
 
-    for (final f in List.generate(15, (_) => m())) {
+    for (final f in List.generate(15, (_) => frameMeasure())) {
       camera.feeds.last.value.value = f;
     }
     await tester.pump();

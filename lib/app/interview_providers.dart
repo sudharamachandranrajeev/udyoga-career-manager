@@ -6,10 +6,10 @@ library;
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:interview_engine/interview_engine.dart';
 
 import '../domain/advisor.dart';
 import '../domain/ai.dart';
-import '../domain/interview_plan.dart';
 import '../domain/ollama.dart';
 import 'providers.dart';
 

@@ -515,9 +515,7 @@ class ProfilePage extends ConsumerWidget {
         ),
       ],
       onSave: () async {
-        final parsedAreas = [
-          for (final l in areas.text.split('\n')) ?HomeArea.parse(l),
-        ];
+        final parsedAreas = [for (final l in areas.text.split('\n')) ?HomeArea.parse(l)];
         await ref.mutate(
           (s) => s.book.saveProfile(
             p.copyWith(

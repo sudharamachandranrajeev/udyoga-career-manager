@@ -161,7 +161,8 @@ class _NervesPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_NervesPainter old) => old.points != points || old.before != before || old.after != after;
+  bool shouldRepaint(_NervesPainter old) =>
+      old.points != points || old.before != before || old.after != after;
 }
 
 final readyForProvider = FutureProvider<ReadyFor>((ref) {
@@ -324,12 +325,15 @@ class DrillsCard extends ConsumerWidget {
 
   Future<void> _editQuestions(BuildContext context, WidgetRef ref, List<String> current) async {
     final field = TextEditingController(text: current.join('\n'));
-    final bank = [for (final e in questionsForThemBank.entries) '${e.key}: ${e.value.join(' / ')}'].join('\n');
+    final bank = [for (final e in questionsForThemBank.entries) '${e.key}: ${e.value.join(' / ')}']
+        .join('\n');
     await showFormDialog(
       context,
       title: 'Your questions for them',
       action: 'Save',
-      fields: (_) => [Field(field, 'One per line', lines: 6, autofocus: true, helper: 'Ideas by stage:\n$bank')],
+      fields: (_) => [
+        Field(field, 'One per line', lines: 6, autofocus: true, helper: 'Ideas by stage:\n$bank'),
+      ],
       onSave: () async {
         await ref.mutate((s) => s.book.setQuestionsForThem(field.text.split('\n')));
         return null;

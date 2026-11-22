@@ -8,6 +8,27 @@ import 'package:shadcn_ui/shadcn_ui.dart'
         ShadTextTheme,
         ShadTheme,
         ShadThemeData;
+import 'package:ui_kit/ui_kit.dart';
+
+// The motion tokens, canvas and kit widgets live in the shared ui_kit
+// package (pariksha-interview-kit); Udyoga installs its azure palette as a
+// KitPalette and re-exports them here, so the pages import one file.
+export 'package:ui_kit/ui_kit.dart'
+    show
+        Backdrop,
+        Ease,
+        Headline,
+        KitPalette,
+        Pace,
+        Radii,
+        RisePageTransitionsBuilder,
+        Tilt,
+        TiltGrid,
+        TypeScale,
+        figures,
+        glassBlur,
+        paced,
+        reducedMotion;
 
 // Udyoga's look: a calm, airy canvas (soft azure light, deep navy at night)
 // so the content stands forward; cards set apart by hairline borders rather
@@ -25,73 +46,11 @@ const mint = Color(0xFF12B886);
 const headingFont = 'PlusJakartaSans';
 const bodyFont = 'Inter';
 
-/// Corner radii: [sm] for inputs, buttons and small cards, [lg] for cards,
-/// dialogs and sheets. Pills are fully round.
-abstract final class Radii {
-  static const sm = 12.0;
-  static const lg = 16.0;
-  static const pill = 999.0;
-}
+/// Every colour of one brightness, in one place. Installed on the theme as
+/// the kit's palette, so the shared widgets paint in azure.
+typedef Palette = KitPalette;
 
-/// How strongly frosted glass (the floating bars, sheets) blurs what is
-/// behind it.
-const glassBlur = 16.0;
-
-/// The type scale, in logical pixels: 12, 14, 16, 20, 24, 30, 36.
-abstract final class TypeScale {
-  static const xs = 12.0;
-  static const sm = 14.0;
-  static const base = 16.0;
-  static const lg = 20.0;
-  static const xl = 24.0;
-  static const xxl = 30.0;
-  static const display = 36.0;
-}
-
-/// Figures that line up in columns and do not jiggle as they change: for
-/// counts, money and dates. Merge it into any style that shows numbers.
-const figures = TextStyle(fontFeatures: [FontFeature.tabularFigures()]);
-
-/// Motion curves, after Emil Kowalski's: [out] for things entering or
-/// leaving, [inOut] for things moving on screen, [drawer] for sheets.
-/// Nothing uses ease-in: it feels slow to start.
-abstract final class Ease {
-  static const out = Cubic(0.23, 1, 0.32, 1);
-  static const inOut = Cubic(0.77, 0, 0.175, 1);
-  static const drawer = Cubic(0.32, 0.72, 0, 1);
-}
-
-/// Motion lengths. Interface motion stays between 150 and 250 ms.
-abstract final class Pace {
-  static const fast = Duration(milliseconds: 150);
-  static const base = Duration(milliseconds: 200);
-  static const slow = Duration(milliseconds: 250);
-}
-
-/// [d], or no time at all when the system asks for reduced motion.
-Duration paced(BuildContext context, Duration d) => Motion.reduced(context) ? Duration.zero : d;
-
-/// Every colour of one brightness, in one place.
-typedef Palette = ({
-  // The canvas behind every page: a vertical wash and two faint glows.
-  Color top,
-  Color bottom,
-  Color glow,
-  Color glow2,
-  // Surfaces, from the page to quiet fills inside it.
-  Color surface,
-  Color card,
-  Color subtle,
-  Color raised,
-  // Lines and text.
-  Color hairline,
-  Color text,
-  Color heading,
-  Color muted,
-  Color primary,
-});
-
-const _light = (
+const _light = KitPalette(
   top: Color(0xFFE3EBFD),
   bottom: Color(0xFFF8FAFD),
   glow: Color(0x592F6BFF),
@@ -107,7 +66,7 @@ const _light = (
   primary: azure,
 );
 
-const _dark = (
+const _dark = KitPalette(
   top: Color(0xFF0A1022),
   bottom: Color(0xFF05070F),
   glow: Color(0x4D2F6BFF),
@@ -324,6 +283,7 @@ ThemeData udyogaTheme(Brightness b) {
       color: scheme.primary,
       linearTrackColor: scheme.surfaceContainerHighest,
     ),
+    extensions: [p],
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
         TargetPlatform.android: RisePageTransitionsBuilder(),
@@ -384,124 +344,6 @@ class ShadBridge extends StatelessWidget {
   );
 }
 
-/// The canvas: a soft vertical wash with two faint glows, behind every page.
-class Backdrop extends StatelessWidget {
-  const Backdrop({super.key, required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = canvas(Theme.of(context).brightness);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [c.top, c.bottom],
-          stops: const [0, 0.55],
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(top: -160, right: -120, child: _Glow(c.glow, 420)),
-          Positioned(bottom: -200, left: -160, child: _Glow(c.glow2, 460)),
-          Positioned.fill(child: child),
-        ],
-      ),
-    );
-  }
-}
-
-class _Glow extends StatelessWidget {
-  const _Glow(this.color, this.size);
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) => IgnorePointer(
-    child: Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
-      ),
-    ),
-  );
-}
-
-/// Pushed pages rise a little into place and fade in, while the page
-/// underneath dims slightly. A page opens tens of times a day, so it is short
-/// (250 ms) and leaves at once: the way back starts fast. No 3D turn: it
-/// added nothing but time.
-class RisePageTransitionsBuilder extends PageTransitionsBuilder {
-  const RisePageTransitionsBuilder();
-
-  @override
-  Duration get transitionDuration => Pace.slow;
-
-  @override
-  Widget buildTransitions<T>(
-    PageRoute<T> route,
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
-    // Each page brings its own canvas, so the page beneath never shows through.
-    child = Backdrop(child: child);
-    // Under reduced motion a fade remains: it moves nothing.
-    if (Motion.reduced(context)) return FadeTransition(opacity: animation, child: child);
-    final inCurve = CurvedAnimation(parent: animation, curve: Ease.out, reverseCurve: Ease.out.flipped);
-    final outCurve = CurvedAnimation(parent: secondaryAnimation, curve: Ease.out);
-    return AnimatedBuilder(
-      animation: Listenable.merge([inCurve, outCurve]),
-      child: child,
-      builder: (context, child) => Opacity(
-        opacity: (inCurve.value.clamp(0, 1) * (1 - outCurve.value * 0.2)).toDouble(),
-        child: Transform.translate(offset: Offset(0, (1 - inCurve.value) * 24), child: child),
-      ),
-    );
-  }
-}
-
-/// Press feedback for a card that opens something: it sinks a touch while
-/// held, so the app is seen to have heard. It used to tilt towards the
-/// pointer in 3D as well; that ran on every hover over every list, tens of
-/// times a day, and said nothing, so it is gone. Hover is left to the
-/// card's own highlight (SpotlightCard). Still under reduced motion.
-class Tilt extends StatefulWidget {
-  const Tilt({super.key, required this.child});
-  final Widget child;
-
-  @override
-  State<Tilt> createState() => _TiltState();
-}
-
-class _TiltState extends State<Tilt> {
-  var _down = false;
-
-  void _press(bool down) {
-    if (_down != down) setState(() => _down = down);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (Motion.reduced(context)) return widget.child;
-    return Listener(
-      onPointerDown: (_) => _press(true),
-      onPointerUp: (_) => _press(false),
-      onPointerCancel: (_) => _press(false),
-      child: AnimatedScale(
-        scale: _down ? 0.98 : 1,
-        duration: Pace.fast,
-        curve: Ease.out,
-        child: widget.child,
-      ),
-    );
-  }
-}
-
 /// An employer's mark: its initials on a gradient picked from its name, so
 /// the same employer always looks the same (no logos are fetched).
 class OrgLogo extends StatelessWidget {
@@ -554,44 +396,4 @@ class OrgLogo extends StatelessWidget {
       ),
     );
   }
-}
-
-/// A big greeting with one phrase picked out in the brand colour.
-class Headline extends StatelessWidget {
-  const Headline(this.parts, {super.key});
-
-  /// Alternating plain and highlighted runs, starting plain.
-  final List<String> parts;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    final base = t.headlineMedium?.copyWith(fontWeight: FontWeight.w500, height: 1.2);
-    return Text.rich(
-      TextSpan(
-        children: [
-          for (final (i, p) in parts.indexed)
-            TextSpan(
-              text: p,
-              style: i.isOdd
-                  ? base?.copyWith(fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.primary)
-                  : base,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A [TileGrid] whose tiles sink a touch when pressed (see [Tilt]).
-class TiltGrid extends StatelessWidget {
-  const TiltGrid({super.key, required this.children, this.minWidth = 200});
-  final List<Widget> children;
-  final double minWidth;
-
-  @override
-  Widget build(BuildContext context) => TileGrid(
-    minWidth: minWidth,
-    children: [for (final c in children) Tilt(child: c)],
-  );
 }

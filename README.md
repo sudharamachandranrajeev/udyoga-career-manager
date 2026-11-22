@@ -311,6 +311,10 @@ scripts/make-icons.sh                                               # app icons 
 - `brahma_core` comes from the [brahma](https://github.com/sudharamachandranrajeev/brahma-life-suite) repo.
   To work on both at once, add a `pubspec_overrides.yaml` (ignored by git) with
   `dependency_overrides: brahma_core: path: ../brahma/core`.
+- `ui_kit` (the shared motion and components) comes from the
+  [pariksha-interview-kit](https://github.com/sudharamachandranrajeev/pariksha-interview-kit) repo
+  and paints in Udyoga's azure through a `KitPalette`. To work on it locally, add
+  `ui_kit: path: ../pariksha-interview-kit/packages/ui_kit` to the same overrides file.
 - Tests use made-up people and companies only. CI runs analyse and test on each push. A `v*` tag
   builds, smoke-tests and publishes the Android, Windows and Linux builds
   (`.github/workflows/release.yml`).
@@ -318,7 +322,16 @@ scripts/make-icons.sh                                               # app icons 
   APK carries one copy of the native speech engines. The 64-bit ARM APK is published as
   `-android.apk`; the others as `-android-armeabi-v7a.apk` and `-android-x86_64.apk`. The in-app
   updater fetches the one for the phone's ABI.
-- Speech models are never bundled: the interview round downloads them on request. To time the
+- The mock interviewer (voice, camera set-up cues, question plans and verified-quote scoring) lives
+  in the shared `interview_engine` package
+  ([pariksha-interview-kit](https://github.com/sudharamachandranrajeev/pariksha-interview-kit)), also
+  used by Vidya. Udyoga keeps the database, the screens and its AI adapter
+  (`lib/domain/interview_brain.dart`).
+- Speech models are never bundled: the interview round downloads them on request, checked against
+  pinned SHA-256 hashes. On Linux, Windows and macOS they go in one folder Udyoga and Vidya share
+  (`~/.local/share/pariksha/models` on Linux, `%APPDATA%\pariksha\models` on Windows); models an
+  older Udyoga downloaded move there once, after the same check. Android keeps them in the app's own
+  storage. To time the
   speech stack on a device, build `tool/interview_spike.dart` or `tool/spoken_round_check.dart`
   with `-t`; for the camera coach, `tool/camera_coach_check.dart` (results in
   [docs/interview-spike.md](docs/interview-spike.md)).

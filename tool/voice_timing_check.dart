@@ -15,15 +15,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:interview_engine/interview_engine.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
-import 'package:udyoga/domain/interview_plan.dart';
-import 'package:udyoga/domain/interview_process.dart';
-import 'package:udyoga/voice/lexicon.dart';
-import 'package:udyoga/voice/models.dart';
-import 'package:udyoga/voice/native_engines.dart';
-import 'package:udyoga/voice/round_engines.dart';
-import 'package:udyoga/voice/voice_cache.dart';
 
 /// Makes or reads each sentence of [text] in turn and works out when the
 /// microphone would open. With [cache], fixed sentences come from it when

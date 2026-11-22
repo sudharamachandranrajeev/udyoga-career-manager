@@ -761,7 +761,10 @@ class RoleSearchPage extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text('Jobs: ${query.role}')),
     body: SafeArea(
-      child: ListView(padding: const EdgeInsets.all(16), children: [RoleSearchView(initial: query)]),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [RoleSearchView(initial: query)],
+      ),
     ),
   );
 }
