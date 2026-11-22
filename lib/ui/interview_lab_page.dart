@@ -23,11 +23,24 @@ final devToolsProvider = FutureProvider<bool>((ref) async {
   return await ref.watch(sessionProvider).db.localSetting(devToolsKey) == 'on';
 });
 
-/// Where downloaded models live: the app's own data folder, never synced.
+/// Where downloaded models live, never synced: on a desktop the per-user
+/// folder Udyoga and Vidya share (see the interview engine's
+/// [sharedModelFolder]), on a phone the app's own data folder. Models an
+/// earlier Udyoga downloaded into its own folder move to the shared one
+/// the first time, after their checksum check, so nothing is fetched again.
 final modelManagerProvider = FutureProvider<ModelManager>((ref) async {
   final base = await getApplicationSupportDirectory();
+  final own = Directory('${base.path}/models');
+  final shared = sharedModelFolder();
+  if (shared != null) {
+    try {
+      await adoptModels(from: own, to: shared);
+    } on FileSystemException {
+      // Left where they are; the lab offers the download again.
+    }
+  }
   return ModelManager(
-    Directory('${base.path}/models'),
+    shared ?? own,
     client: ref.watch(httpClientProvider),
     voiceCache: Directory('${base.path}/voice-cache'),
   );
