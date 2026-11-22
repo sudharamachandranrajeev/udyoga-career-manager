@@ -18,6 +18,7 @@ import '../app/interview_providers.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/companion.dart' show practiceStory;
+import '../domain/companion_book.dart' show CompanionBook;
 import '../domain/interview_book.dart';
 import '../domain/json.dart';
 import 'common.dart';
@@ -448,28 +449,134 @@ class _DebriefPageState extends ConsumerState<DebriefPage> {
     final f = l.profile?.framework ?? Framework.of('private');
     final answered = l.data.answered;
     if (answered.isEmpty) return showMessage(context, 'No answers to score yet.');
-    final scores = await runAi(
+    // Scored twice with the criteria shuffled, the same engine path as
+    // Vidya (honesty rule 8).
+    final runs = await runAi(
       context,
-      title: 'Scoring the round',
-      status: 'Only the transcripts and the criteria are sent to your AI.',
-      task: (_) async => (await requireInterviewAdvisor(ref)).scoreRound(
+      title: 'Scoring the round twice',
+      status: 'Only the transcripts and the criteria are sent to your AI, twice, in a different order.',
+      task: (_) async => scoreTwice(
+        brain: (await requireInterviewAdvisor(ref)).interviewBrain,
         role: l.round.role,
         framework: f,
-        criteria: l.data.criteria,
-        answers: [
-          for (final q in answered)
-            (index: q.index, question: q.question.question, criteria: q.criteria, answer: q.heard),
-        ],
+        round: l.data,
       ),
     );
-    if (scores == null || !mounted) return;
+    if (runs == null || !mounted) return;
     await ref.mutate(
       (s) => s.book.saveScoring(l.round.id, {
         'framework': f.id,
-        'answers': [for (final a in scores) a.toJson()],
+        'engine': engineVersion,
+        'runs': [
+          for (final run in runs) [for (final a in run) a.toJson()],
+        ],
       }),
     );
     await _load();
+  }
+
+  /// Re-checks one score (honesty rule 6): the quote and the criterion
+  /// only. What the candidate types is not read; it never moves a score.
+  Future<void> _dispute(VerifiedScore score, Criterion criterion, Framework f) async {
+    final push = TextEditingController();
+    final asked = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Check this score again'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(criterion.text),
+            const SizedBox(height: 8),
+            const Text(
+              'The check looks again at the quoted words and the criterion. Disagreeing does not change a score; '
+              'answering again does.',
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: push,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(labelText: 'What do you think it missed? (optional)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Check again')),
+        ],
+      ),
+    );
+    final pushback = push.text;
+    if (asked != true || !mounted) return;
+    final result = recheckScore(score, round: _loaded!.data, scale: f.scale, pushback: pushback);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(result.stands ? 'The score stands' : 'The score is taken off'),
+        content: Text(result.message),
+        actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+      ),
+    );
+  }
+
+  /// "Improve my answer" (honesty rule 7): only after the candidate's own
+  /// attempt, only from their words and story bank; a rewrite that adds a
+  /// number, name or achievement is refused.
+  Future<void> _improve(DebriefQuestion q, AnswerNote n) async {
+    final l = _loaded!;
+    final book = ref.read(sessionProvider).book;
+    final stories = await book.stories();
+    if (!mounted) return;
+    final criterion = [
+      for (final c in l.data.criteria)
+        if (q.criteria.contains(c.id)) c.text,
+    ].join('; ');
+    final result = await runAi(
+      context,
+      title: 'Improving your answer',
+      status: 'Only the question, your words and your story bank are sent to your AI.',
+      task: (_) async => improveAnswer(
+        brain: (await requireInterviewAdvisor(ref)).interviewBrain,
+        question: q.question.question,
+        answer: q.heard,
+        criterion: criterion,
+        fix: n.fix,
+        storyBank: [
+          for (final s in stories)
+            [s.title, s.situation, s.task, s.action, s.result].where((p) => p.trim().isNotEmpty).join('. '),
+        ],
+      ),
+    );
+    if (result == null || !mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(result.ok ? 'Your answer, tightened' : 'No rewrite shown'),
+        scrollable: true,
+        content: SizedBox(
+          width: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (result.ok) ...[
+                SelectableText(result.text),
+                const SizedBox(height: 8),
+                const Text(
+                  'Built only from your own words and your story bank: checked to add no number, name or '
+                  'achievement you did not give. Say it in your own way; do not learn it by heart.',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ] else
+                Text(result.message),
+            ],
+          ),
+        ),
+        actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+      ),
+    );
   }
 
   Future<void> _saveStory(DebriefQuestion q, AnswerNote n) async {
@@ -507,6 +614,11 @@ class _DebriefPageState extends ConsumerState<DebriefPage> {
     final t = Theme.of(context).textTheme;
     final scoreLines = d.scoreLines();
     final qs = {for (final q in l.data.questions) q.index: q};
+    final verified = d.aiScored ? InterviewBook.verifiedOf(l.round.debrief, l.data, d.framework) : null;
+    final expected = {
+      for (final e in answerExpectations(round: l.data, framework: d.framework, verified: verified))
+        e.question: e,
+    };
     return PageScaffold(
       title: 'Debrief: ${l.round.role}',
       actions: const [OfflineBadge()],
@@ -577,8 +689,21 @@ class _DebriefPageState extends ConsumerState<DebriefPage> {
                 for (final s in scoreLines) ...[
                   const SizedBox(height: 6),
                   Text('${s.criterion.text}: ${s.level.code} · ${s.level.label}', style: t.titleSmall),
-                  Text(s.level.anchor),
+                  if (s.uncertain) StatusLabel(Status.warning, uncertainNote),
+                  Text('This level: ${s.level.anchor}'),
+                  if (s.next case final up?)
+                    Text('Next level (${up.code}): ${up.anchor}', style: t.bodySmall),
                   if (s.quote.isNotEmpty) Text('You said: "${s.quote}"', style: t.bodySmall),
+                  if (d.coverage.where((c) => c.criterion.id == s.criterion.id).firstOrNull?.best
+                      case final best?)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        key: Key('dispute-${s.criterion.id}'),
+                        onPressed: () => _dispute(best, s.criterion, d.framework),
+                        child: const Text('Dispute this score'),
+                      ),
+                    ),
                 ],
                 ScaleView(d.framework.scale),
               ],
@@ -593,7 +718,28 @@ class _DebriefPageState extends ConsumerState<DebriefPage> {
                 Text(qs[n.question]!.question.question, style: t.bodySmall),
                 const SizedBox(height: 6),
                 Bullets([n.strength], icon: Icons.check, color: Status.good.color),
+                if (n.strengthQuote.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 28),
+                    child: Text(
+                      '"${n.strengthQuote}"',
+                      key: Key('strength-quote-${n.question}'),
+                      style: t.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+                    ),
+                  ),
                 Bullets([n.fix], icon: Icons.arrow_upward),
+                if (expected[n.question] case final e?)
+                  _Expectations(e, key: Key('expectations-${n.question}')),
+                if (hasAi && hasOwnAttempt(qs[n.question]!.heard))
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      key: Key('improve-${n.question}'),
+                      onPressed: () => _improve(qs[n.question]!, n),
+                      icon: const Icon(Icons.edit_note),
+                      label: const Text('Improve my answer'),
+                    ),
+                  ),
                 if (n.recovery.isNotEmpty)
                   Text('In the room you could say: "${n.recovery}"', style: t.bodySmall),
                 if (n.good)
@@ -621,6 +767,46 @@ class _DebriefPageState extends ConsumerState<DebriefPage> {
               ],
             ),
           ),
+      ],
+    );
+  }
+}
+
+/// What the panel, the organisation and the manager expected of one
+/// answer (J6): each covered one with the line that covered it, the rest as
+/// not covered. Udyoga keeps no checked employer facts of its own, so the
+/// organisation and manager say so rather than guess.
+class _Expectations extends StatelessWidget {
+  const _Expectations(this.e, {super.key});
+  final AnswerExpectations e;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      title: const Text('What they expected'),
+      childrenPadding: const EdgeInsets.only(bottom: 8),
+      expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final g in e.groups) ...[
+          Text(g.source.label, style: t.titleSmall),
+          if (g.note.isNotEmpty)
+            Text(
+              g.source == ExpectationSource.panel
+                  ? g.note
+                  : '${g.note} Checked employer facts live in Vidya\'s job dossier: send the job there with '
+                        '"Prepare this job".',
+              style: t.bodySmall,
+            ),
+          for (final h in g.covered) Text('Covered: ${h.expectation.text}\n"${h.quote}"', style: t.bodySmall),
+          for (final h in g.notCovered)
+            Text(
+              'Not covered: ${h.expectation.text}',
+              style: t.bodySmall?.copyWith(color: Status.warning.color),
+            ),
+          const SizedBox(height: 6),
+        ],
       ],
     );
   }

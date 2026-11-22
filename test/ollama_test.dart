@@ -283,6 +283,7 @@ void main() {
                 {'criterion': 'c2', 'level': '4', 'quote': 'I ran a daily team huddle'},
               ],
               'strength': 'A measured result.',
+              'strengthQuote': 'I rang each patient on the list',
               'fix': 'Say what you learned.',
             },
           ],

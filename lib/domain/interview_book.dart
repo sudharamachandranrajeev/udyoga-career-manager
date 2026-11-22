@@ -108,6 +108,36 @@ extension InterviewBook on CareerBook {
     );
   }
 
+  /// The AI's scoring of a saved round ([debrief], as saved), checked again against the
+  /// transcripts: both runs when it was scored twice (the criteria shuffled
+  /// each time; where they disagree the lower level shows, marked
+  /// uncertain), or the one run a round scored before that kept. Null when
+  /// not scored.
+  static Verified? verifiedOf(String debrief, DebriefRound data, Framework framework) {
+    final saved = decodeObject(debrief);
+    if (saved.isEmpty) return null;
+    final runs = [
+      for (final r in saved['runs'] is List ? saved['runs'] as List : const [])
+        [for (final a in objs(r)) AnswerScore.fromJson(a)],
+    ];
+    if (runs.isNotEmpty) return verifyRuns(runs, framework.scale, data);
+    return verifyScores(
+      [for (final a in objs(saved['answers'])) AnswerScore.fromJson(a)],
+      framework.scale,
+      heard: data.heard,
+      asked: data.asked,
+      situational: data.situational,
+    );
+  }
+
+  /// The framework a saved round was scored on, else the profile's.
+  static Framework frameworkOf(PracticeSession round, RoleProfile? profile) {
+    final saved = decodeObject(round.debrief);
+    return Framework.of(
+      str(saved['framework']).isNotEmpty ? str(saved['framework']) : profile?.frameworkId ?? 'private',
+    );
+  }
+
   /// The debrief of a saved round: its saved scoring checked again against
   /// the transcripts, or coverage from the matcher when it was not scored.
   static Debrief debriefOf(
@@ -116,19 +146,8 @@ extension InterviewBook on CareerBook {
     RoleProfile? profile, {
     bool wholeProfile = true,
   }) {
-    final saved = decodeObject(round.debrief);
-    final framework = Framework.of(
-      str(saved['framework']).isNotEmpty ? str(saved['framework']) : profile?.frameworkId ?? 'private',
-    );
-    final verified = saved.isEmpty
-        ? null
-        : verifyScores(
-            [for (final a in objs(saved['answers'])) AnswerScore.fromJson(a)],
-            framework.scale,
-            heard: data.heard,
-            asked: data.asked,
-            situational: data.situational,
-          );
+    final framework = frameworkOf(round, profile);
+    final verified = verifiedOf(round.debrief, data, framework);
     return Debrief.build(framework: framework, round: data, verified: verified, wholeProfile: wholeProfile);
   }
 
