@@ -285,6 +285,9 @@ Json roleVidyaPlan(RoleInsight i) {
 /// for Vidya's dossier; [facts] are claims about the employer with the web
 /// address each came from ([employerFacts]): Vidya keeps them as
 /// unverified inference until it finds the supporting sentence in a source.
+/// [checks] are the application's offer-to-start checks ([vidyaChecks]):
+/// Vidya's checks stage shows them, with due dates and overdue warnings,
+/// in place of its own list.
 Json jobJourney({
   required String role,
   String employer = '',
@@ -294,6 +297,7 @@ Json jobJourney({
   String applicationStage = '',
   String advertText = '',
   List<Json> facts = const [],
+  List<Json> checks = const [],
 }) => {
   'role': _clip(role, 200),
   if (employer.isNotEmpty) 'employer': _clip(employer, 200),
@@ -303,7 +307,22 @@ Json jobJourney({
   if (applicationStage.isNotEmpty) 'applicationStage': applicationStage,
   if (advertText.trim().isNotEmpty) 'advertText': _clip(advertText.trim(), 20000),
   if (facts.isNotEmpty) 'facts': facts.take(30).toList(),
+  if (checks.isNotEmpty) 'checks': checks.take(40).toList(),
 };
+
+/// An application's offer-to-start checks for Vidya's journey: kind,
+/// title, status and dates only (never the notes, which may hold personal
+/// details).
+List<Json> vidyaChecks(List<JobCheck> checks) => [
+  for (final c in checks)
+    {
+      'kind': c.kind,
+      'title': _clip(c.title, 200),
+      'status': c.status,
+      if (c.due != null && isValidIsoDate(c.due!)) 'due': c.due,
+      if (c.done != null && isValidIsoDate(c.done!)) 'done': c.done,
+    },
+];
 
 /// The culture points of employer research that name the web address they
 /// come from, as journey facts (`claim`, `url`, `title`). The title is the
@@ -357,9 +376,16 @@ String jobPlanId(String jobId) => 'udyoga.job.$jobId';
 /// job's criteria (from its role profile, checked by the candidate, else
 /// the AI fit assessment's requirements), its employer, a sector guess,
 /// the advert's link, text and closing date, where the application stands,
-/// and the employer research's sourced culture points ([brief]).
+/// the employer research's sourced culture points ([brief]) and the
+/// application's offer-to-start [checks].
 /// A version 1 plan with a note, so an older Vidya still imports it.
-Json jobVidyaPlan(Job j, {RoleProfile? profile, JobApplication? application, EmployerBrief? brief}) {
+Json jobVidyaPlan(
+  Job j, {
+  RoleProfile? profile,
+  JobApplication? application,
+  EmployerBrief? brief,
+  List<JobCheck> checks = const [],
+}) {
   final fit = j.assessment.isEmpty ? null : FitAssessment(decodeObject(j.assessment));
   final where = j.company.isEmpty ? j.title : '${j.title} at ${j.company}';
   final criteria = <Json>[
@@ -399,6 +425,7 @@ Json jobVidyaPlan(Job j, {RoleProfile? profile, JobApplication? application, Emp
       applicationStage: application?.stage ?? '',
       advertText: j.description,
       facts: employerFacts(brief),
+      checks: vidyaChecks(checks),
     ),
     'criteria': criteria,
     'courses': const [],
@@ -547,6 +574,7 @@ extension VidyaLink on CareerBook {
       profile: profile == null ? null : InterviewBook.roleProfileOf(profile),
       application: application,
       brief: await employerBrief(j.company),
+      checks: application == null ? const [] : await checks(application.id),
     );
   }
 

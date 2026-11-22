@@ -355,6 +355,54 @@ void journeyTests() {
     expect((await journey())['facts'], hasLength(1));
   });
 
+  test('the offer-to-start checks ride in the journey and are sent again when one changes', () async {
+    final j = await job();
+    final app = await book.applyFor(j, today: '2026-11-15');
+    await book.sendJobToVidya(j, now: '2026-11-21T09:00:00Z');
+    Future<Map> journey() async =>
+        decodeObject((await book.db.select(book.db.bridgeStudyPlans).get()).single.plan)['journey'] as Map;
+    expect((await journey())['checks'], isNull);
+    await book.moveTo(app, Stage.offer, date: '2026-12-20');
+    await book.moveTo(app, Stage.checks, date: '2026-12-21');
+    var checks = (await journey())['checks'] as List;
+    expect(checks.map((c) => (c as Map)['kind']), [for (final s in CareerBook.offerSteps) s.$1]);
+    expect((checks.first as Map)['status'], 'todo');
+    expect((checks.first as Map)['due'], '2026-12-28', reason: '5 working days after the checks began');
+    final id = (await book.checks(app)).first;
+    await book.setCheck(id, 'done', today: '2026-12-22', notes: 'Passport number 123 (never sent)');
+    checks = (await journey())['checks'] as List;
+    expect(checks.first, {
+      'kind': 'identity',
+      'title': CareerBook.offerSteps.first.$2,
+      'status': 'done',
+      'due': '2026-12-28',
+      'done': '2026-12-22',
+    });
+    expect(jsonEncode(await journey()), isNot(contains('Passport')), reason: 'notes stay in Udyoga');
+  });
+
+  test('the checks plan fixture shared with Vidya is current', () async {
+    // Vidya's tests parse this file for its checks stage.
+    final j = await job();
+    final app = await book.applyFor(j, today: '2026-11-15');
+    await book.moveTo(app, Stage.offer, date: '2026-12-20');
+    await book.moveTo(app, Stage.checks, date: '2026-12-21');
+    final all = await book.checks(app);
+    await book.setCheck(all.firstWhere((c) => c.kind == 'identity'), 'done', today: '2026-12-22');
+    await book.setCheck(all.firstWhere((c) => c.kind == 'references'), 'sent', today: '2026-12-22');
+    await book.setCheck(all.firstWhere((c) => c.kind == 'contract'), 'not_needed', today: '2026-12-22');
+    await book.sendJobToVidya(j, now: '2026-12-22T09:00:00Z');
+    final plan = const JsonEncoder.withIndent('  ')
+        .convert(decodeObject((await book.db.select(book.db.bridgeStudyPlans).get()).single.plan))
+        .replaceAll(j.id, 'fixture-job');
+    final fixture = File('test/fixtures/udyoga-checks-plan.json');
+    if (!fixture.existsSync() || Platform.environment['UPDATE_FIXTURES'] == '1') {
+      await fixture.parent.create(recursive: true);
+      await fixture.writeAsString('$plan\n');
+    }
+    expect(await fixture.readAsString(), '$plan\n');
+  });
+
   test('the job plan fixture shared with Vidya is current', () async {
     // Vidya's tests parse this file. Job ids are random: the fixture has a fixed one.
     final j = await job();

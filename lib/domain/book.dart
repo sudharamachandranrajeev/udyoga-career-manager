@@ -765,8 +765,19 @@ class CareerBook {
         kind: kind,
         title: title,
         due: _formsDue.contains(kind) ? addWorkingDays(date, 5) : null,
+        refresh: false,
       );
     }
+    await _checksChanged(applicationId);
+  }
+
+  /// A journey sent to Vidya hears the checks' new state (its checks
+  /// stage shows them with due dates).
+  Future<void> _checksChanged(String applicationId) async {
+    final a = await (db.select(
+      db.jobApplications,
+    )..where((x) => x.id.equals(applicationId))).getSingleOrNull();
+    if (a != null) await refreshJobJourney(a.jobId, now: DateTime.now().toUtc().toIso8601String());
   }
 
   /// The checks on an application, in the order of [offerSteps], then any
@@ -791,6 +802,7 @@ class CareerBook {
     required String kind,
     required String title,
     String? due,
+    bool refresh = true,
   }) async {
     final id = newId();
     await save(
@@ -804,21 +816,30 @@ class CareerBook {
       ),
       id,
     );
+    if (refresh) await _checksChanged(applicationId);
     return id;
   }
 
   /// Sets a check's status; done ones record [today].
-  Future<void> setCheck(JobCheck c, String status, {required String today, String? due, String? notes}) =>
-      save(
-        db.jobChecks,
-        c.copyWith(
-          status: status,
-          done: Value(status == 'done' ? (c.done ?? today) : null),
-          due: due == null ? const Value.absent() : Value(due.isEmpty ? null : due),
-          notes: notes ?? c.notes,
-        ),
-        c.id,
-      );
+  Future<void> setCheck(
+    JobCheck c,
+    String status, {
+    required String today,
+    String? due,
+    String? notes,
+  }) async {
+    await save(
+      db.jobChecks,
+      c.copyWith(
+        status: status,
+        done: Value(status == 'done' ? (c.done ?? today) : null),
+        due: due == null ? const Value.absent() : Value(due.isEmpty ? null : due),
+        notes: notes ?? c.notes,
+      ),
+      c.id,
+    );
+    await _checksChanged(c.applicationId);
+  }
 
   /// Keeps a copy of [content]: the advert as it read or the application as
   /// sent.
