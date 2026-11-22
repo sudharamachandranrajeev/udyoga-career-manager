@@ -1136,9 +1136,12 @@ class CareerBook {
     return null;
   }
 
-  /// Saves research on [employer] under the name the candidate's job uses.
-  Future<void> saveEmployerBrief(String employer, AiResult r, {required String at}) =>
-      saveReport('employer', {...r.data, 'employer': employer}, r.sources, at: at);
+  /// Saves research on [employer] under the name the candidate's job uses,
+  /// and sends its sourced points to Vidya with any job plan sent for it.
+  Future<void> saveEmployerBrief(String employer, AiResult r, {required String at}) async {
+    await saveReport('employer', {...r.data, 'employer': employer}, r.sources, at: at);
+    await refreshEmployerJourneys(employer, now: DateTime.now().toUtc().toIso8601String());
+  }
 
   Future<PayBaseline> payBaseline() async =>
       PayBaseline.fromJson(await pref<Map<String, Object?>>(PrefKeys.pay, const {}));

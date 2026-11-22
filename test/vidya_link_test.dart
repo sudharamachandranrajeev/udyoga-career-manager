@@ -7,6 +7,7 @@ import 'package:flutter/material.dart' show Key;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:interview_engine/interview_engine.dart' show Criterion, CriterionKind, RoleProfile;
 import 'package:udyoga/db/database.dart';
+import 'package:udyoga/domain/ai.dart' show AiResult;
 import 'package:udyoga/domain/book.dart';
 import 'package:udyoga/domain/companion.dart';
 import 'package:udyoga/domain/companion_book.dart';
@@ -250,6 +251,7 @@ void journeyTests() {
         'sector': 'nhs',
         'advertUrl': 'https://example.org/jobs/123',
         'closes': '2026-12-10',
+        'advertText': 'Support EPR systems and patient safety training across wards.',
       });
       expect(
         [for (final c in plan['criteria'] as List) (c as Map)['text']],
@@ -300,6 +302,59 @@ void journeyTests() {
     expect(await book.db.select(book.db.bridgeStudyPlans).get(), hasLength(1));
   });
 
+  test('employer research reaches Vidya as proposed facts, with their sources', () async {
+    expect(employerFacts(null), isEmpty);
+    expect(
+      employerFacts(
+        const EmployerBrief({
+          'culture': [
+            {'point': 'Rated good by the regulator (2024).', 'source': 'https://example.org/report'},
+            {'point': 'Rated good by the regulator (2024).', 'source': 'https://example.org/report'},
+            {'point': 'No address.', 'source': 'example.org/report'},
+            {'point': '', 'source': 'https://example.org/empty'},
+          ],
+          'sources': [
+            {'title': 'Example inspection report', 'url': 'https://example.org/report'},
+          ],
+        }),
+      ),
+      [
+        {
+          'claim': 'Rated good by the regulator (2024).',
+          'url': 'https://example.org/report',
+          'title': 'Example inspection report',
+        },
+      ],
+    );
+
+    // Research saved after the job was sent goes out with the plan again.
+    final j = await job();
+    await book.sendJobToVidya(j, now: '2026-11-21T09:00:00Z');
+    Future<Map> journey() async =>
+        decodeObject((await book.db.select(book.db.bridgeStudyPlans).get()).single.plan)['journey'] as Map;
+    expect((await journey())['facts'], isNull);
+    expect((await journey())['advertText'], 'Support EPR systems and patient safety training across wards.');
+    await book.saveEmployerBrief(
+      'example health trust',
+      const AiResult({
+        'culture': [
+          {'point': 'A new day surgery unit opens in 2027.', 'source': 'https://example.org/strategy'},
+        ],
+      }),
+      at: '2026-11-22T09:00',
+    );
+    expect((await journey())['facts'], [
+      {'claim': 'A new day surgery unit opens in 2027.', 'url': 'https://example.org/strategy'},
+    ]);
+    // Research on another employer leaves it alone.
+    await book.saveEmployerBrief(
+      'Another Example Trust',
+      const AiResult({'culture': []}),
+      at: '2026-11-23T09:00',
+    );
+    expect((await journey())['facts'], hasLength(1));
+  });
+
   test('the job plan fixture shared with Vidya is current', () async {
     // Vidya's tests parse this file. Job ids are random: the fixture has a fixed one.
     final j = await job();
@@ -320,6 +375,24 @@ void journeyTests() {
       at: '2026-11-21T09:00',
     );
     expect(id, isNotEmpty);
+    await book.saveEmployerBrief(
+      'Example Health Trust',
+      const AiResult(
+        {
+          'employer': 'Example Health Trust',
+          'summary': 'A made-up hospital trust.',
+          'culture': [
+            {
+              'point': '64% of staff would recommend the trust as a place to work (2025).',
+              'source': 'https://example.org/staff-survey',
+            },
+            {'point': 'A point with no web address is left out.', 'source': ''},
+          ],
+        },
+        sources: [(title: 'Example staff survey 2025', url: 'https://example.org/staff-survey')],
+      ),
+      at: '2026-11-20T09:00',
+    );
     await book.sendJobToVidya(j, now: '2026-11-21T09:00:00Z');
     final plan = const JsonEncoder.withIndent('  ')
         .convert(decodeObject((await book.db.select(book.db.bridgeStudyPlans).get()).single.plan))

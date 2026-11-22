@@ -265,7 +265,8 @@ Json roleVidyaPlan(RoleInsight i) {
         'title': _clip('From Udyoga: ${i.role}', 200),
         'body': [
           'Made by Udyoga from its role insight for ${i.role} (${i.updated}).',
-          if (i.fit != null) 'Fit today: ${i.fit}%${i.fitAi != null ? ' (AI)' : ' (skills shown in your profile)'}.',
+          if (i.fit != null)
+            'Fit today: ${i.fit}%${i.fitAi != null ? ' (AI)' : ' (skills shown in your profile)'}.',
           if (i.timeToReach.isNotEmpty) 'Time to reach: ${i.timeToReach} (AI).',
           '',
           'Criteria:',
@@ -280,7 +281,10 @@ Json roleVidyaPlan(RoleInsight i) {
 
 /// A job journey for Vidya (plan format 3's `journey`): only the job's own
 /// data. The generic, dated stage templates live in Vidya, so nothing here
-/// teaches. Empty fields are left out.
+/// teaches. Empty fields are left out. [advertText] is the advert as saved,
+/// for Vidya's dossier; [facts] are claims about the employer with the web
+/// address each came from ([employerFacts]): Vidya keeps them as
+/// unverified inference until it finds the supporting sentence in a source.
 Json jobJourney({
   required String role,
   String employer = '',
@@ -288,6 +292,8 @@ Json jobJourney({
   String advertUrl = '',
   String? closes,
   String applicationStage = '',
+  String advertText = '',
+  List<Json> facts = const [],
 }) => {
   'role': _clip(role, 200),
   if (employer.isNotEmpty) 'employer': _clip(employer, 200),
@@ -295,7 +301,32 @@ Json jobJourney({
   if (advertUrl.startsWith('http')) 'advertUrl': _clip(advertUrl, 500),
   if (closes != null && isValidIsoDate(closes)) 'closes': closes,
   if (applicationStage.isNotEmpty) 'applicationStage': applicationStage,
+  if (advertText.trim().isNotEmpty) 'advertText': _clip(advertText.trim(), 20000),
+  if (facts.isNotEmpty) 'facts': facts.take(30).toList(),
 };
+
+/// The culture points of employer research that name the web address they
+/// come from, as journey facts (`claim`, `url`, `title`). The title is the
+/// brief's own name for that source, when it lists one. Points without a
+/// web address are left out: Vidya could never check them.
+List<Json> employerFacts(EmployerBrief? brief) {
+  if (brief == null) return const [];
+  final titles = {
+    for (final s in brief.sources)
+      if (str(s['url']).startsWith('http')) str(s['url']): str(s['title']),
+  };
+  final seen = <String>{};
+  return [
+    for (final c in brief.culture)
+      if ((claim: str(c['point']).trim(), url: str(c['source']).trim()) case (:final claim, :final url)
+          when claim.isNotEmpty && RegExp(r'^https?://').hasMatch(url) && seen.add('$claim|$url'))
+        {
+          'claim': _clip(claim, 2000),
+          'url': _clip(url, 500),
+          if (titles[url] case final t? when t.isNotEmpty) 'title': _clip(t, 200),
+        },
+  ];
+}
 
 /// The kind of employer a job is with, for Vidya's templates: `nhs`,
 /// `university`, `civil-service`, `private` or `other`. The interview
@@ -310,8 +341,7 @@ String journeySector({String employer = '', String framework = ''}) {
   }
   final e = ' ${employer.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ')} ';
   bool has(String words) => RegExp(' ($words) ').hasMatch(e);
-  if (has('nhs|hsc|health and social care|health board|ambulance service') ||
-      has('health') && has('trust')) {
+  if (has('nhs|hsc|health and social care|health board|ambulance service') || has('health') && has('trust')) {
     return 'nhs';
   }
   if (has('university|college')) return 'university';
@@ -326,9 +356,10 @@ String jobPlanId(String jobId) => 'udyoga.job.$jobId';
 /// A saved job as a Vidya plan with a journey ("Prepare this job"): the
 /// job's criteria (from its role profile, checked by the candidate, else
 /// the AI fit assessment's requirements), its employer, a sector guess,
-/// the advert's link and closing date, and where the application stands.
+/// the advert's link, text and closing date, where the application stands,
+/// and the employer research's sourced culture points ([brief]).
 /// A version 1 plan with a note, so an older Vidya still imports it.
-Json jobVidyaPlan(Job j, {RoleProfile? profile, JobApplication? application}) {
+Json jobVidyaPlan(Job j, {RoleProfile? profile, JobApplication? application, EmployerBrief? brief}) {
   final fit = j.assessment.isEmpty ? null : FitAssessment(decodeObject(j.assessment));
   final where = j.company.isEmpty ? j.title : '${j.title} at ${j.company}';
   final criteria = <Json>[
@@ -366,6 +397,8 @@ Json jobVidyaPlan(Job j, {RoleProfile? profile, JobApplication? application}) {
       advertUrl: j.url,
       closes: closes,
       applicationStage: application?.stage ?? '',
+      advertText: j.description,
+      facts: employerFacts(brief),
     ),
     'criteria': criteria,
     'courses': const [],
@@ -379,8 +412,7 @@ Json jobVidyaPlan(Job j, {RoleProfile? profile, JobApplication? application}) {
           if (j.url.startsWith('http')) 'Advert: ${j.url}',
           if (closes != null) 'Closes: ${niceDate(closes)}',
           if (application != null) 'Application: ${Stage.of(application.stage).label}',
-          if (criteria.isEmpty)
-            '',
+          if (criteria.isEmpty) '',
           if (criteria.isEmpty)
             'No criteria yet: read them from the advert on Udyoga\'s interview page, or add them in Vidya.',
         ].join('\n'),
@@ -490,7 +522,12 @@ extension VidyaLink on CareerBook {
     final id = rolePlanId(i.role);
     await save(
       db.bridgeStudyPlans,
-      BridgeStudyPlansCompanion.insert(id: id, source: 'udyoga', plan: jsonEncode(roleVidyaPlan(i)), updated: now),
+      BridgeStudyPlansCompanion.insert(
+        id: id,
+        source: 'udyoga',
+        plan: jsonEncode(roleVidyaPlan(i)),
+        updated: now,
+      ),
       id,
     );
     return id;
@@ -509,6 +546,7 @@ extension VidyaLink on CareerBook {
       j,
       profile: profile == null ? null : InterviewBook.roleProfileOf(profile),
       application: application,
+      brief: await employerBrief(j.company),
     );
   }
 
@@ -518,7 +556,12 @@ extension VidyaLink on CareerBook {
     final id = jobPlanId(j.id);
     await save(
       db.bridgeStudyPlans,
-      BridgeStudyPlansCompanion.insert(id: id, source: 'udyoga', plan: jsonEncode(await _jobPlan(j)), updated: now),
+      BridgeStudyPlansCompanion.insert(
+        id: id,
+        source: 'udyoga',
+        plan: jsonEncode(await _jobPlan(j)),
+        updated: now,
+      ),
       id,
     );
     return id;
@@ -537,6 +580,21 @@ extension VidyaLink on CareerBook {
     if (j == null) return;
     final plan = jsonEncode(await _jobPlan(j));
     if (plan != sent.plan) await save(db.bridgeStudyPlans, sent.copyWith(plan: plan, updated: now), sent.id);
+  }
+
+  /// Sends again every job plan already sent for [employer] (any case),
+  /// so new employer research reaches Vidya as proposed facts.
+  Future<void> refreshEmployerJourneys(String employer, {required String now}) async {
+    final key = employer.toLowerCase().trim();
+    if (key.isEmpty) return;
+    final sent = await (db.select(
+      db.bridgeStudyPlans,
+    )..where((p) => p.id.like('${jobPlanId('')}%') & p.deleted.not())).get();
+    for (final p in sent) {
+      final jobId = p.id.substring(jobPlanId('').length);
+      final j = await (db.select(db.jobListings)..where((x) => x.id.equals(jobId))).getSingleOrNull();
+      if (j != null && j.company.toLowerCase().trim() == key) await refreshJobJourney(jobId, now: now);
+    }
   }
 
   Future<VidyaBridge> vidyaBridge() async {
