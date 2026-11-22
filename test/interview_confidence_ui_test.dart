@@ -42,7 +42,9 @@ void main() {
     expect(find.text('How is a new starter supported?'), findsOneWidget);
     await app.tapText('Send drills to Vidya');
     final row = await tester.runAsync(
-      () => (app.book.db.select(app.book.db.bridgeStudyPlans)..where((p) => p.id.equals(drillsPlanId))).getSingle(),
+      () => (app.book.db.select(
+        app.book.db.bridgeStudyPlans,
+      )..where((p) => p.id.equals(drillsPlanId))).getSingle(),
     );
     final cardsSent = (jsonDecode(row!.plan) as Map)['cards'] as List;
     expect(

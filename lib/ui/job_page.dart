@@ -150,7 +150,9 @@ class JobPage extends ConsumerWidget {
               OutlinedButton.icon(
                 key: const Key('job-prepare'),
                 onPressed: () async {
-                  await ref.mutate((s) => s.book.sendJobToVidya(j, now: DateTime.now().toUtc().toIso8601String()));
+                  await ref.mutate(
+                    (s) => s.book.sendJobToVidya(j, now: DateTime.now().toUtc().toIso8601String()),
+                  );
                   if (!context.mounted) return;
                   showMessage(
                     context,

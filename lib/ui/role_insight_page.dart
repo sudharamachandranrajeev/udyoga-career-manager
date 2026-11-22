@@ -65,7 +65,11 @@ class _RoleInsightPageState extends ConsumerState<RoleInsightPage> {
     return RoleInsightBuilder(
       families: RoleFamilies(client, s.db),
       advisor: withAi ? ref.read(advisorProvider).value : null,
-      keyed: careerDataSources(client, ref.read(careerDataKeysProvider).value ?? const CareerDataKeys(), today: today()),
+      keyed: careerDataSources(
+        client,
+        ref.read(careerDataKeysProvider).value ?? const CareerDataKeys(),
+        today: today(),
+      ),
       today: today(),
     );
   }
@@ -132,7 +136,10 @@ class _RoleInsightPageState extends ConsumerState<RoleInsightPage> {
   Future<void> _study(RoleInsight i) async {
     await ref.mutate((s) => s.book.sendRoleToVidya(i, now: DateTime.now().toUtc().toIso8601String()));
     if (mounted) {
-      showMessage(context, 'Sent to Vidya. Open Vidya to add "Approach: ${i.role}" with its gaps and criteria.');
+      showMessage(
+        context,
+        'Sent to Vidya. Open Vidya to add "Approach: ${i.role}" with its gaps and criteria.',
+      );
     }
   }
 
@@ -148,9 +155,7 @@ class _RoleInsightPageState extends ConsumerState<RoleInsightPage> {
       for (final s in searches) s.role,
       for (final i in saved) i.role,
     }.where((r) => r.trim().isNotEmpty && !picked.contains(normalJobTitle(r))).toList();
-    final shown = [
-      for (final c in chosen) ?insights[roleInsightId(c)],
-    ];
+    final shown = [for (final c in chosen) ?insights[roleInsightId(c)]];
     return Scaffold(
       appBar: AppBar(
         title: const Text('Approach this role'),
@@ -177,9 +182,14 @@ class _RoleInsightPageState extends ConsumerState<RoleInsightPage> {
               spacing: 6,
               runSpacing: 6,
               children: [
-                for (final c in chosen) InputChip(label: Text(c), selected: true, onDeleted: () => _unpick(c)),
+                for (final c in chosen)
+                  InputChip(label: Text(c), selected: true, onDeleted: () => _unpick(c)),
                 for (final s in suggestions.take(10))
-                  ActionChip(avatar: const Icon(Icons.add, size: 16), label: Text(s), onPressed: () => _pick(s)),
+                  ActionChip(
+                    avatar: const Icon(Icons.add, size: 16),
+                    label: Text(s),
+                    onPressed: () => _pick(s),
+                  ),
               ],
             ),
             const SizedBox(height: 8),
@@ -228,7 +238,8 @@ class _RoleInsightPageState extends ConsumerState<RoleInsightPage> {
                     hasAi: hasAi,
                     onAsk: () => _ask(i),
                     onStudy: () => _study(i),
-                    onClose: () => _unpick(chosen.firstWhere((c) => roleInsightId(c) == i.id, orElse: () => i.role)),
+                    onClose: () =>
+                        _unpick(chosen.firstWhere((c) => roleInsightId(c) == i.id, orElse: () => i.role)),
                   ),
                 ),
           ],
@@ -349,7 +360,8 @@ class _RoleInsightCardState extends ConsumerState<RoleInsightCard> {
     );
   }
 
-  Widget _empty(String text) => Text(text, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant));
+  Widget _empty(String text) =>
+      Text(text, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant));
 
   String get _needsAi => widget.hasAi
       ? 'Press "Ask the AI" to fill this in.'
@@ -375,7 +387,11 @@ class _RoleInsightCardState extends ConsumerState<RoleInsightCard> {
                 Expanded(child: Text(i.role, style: t.titleLarge)),
                 FitBadge(i.fit, ai: i.fitAi != null),
                 if (widget.onClose != null)
-                  IconButton(tooltip: 'Take this role off', icon: const Icon(Icons.close), onPressed: widget.onClose),
+                  IconButton(
+                    tooltip: 'Take this role off',
+                    icon: const Icon(Icons.close),
+                    onPressed: widget.onClose,
+                  ),
               ],
             ),
             Text(
@@ -431,7 +447,9 @@ class _RoleInsightCardState extends ConsumerState<RoleInsightCard> {
                             message: f.reason,
                             child: Chip(
                               visualDensity: VisualDensity.compact,
-                              avatar: f.source == FamilySource.ai ? const Icon(Icons.auto_awesome, size: 14) : null,
+                              avatar: f.source == FamilySource.ai
+                                  ? const Icon(Icons.auto_awesome, size: 14)
+                                  : null,
                               label: Text(f.source == FamilySource.ai ? 'AI: ${f.title}' : f.title),
                             ),
                           ),
@@ -450,9 +468,16 @@ class _RoleInsightCardState extends ConsumerState<RoleInsightCard> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (essential.isNotEmpty)
-                    Text('Your profile shows $shownEssential of ${essential.length} essential skills ESCO lists.'),
+                    Text(
+                      'Your profile shows $shownEssential of ${essential.length} essential skills ESCO lists.',
+                    ),
                   if (i.fitAi != null)
-                    Row(children: [const AiTag(), Expanded(child: Text('Ready today: ${i.fitAi}%'))]),
+                    Row(
+                      children: [
+                        const AiTag(),
+                        Expanded(child: Text('Ready today: ${i.fitAi}%')),
+                      ],
+                    ),
                   for (final g in gaps)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -487,7 +512,9 @@ class _RoleInsightCardState extends ConsumerState<RoleInsightCard> {
                   if (i.criteria.any((c) => c.shown == true)) ...[
                     TextButton(
                       onPressed: () => setState(() => allCriteria = !allCriteria),
-                      child: Text(allCriteria ? 'Hide what you already show' : 'What your profile already shows'),
+                      child: Text(
+                        allCriteria ? 'Hide what you already show' : 'What your profile already shows',
+                      ),
                     ),
                     if (allCriteria)
                       Bullets(
@@ -500,7 +527,9 @@ class _RoleInsightCardState extends ConsumerState<RoleInsightCard> {
                       ),
                   ],
                   if (i.criteria.isEmpty && i.gaps.isEmpty)
-                    _empty('ESCO has no skills for this title yet (or was not reached). ${widget.hasAi ? _needsAi : ''}'),
+                    _empty(
+                      'ESCO has no skills for this title yet (or was not reached). ${widget.hasAi ? _needsAi : ''}',
+                    ),
                 ],
               ),
             ),
@@ -578,7 +607,8 @@ class _RoleInsightCardState extends ConsumerState<RoleInsightCard> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (c.experience.isNotEmpty) Text('You did: ${c.experience}', style: t.bodySmall),
+                                  if (c.experience.isNotEmpty)
+                                    Text('You did: ${c.experience}', style: t.bodySmall),
                                   _Said('Say: ${c.inTargetTerms}', c.from),
                                 ],
                               ),
@@ -608,7 +638,10 @@ class _RoleInsightCardState extends ConsumerState<RoleInsightCard> {
                     ),
                   ],
                   if (!i.path.any((s) => s.from.isAi))
-                    Padding(padding: const EdgeInsets.only(top: 8), child: _empty('Timeframes and odds: ${_needsAi.toLowerCase()}')),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: _empty('Timeframes and odds: ${_needsAi.toLowerCase()}'),
+                    ),
                 ],
               ),
             ),
@@ -663,7 +696,8 @@ class _Stone extends StatelessWidget {
           child: TextButton.icon(
             key: ValueKey('stone.search.${normalJobTitle(s.role)}'),
             onPressed: () =>
-                Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => RoleSearchPage(query: s.query))),
+                Navigator.of(context)
+                    .push(MaterialPageRoute<void>(builder: (_) => RoleSearchPage(query: s.query))),
             icon: const Icon(Icons.travel_explore, size: 18),
             label: const Text('Search these jobs'),
           ),
@@ -763,7 +797,12 @@ class RoleCompare extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [Text(label, style: t.labelMedium), if (ai) ...[const SizedBox(width: 6), const AiTag()]]),
+          Row(
+            children: [
+              Text(label, style: t.labelMedium),
+              if (ai) ...[const SizedBox(width: 6), const AiTag()],
+            ],
+          ),
           SelectableText(value.isEmpty ? 'Not known yet' : value),
         ],
       ),

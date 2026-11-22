@@ -89,8 +89,12 @@ class InsightSource {
 
   Json toJson() => {'from': from.name, 'label': label, 'url': url, 'date': date};
 
-  factory InsightSource.fromJson(Json j) =>
-      InsightSource(InsightFrom.of(str(j['from'])), label: str(j['label']), url: str(j['url']), date: str(j['date']));
+  factory InsightSource.fromJson(Json j) => InsightSource(
+    InsightFrom.of(str(j['from'])),
+    label: str(j['label']),
+    url: str(j['url']),
+    date: str(j['date']),
+  );
 }
 
 /// The sections of an insight, in the order shown, with their headings.
@@ -169,7 +173,13 @@ const gapSeverities = ['blocker', 'major', 'minor'];
 
 /// Something the role asks for that the profile does not show yet.
 class Gap {
-  const Gap({required this.text, required this.severity, this.howToClose = '', this.criterion = '', required this.from});
+  const Gap({
+    required this.text,
+    required this.severity,
+    this.howToClose = '',
+    this.criterion = '',
+    required this.from,
+  });
   final String text;
 
   /// blocker | major | minor.
@@ -267,7 +277,13 @@ class SteppingStone {
 
 /// A pay figure with its source and date.
 class PayFigure {
-  const PayFigure({required this.label, required this.amount, this.source = '', this.asOf = '', required this.from});
+  const PayFigure({
+    required this.label,
+    required this.amount,
+    this.source = '',
+    this.asOf = '',
+    required this.from,
+  });
   final String label, amount, source, asOf;
   final InsightFrom from;
 
@@ -311,11 +327,22 @@ class CvLine {
 }
 
 /// Where a stop sits on the career path.
-const pathStages = {'now': 'Now', 'stepping_stone': 'Stepping stone', 'target': 'Target', 'beyond': 'One step beyond'};
+const pathStages = {
+  'now': 'Now',
+  'stepping_stone': 'Stepping stone',
+  'target': 'Target',
+  'beyond': 'One step beyond',
+};
 
 /// One stop on the career path timeline.
 class PathStop {
-  const PathStop({required this.role, required this.stage, this.timeframe = '', this.likelihood, required this.from});
+  const PathStop({
+    required this.role,
+    required this.stage,
+    this.timeframe = '',
+    this.likelihood,
+    required this.from,
+  });
   final String role;
 
   /// now | stepping_stone | target | beyond.
@@ -595,15 +622,14 @@ class RoleInsight {
       cv: [for (final c in objs(j['cv'])) CvLine.fromJson(c)],
       path: [for (final s in objs(j['path'])) PathStop.fromJson(s)],
       sources: {
-        for (final e in obj(j['sources']).entries) e.key: [for (final s in objs(e.value)) InsightSource.fromJson(s)],
+        for (final e in obj(j['sources']).entries)
+          e.key: [for (final s in objs(e.value)) InsightSource.fromJson(s)],
       },
       web: [
         for (final s in objs(j['web']))
           if (str(s['url']).isNotEmpty) (title: str(s['title']), url: str(s['url'])),
       ],
-      keyed: [
-        for (final k in strs(j['keyed'])) ?InsightFrom.values.asNameMap()[k],
-      ],
+      keyed: [for (final k in strs(j['keyed'])) ?InsightFrom.values.asNameMap()[k]],
       problems: strs(j['problems']),
     );
   }
@@ -611,13 +637,17 @@ class RoleInsight {
   // The JSON shape the AI answers in, PathStep-like for the path.
   static final aiSchema = object({
     'summary': string('What the role is and does day to day, in two or three plain sentences'),
-    'fit': integer('0 to 100: how ready the candidate is for this role today. 70+ only if they meet nearly all essentials'),
+    'fit': integer(
+      '0 to 100: how ready the candidate is for this role today. 70+ only if they meet nearly all essentials',
+    ),
     'gaps': array(
       object({
         'gap': string('What the role needs that the CV does not show yet'),
         'severity': oneOf(gapSeverities, 'blocker: rules them out (a registration or licence); major; minor'),
         'howToClose': string('A concrete way to close or honestly address it'),
-        'criterion': string('The skill or requirement it falls short of, copied from known_criteria when it is one'),
+        'criterion': string(
+          'The skill or requirement it falls short of, copied from known_criteria when it is one',
+        ),
       }),
       description: 'Most serious first',
     ),
@@ -640,7 +670,9 @@ class RoleInsight {
       description: 'Two or three concrete roles, not generic advice',
     ),
     'pay': object({
-      'nhsBand': string('The Agenda for Change band or bands the role is usually on, e.g. "6" or "6-7"; \'\' when not NHS'),
+      'nhsBand': string(
+        'The Agenda for Change band or bands the role is usually on, e.g. "6" or "6-7"; \'\' when not NHS',
+      ),
       'figures': array(
         object({
           'label': string('e.g. "Starter", "Experienced"'),
@@ -796,13 +828,27 @@ RoleInsight offlineInsight(
     for (final (i, s) in skills.essential.indexed) {
       final ev = shownIn(s, lines);
       criteria.add(
-        RoleCriterion(id: 'e${i + 1}', text: s, essential: true, from: InsightFrom.esco, shown: ev != null, evidence: ev ?? ''),
+        RoleCriterion(
+          id: 'e${i + 1}',
+          text: s,
+          essential: true,
+          from: InsightFrom.esco,
+          shown: ev != null,
+          evidence: ev ?? '',
+        ),
       );
     }
     for (final (i, s) in skills.optional.indexed) {
       final ev = shownIn(s, lines);
       criteria.add(
-        RoleCriterion(id: 'o${i + 1}', text: s, essential: false, from: InsightFrom.esco, shown: ev != null, evidence: ev ?? ''),
+        RoleCriterion(
+          id: 'o${i + 1}',
+          text: s,
+          essential: false,
+          from: InsightFrom.esco,
+          shown: ev != null,
+          evidence: ev ?? '',
+        ),
       );
     }
   }
@@ -844,13 +890,26 @@ RoleInsight offlineInsight(
     checklist: [for (final c in peopleChecklist) Line(c, InsightFrom.udyoga)],
     path: [
       if (p.currentRole.isNotEmpty) PathStop(role: p.currentRole, stage: 'now', from: InsightFrom.profile),
-      PathStop(role: family.role.isEmpty ? role.trim() : family.role, stage: 'target', from: InsightFrom.profile),
+      PathStop(
+        role: family.role.isEmpty ? role.trim() : family.role,
+        stage: 'target',
+        from: InsightFrom.profile,
+      ),
     ],
     sources: {
       'about': aboutSources,
-      'fit': [if (skills != null) esco, InsightSource(InsightFrom.profile, label: 'Your profile', date: today)],
+      'fit': [
+        if (skills != null) esco,
+        InsightSource(InsightFrom.profile, label: 'Your profile', date: today),
+      ],
       'pay': [if (nhs) afcSource()],
-      'people': [InsightSource(InsightFrom.udyoga, label: 'Udyoga checklist; LinkedIn opened as a link only', date: today)],
+      'people': [
+        InsightSource(
+          InsightFrom.udyoga,
+          label: 'Udyoga checklist; LinkedIn opened as a link only',
+          date: today,
+        ),
+      ],
       'path': [InsightSource(InsightFrom.profile, label: 'Your profile', date: today)],
     },
     problems: problems,
@@ -876,7 +935,12 @@ List<FamilyTitle> stoneTitles(String role, {int max = 4}) {
 /// [i] with what keyed source [d] says added (ways in, pay, progression,
 /// stepping stones and a summary when there is none yet).
 RoleInsight withCareerData(RoleInsight i, CareerData d, {required String today}) {
-  final src = InsightSource(d.from, label: d.credit.text, url: d.url.isEmpty ? d.credit.url : d.url, date: today);
+  final src = InsightSource(
+    d.from,
+    label: d.credit.text,
+    url: d.url.isEmpty ? d.credit.url : d.url,
+    date: today,
+  );
   Map<String, List<InsightSource>> add(Iterable<String> sections) => {
     ...i.sources,
     for (final s in sections) s: [...?i.sources[s], src],
@@ -953,7 +1017,10 @@ RoleInsight withAi(
         text: text,
         severity: sev,
         howToClose: str(g['howToClose']),
-        criterion: criterionFor(str(g['criterion']).isEmpty ? text : str(g['criterion']), essential: sev != 'minor'),
+        criterion: criterionFor(
+          str(g['criterion']).isEmpty ? text : str(g['criterion']),
+          essential: sev != 'minor',
+        ),
         from: ai,
       ),
     );
@@ -971,9 +1038,7 @@ RoleInsight withAi(
     if (text.isEmpty) continue;
     final c = str(m['criterion']);
     final gapMatch = aiGaps.where((g) => g.text.toLowerCase() == c.toLowerCase()).firstOrNull;
-    moves.add(
-      Move(text, criterion: gapMatch?.criterion ?? criterionFor(c, essential: false), from: ai),
-    );
+    moves.add(Move(text, criterion: gapMatch?.criterion ?? criterionFor(c, essential: false), from: ai));
   }
 
   final haveStones = {for (final s in base.stones) _key(s.role)};
@@ -989,7 +1054,12 @@ RoleInsight withAi(
           titles: _dedupeTitles([
             ...stoneTitles(str(s['role'])),
             for (final t in strs(s['exampleTitles']).take(4))
-              FamilyTitle(title: t, reason: 'AI suggestion', closeness: Closeness.related, source: FamilySource.ai),
+              FamilyTitle(
+                title: t,
+                reason: 'AI suggestion',
+                closeness: Closeness.related,
+                source: FamilySource.ai,
+              ),
           ]),
         ),
   ];
@@ -1110,7 +1180,11 @@ RoleInsight withoutAi(RoleInsight i) {
     cv: i.cv.where((c) => keep(c.from)).toList(),
     path: i.path.any((s) => s.from.isAi) ? _skeletonPath(i) : i.path,
     sources: {
-      for (final e in i.sources.entries) e.key: [for (final s in e.value) if (keep(s.from)) s],
+      for (final e in i.sources.entries)
+        e.key: [
+          for (final s in e.value)
+            if (keep(s.from)) s,
+        ],
     },
     keyed: i.keyed,
     problems: i.problems,
@@ -1138,7 +1212,12 @@ class RoleInsightBuilder {
 
   /// The shipped and cached part for [role]: no AI, no keyed sources. With
   /// [offline], ESCO answers come from the device cache only.
-  Future<RoleInsight> offline(String role, CandidateProfile p, {bool offline = false, String? created}) async {
+  Future<RoleInsight> offline(
+    String role,
+    CandidateProfile p, {
+    bool offline = false,
+    String? created,
+  }) async {
     final problems = <String>[];
     var family = offlineFamily(role);
     RoleSkills? skills;
@@ -1148,7 +1227,15 @@ class RoleInsightBuilder {
     } on Object {
       problems.add('ESCO could not be reached; skills are left out until it can.');
     }
-    return offlineInsight(role, p, family: family, skills: skills, today: today, created: created, problems: problems);
+    return offlineInsight(
+      role,
+      p,
+      family: family,
+      skills: skills,
+      today: today,
+      created: created,
+      problems: problems,
+    );
   }
 
   /// [i] with every keyed source's data added. A source that fails is

@@ -62,7 +62,13 @@ class CareerDataKeys {
 
 /// The credit a data source asks for, with its link.
 class DataCredit {
-  const DataCredit({required this.name, required this.text, required this.url, this.licenceUrl = '', this.note = ''});
+  const DataCredit({
+    required this.name,
+    required this.text,
+    required this.url,
+    this.licenceUrl = '',
+    this.note = '',
+  });
   final String name, text, url, licenceUrl, note;
 }
 
@@ -99,7 +105,8 @@ final onsCredit = DataCredit(
 
 const escoDataCredit = DataCredit(
   name: 'ESCO',
-  text: '$escoCredit Udyoga filters and combines ESCO labels with other data, so what it shows is a modified version.',
+  text:
+      '$escoCredit Udyoga filters and combines ESCO labels with other data, so what it shows is a modified version.',
   url: 'https://esco.ec.europa.eu/',
 );
 
@@ -154,15 +161,18 @@ abstract interface class CareerDataSource {
 }
 
 /// The keyed sources [keys] switch on (none without keys).
-List<CareerDataSource> careerDataSources(http.Client client, CareerDataKeys keys, {required String today}) => [
-  if (keys.ncs.isNotEmpty) NcsJobProfiles(client, key: keys.ncs, today: today),
-  if (keys.skillsEngland.isNotEmpty) SkillsEnglandMaps(client, key: keys.skillsEngland, today: today),
-];
+List<CareerDataSource> careerDataSources(http.Client client, CareerDataKeys keys, {required String today}) =>
+    [
+      if (keys.ncs.isNotEmpty) NcsJobProfiles(client, key: keys.ncs, today: today),
+      if (keys.skillsEngland.isNotEmpty) SkillsEnglandMaps(client, key: keys.skillsEngland, today: today),
+    ];
 
 Future<Object?> _get(http.Client client, Uri uri, Map<String, String> headers, String who) async {
   final http.Response r;
   try {
-    r = await client.get(uri, headers: {'accept': 'application/json', ...headers}).timeout(const Duration(seconds: 30));
+    r = await client
+        .get(uri, headers: {'accept': 'application/json', ...headers})
+        .timeout(const Duration(seconds: 30));
   } on Exception catch (e) {
     throw FeedException('$who could not be reached ($e)');
   }
@@ -239,7 +249,10 @@ class NcsJobProfiles implements CareerDataSource {
     final hits = found is List ? found : (_field(found, 'results') as List? ?? const []);
     if (hits.isEmpty) return null;
     final k = normalJobTitle(role);
-    final best = hits.firstWhere((h) => normalJobTitle(str(_field(h, 'title'))) == k, orElse: () => hits.first);
+    final best = hits.firstWhere(
+      (h) => normalJobTitle(str(_field(h, 'title'))) == k,
+      orElse: () => hits.first,
+    );
     final profile = canonical(best);
     if (profile.isEmpty) return null;
     final p = await _get(client, _uri(profile), _headers, name);
@@ -298,7 +311,8 @@ class SkillsEnglandMaps implements CareerDataSource {
   static const defaultBase = 'https://occupational-maps-api.skillsengland.education.gov.uk/api/v1';
   final String base;
 
-  static const expand = 'occupation.summary,occupation.typicaljobtitles,occupation.products,occupation.salary';
+  static const expand =
+      'occupation.summary,occupation.typicaljobtitles,occupation.products,occupation.salary';
 
   @override
   String get name => 'Skills England';
@@ -403,7 +417,13 @@ CareerData parseSkillsEngland(Json occupation, Object? progression, {required St
     waysIn: waysIn,
     pay: [
       if (median != null && median > 0)
-        PayFigure(label: 'Median', amount: _money(median), source: 'Skills England occupational maps', asOf: today, from: from),
+        PayFigure(
+          label: 'Median',
+          amount: _money(median),
+          source: 'Skills England occupational maps',
+          asOf: today,
+          from: from,
+        ),
     ],
     progression: [if (next.isNotEmpty) 'Skills England maps progression on to: ${next.take(4).join(', ')}.'],
     stones: stones.take(3).toList(),

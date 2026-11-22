@@ -269,8 +269,9 @@ class VidyaReadiness {
   int get missing => rows.where((r) => r.missing).length;
 
   /// "Vidya readiness: 2 weak, 1 missing", or every criterion covered.
-  String get text =>
-      rows.isEmpty ? 'Vidya readiness: every criterion covered' : 'Vidya readiness: $weak weak, $missing missing';
+  String get text => rows.isEmpty
+      ? 'Vidya readiness: every criterion covered'
+      : 'Vidya readiness: $weak weak, $missing missing';
 
   /// The essential rows, the ones that become drill cards.
   List<VidyaReadinessRow> get essentialGaps => [
@@ -434,7 +435,13 @@ extension VidyaPractice on CareerBook {
       final rows = parseVidyaReadiness(p.progress);
       if (rows == null) continue;
       final role = str(decodeObject(plan.plan)['role']);
-      out.add(VidyaReadiness(planId: p.id, role: role.isEmpty ? p.id.substring(rolePlanPrefix.length) : role, rows: rows));
+      out.add(
+        VidyaReadiness(
+          planId: p.id,
+          role: role.isEmpty ? p.id.substring(rolePlanPrefix.length) : role,
+          rows: rows,
+        ),
+      );
     }
     return out;
   }
