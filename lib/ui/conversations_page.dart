@@ -11,6 +11,7 @@ import '../domain/countries.dart';
 import '../domain/fill_drafts.dart';
 import '../domain/humanizer.dart';
 import '../domain/pipeline.dart';
+import '../domain/vidya_drafts.dart';
 import 'accounts_page.dart';
 import 'common.dart';
 import 'kit/kit.dart';
@@ -815,6 +816,12 @@ extension on MessageBubble {
 
 // ---- the composer ----
 
+/// Email drafts Vidya's job journey sent over, newest first.
+final vidyaDraftsProvider = FutureProvider<List<VidyaDraft>>((ref) {
+  ref.watch(revisionProvider);
+  return ref.watch(sessionProvider).book.vidyaDrafts();
+});
+
 /// The text box and what can be done with it, by channel. Hand channels
 /// (LinkedIn, phone, Bluesky until it is connected) copy the text and open
 /// the page; the user sends it there and comes back to log it. E-mail with
@@ -858,6 +865,7 @@ class _ComposerState extends ConsumerState<Composer> {
     final hasAi = ref.watch(advisorProvider).value != null;
     final messages = ref.watch(threadMessagesProvider(thread.id)).value ?? const <ThreadMessage>[];
     final first = !messages.any((m) => m.direction == 'out');
+    final drafts = ref.watch(vidyaDraftsProvider).value ?? const <VidyaDraft>[];
     final opener = howIFoundYou(l);
     final sender = senderFor(thread, ref.watch(channelSendersProvider));
     final target = sender != null ? null : openTarget(thread, l, subject: thread.subject, body: '');
@@ -893,6 +901,13 @@ class _ComposerState extends ConsumerState<Composer> {
               runSpacing: 8,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
+                if (drafts.isNotEmpty)
+                  OutlinedButton.icon(
+                    key: const Key('composer-from-vidya'),
+                    onPressed: () => _fromVidya(drafts),
+                    icon: const Icon(Icons.school_outlined),
+                    label: const Text('From Vidya'),
+                  ),
                 if (hasAi)
                   OutlinedButton.icon(
                     onPressed: () => _draft(first),
@@ -978,6 +993,38 @@ class _ComposerState extends ConsumerState<Composer> {
       if (mounted) setState(() => sending = false);
     }
   }
+
+  /// Puts a draft from Vidya's job journey in the message box, to edit
+  /// and send as any other message. Its subject is shown, not inserted.
+  Future<void> _fromVidya(List<VidyaDraft> drafts) => showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (sheet) => ListView(
+      shrinkWrap: true,
+      children: [
+        const ListTile(
+          title: Text('Drafts from Vidya'),
+          subtitle: Text('Picking one puts its text in the message box. Nothing is sent until you send it.'),
+        ),
+        for (final d in drafts)
+          ListTile(
+            key: Key('vidya-draft-${d.id}'),
+            title: Text(d.title.ifEmpty(d.template)),
+            subtitle: Text(
+              [
+                if (d.role.isNotEmpty || d.employer.isNotEmpty)
+                  [d.role, d.employer].where((x) => x.isNotEmpty).join(' at '),
+                if (d.subject.isNotEmpty) 'Subject: ${d.subject}',
+              ].join('\n'),
+            ),
+            onTap: () {
+              Navigator.pop(sheet);
+              setState(() => text.text = d.body);
+            },
+          ),
+      ],
+    ),
+  );
 
   Future<void> _copyAndOpen() async {
     final body = text.text.trim();

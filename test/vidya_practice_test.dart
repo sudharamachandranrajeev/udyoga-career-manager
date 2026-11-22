@@ -13,6 +13,7 @@ import 'package:udyoga/domain/insights.dart';
 import 'package:udyoga/domain/interview_book.dart';
 import 'package:udyoga/domain/interview_confidence.dart';
 import 'package:udyoga/domain/json.dart';
+import 'package:udyoga/domain/vidya_drafts.dart';
 import 'package:udyoga/domain/vidya_link.dart';
 import 'package:udyoga/domain/vidya_practice.dart';
 
@@ -72,7 +73,10 @@ void main() {
 
     test('an ordinary progress report is not a request row, and junk is skipped', () {
       expect(parsePractiseRequests(File('test/fixtures/vidya-progress.json').readAsStringSync()), isEmpty);
-      expect(parsePractiseRequests(File('test/fixtures/vidya-drills-progress.json').readAsStringSync()), isEmpty);
+      expect(
+        parsePractiseRequests(File('test/fixtures/vidya-drills-progress.json').readAsStringSync()),
+        isEmpty,
+      );
       expect(parsePractiseRequests('not json'), isEmpty);
       expect(
         parsePractiseRequests(
@@ -141,57 +145,72 @@ void main() {
       expect((await book.roundRecord(other))!.round.role, 'Vidya drill');
     });
 
-    test('after the round the score goes back in exactly Vidya\'s shape (fixture shared with Vidya)', () async {
-      final r = await request();
-      final id = await book.startVidyaPractice(r, at: '2026-11-21T11:00');
-      expect(await book.recordVidyaPractice(id, now: '2026-11-21T11:05:00Z', day: '2026-11-21'), isNull,
-          reason: 'nothing answered yet');
-      await book.saveTranscript(id, 0, goodAnswer, at: '2026-11-21T11:03');
-      final result = (await book.recordVidyaPractice(id, now: '2026-11-21T11:05:00Z', day: '2026-11-21'))!;
-      expect((result.id, result.day, result.score, result.max), ('vidya-drill-q2', '2026-11-21', 2, 2));
+    test(
+      'after the round the score goes back in exactly Vidya\'s shape (fixture shared with Vidya)',
+      () async {
+        final r = await request();
+        final id = await book.startVidyaPractice(r, at: '2026-11-21T11:00');
+        expect(
+          await book.recordVidyaPractice(id, now: '2026-11-21T11:05:00Z', day: '2026-11-21'),
+          isNull,
+          reason: 'nothing answered yet',
+        );
+        await book.saveTranscript(id, 0, goodAnswer, at: '2026-11-21T11:03');
+        final result = (await book.recordVidyaPractice(id, now: '2026-11-21T11:05:00Z', day: '2026-11-21'))!;
+        expect((result.id, result.day, result.score, result.max), ('vidya-drill-q2', '2026-11-21', 2, 2));
 
-      final row = await (book.db.select(book.db.bridgeStudyPlans)..where((p) => p.id.equals(practiseResultsId)))
-          .getSingle();
-      expect((row.source, row.updated, row.deleted), ('udyoga', '2026-11-21T11:05:00Z', false));
-      final j = jsonDecode(row.plan) as Map<String, Object?>;
-      expect(j.keys, ['format', 'version', 'results']);
-      expect((j['format'], j['version']), ('udyoga-practise-results', 1));
-      final entry = (j['results'] as List).single as Map;
-      expect(entry.keys.toSet(), {'id', 'day', 'score', 'max', 'summary'});
-      expect((entry['summary'] as String).length, lessThanOrEqualTo(200));
-      expect(entry['summary'], startsWith('Evidenced.'));
+        final row = await (book.db.select(
+          book.db.bridgeStudyPlans,
+        )..where((p) => p.id.equals(practiseResultsId))).getSingle();
+        expect((row.source, row.updated, row.deleted), ('udyoga', '2026-11-21T11:05:00Z', false));
+        final j = jsonDecode(row.plan) as Map<String, Object?>;
+        expect(j.keys, ['format', 'version', 'results']);
+        expect((j['format'], j['version']), ('udyoga-practise-results', 1));
+        final entry = (j['results'] as List).single as Map;
+        expect(entry.keys.toSet(), {'id', 'day', 'score', 'max', 'summary'});
+        expect((entry['summary'] as String).length, lessThanOrEqualTo(200));
+        expect(entry['summary'], startsWith('Evidenced.'));
 
-      final fixture = File('test/fixtures/udyoga-practise-results.json');
-      final text = const JsonEncoder.withIndent('  ').convert(j);
-      if (!fixture.existsSync() || Platform.environment['UPDATE_FIXTURES'] == '1') {
-        await fixture.writeAsString('$text\n');
-      }
-      expect(await fixture.readAsString(), '$text\n');
+        final fixture = File('test/fixtures/udyoga-practise-results.json');
+        final text = const JsonEncoder.withIndent('  ').convert(j);
+        if (!fixture.existsSync() || Platform.environment['UPDATE_FIXTURES'] == '1') {
+          await fixture.writeAsString('$text\n');
+        }
+        expect(await fixture.readAsString(), '$text\n');
 
-      // Practised now, so no longer pending.
-      expect((await book.pendingPractiseRequests()).map((x) => x.id), ['vidya-drill-q1']);
-      // An ordinary round sends nothing.
-      final plain = await book.startPractice(
-        role: 'Common questions',
-        mode: 'standard',
-        questions: const [PracticeQuestion({'question': 'Why this role?'})],
-        at: '2026-11-21T12:00',
-      );
-      await book.saveTranscript(plain, 0, goodAnswer, at: '2026-11-21T12:01');
-      expect(await book.recordVidyaPractice(plain, now: 'T'), isNull);
-    });
+        // Practised now, so no longer pending.
+        expect((await book.pendingPractiseRequests()).map((x) => x.id), ['vidya-drill-q1']);
+        // An ordinary round sends nothing.
+        final plain = await book.startPractice(
+          role: 'Common questions',
+          mode: 'standard',
+          questions: const [
+            PracticeQuestion({'question': 'Why this role?'}),
+          ],
+          at: '2026-11-21T12:00',
+        );
+        await book.saveTranscript(plain, 0, goodAnswer, at: '2026-11-21T12:01');
+        expect(await book.recordVidyaPractice(plain, now: 'T'), isNull);
+      },
+    );
 
     test('a thin answer scores 1 of 2 on the matcher', () async {
       final r = await request();
       final id = await book.startVidyaPractice(r, at: '2026-11-21T11:00');
-      await book.saveTranscript(id, 0, 'I set up the records system and I updated it every day.', at: '2026-11-21T11:03');
+      await book.saveTranscript(
+        id,
+        0,
+        'I set up the records system and I updated it every day.',
+        at: '2026-11-21T11:03',
+      );
       final result = (await book.recordVidyaPractice(id, now: 'N', day: '2026-11-21'))!;
       expect((result.score, result.max), (1, 2));
       expect(result.summary, startsWith('Thin.'));
     });
 
     test('results merge: newest first, one per drill and day, at most 50', () {
-      PractiseResult res(String id, String day, num score) => PractiseResult(id: id, day: day, score: score, max: 2);
+      PractiseResult res(String id, String day, num score) =>
+          PractiseResult(id: id, day: day, score: score, max: 2);
       var plan = mergePractiseResults(null, res('a', '2026-11-20', 1));
       plan = mergePractiseResults(plan, res('b', '2026-11-21', 2));
       plan = mergePractiseResults(plan, res('a', '2026-11-21', 0));
@@ -202,7 +221,10 @@ void main() {
         ('a', '2026-11-20', 1),
       ]);
       for (var i = 0; i < 60; i++) {
-        plan = mergePractiseResults(plan, res('d$i', '2026-12-${(i % 28 + 1).toString().padLeft(2, '0')}', 1));
+        plan = mergePractiseResults(
+          plan,
+          res('d$i', '2026-12-${(i % 28 + 1).toString().padLeft(2, '0')}', 1),
+        );
       }
       final all = parsePractiseResults(plan);
       expect(all.length, maxPractiseResults);
@@ -225,8 +247,9 @@ void main() {
       expect((await book.vidyaBridge()).sent, isNull);
       expect((await book.drillsSent()).sent, isNull);
       expect(await CareerFileSync(book, device: 'laptop').syncPlans(now: '2026-11-21T12:00:00Z'), 0);
-      final row = await (book.db.select(book.db.bridgeStudyPlans)..where((p) => p.id.equals(practiseResultsId)))
-          .getSingle();
+      final row = await (book.db.select(
+        book.db.bridgeStudyPlans,
+      )..where((p) => p.id.equals(practiseResultsId))).getSingle();
       expect(row.deleted, isFalse, reason: 'the career-file sync only manages its own plan rows');
     });
   });
@@ -246,11 +269,8 @@ void main() {
       planId,
     );
 
-    String progress(List<Map<String, Object>>? readiness) => jsonEncode({
-      'learning': [],
-      'skills': [],
-      'readiness': ?readiness,
-    });
+    String progress(List<Map<String, Object>>? readiness) =>
+        jsonEncode({'learning': [], 'skills': [], 'readiness': ?readiness});
 
     final weakAndMissing = [
       {'criterionId': 'e2', 'text': 'Handle a difficult learner calmly', 'status': 'weak', 'essential': true},
@@ -310,7 +330,10 @@ void main() {
         startsWith('udyoga.drill.readiness.clinical-systems-trainer.t'),
       ], reason: 'essential only; the desirable d1 stays in Vidya');
       final typedId = cards.last['id'];
-      expect(cards[1]['front'], 'This role needs keep training records. Tell us about a time you showed this.');
+      expect(
+        cards[1]['front'],
+        'This role needs keep training records. Tell us about a time you showed this.',
+      );
       expect(cards[1]['back'], contains('Vidya readiness for $role: missing'));
       expect((cards.first['deck'], cards.first['course']), (drillsDeck, 'Interview drills'));
 
@@ -328,8 +351,9 @@ void main() {
 
       // Sent on the existing drills path.
       await book.sendDrills(now: '2026-11-21T09:00:00Z');
-      final row = await (book.db.select(book.db.bridgeStudyPlans)..where((p) => p.id.equals(drillsPlanId)))
-          .getSingle();
+      final row = await (book.db.select(
+        book.db.bridgeStudyPlans,
+      )..where((p) => p.id.equals(drillsPlanId))).getSingle();
       final sent = jsonDecode(row.plan) as Json;
       expect(gapCards(sent).length, 2);
       expect(
@@ -342,7 +366,9 @@ void main() {
       expect(gapCards(await book.drillsPlanNow()), isEmpty);
       // And a role plan taken back takes its readiness with it.
       await vidyaWrites(planId, progress(weakAndMissing));
-      final plan = await (book.db.select(book.db.bridgeStudyPlans)..where((p) => p.id.equals(planId))).getSingle();
+      final plan = await (book.db.select(
+        book.db.bridgeStudyPlans,
+      )..where((p) => p.id.equals(planId))).getSingle();
       await book.save(book.db.bridgeStudyPlans, plan.copyWith(deleted: true), planId);
       expect(gapCards(await book.drillsPlanNow()), isEmpty);
     });
@@ -350,11 +376,61 @@ void main() {
     test('ids stay the same for the same role and criterion', () {
       const row = VidyaReadinessRow(criterionId: '', text: 'Full UK driving licence', status: 'missing');
       final a = readinessDrillId(planId, row);
-      expect(readinessDrillId(planId, const VidyaReadinessRow(criterionId: '', text: ' full uk driving licence ', status: 'weak')), a);
       expect(
-        readinessDrillId(planId, const VidyaReadinessRow(criterionId: 'esco/skill:1 2', text: 'x', status: 'weak')),
+        readinessDrillId(
+          planId,
+          const VidyaReadinessRow(criterionId: '', text: ' full uk driving licence ', status: 'weak'),
+        ),
+        a,
+      );
+      expect(
+        readinessDrillId(
+          planId,
+          const VidyaReadinessRow(criterionId: 'esco/skill:1 2', text: 'x', status: 'weak'),
+        ),
         'udyoga.drill.readiness.clinical-systems-trainer.esco-skill-1-2',
       );
+    });
+  });
+
+  group('email drafts from Vidya', () {
+    // Written by Vidya's tests (test/fixtures/vidya-email-drafts.json there).
+    final draftsJson = File('test/fixtures/vidya-email-drafts.json').readAsStringSync();
+
+    test('Vidya\'s drafts row reads newest first, every field kept; other rows are not drafts', () async {
+      final d = parseVidyaDrafts(draftsJson);
+      expect(d.map((x) => x.template), ['feedback', 'chase']);
+      final f = d.first;
+      expect(
+        (f.id, f.title, f.subject, f.employer, f.role, f.at),
+        (
+          'fixture-feedback',
+          'Ask for feedback by criterion',
+          'Feedback on my interview for Example Officer',
+          'Example Health Trust',
+          'Example Officer',
+          '2026-12-06T09:00:00Z',
+        ),
+      );
+      expect(f.body, 'Dear Hiring Manager,\n\nThank you for interviewing me.');
+      expect(parseVidyaDrafts(requestsJson), isEmpty);
+      expect(parseVidyaDrafts('not json'), isEmpty);
+      expect(
+        parseVidyaDrafts(
+          jsonEncode({
+            'format': 'vidya-email-drafts',
+            'drafts': [
+              {'id': 'a', 'body': ''},
+              {'id': '', 'body': 'x'},
+              {'id': 'b', 'body': 'x' * 6000},
+            ],
+          }),
+        ).single.body.length,
+        maxDraftBody,
+      );
+      expect(await book.vidyaDrafts(), isEmpty);
+      await vidyaWrites(emailDraftsId, draftsJson);
+      expect((await book.vidyaDrafts()).map((x) => x.id), ['fixture-feedback', 'fixture-chase']);
     });
   });
 }
