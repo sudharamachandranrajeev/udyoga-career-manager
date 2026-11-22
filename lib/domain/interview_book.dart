@@ -2,15 +2,13 @@ import 'dart:convert';
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:drift/drift.dart';
+import 'package:interview_engine/interview_engine.dart';
 
 import '../db/database.dart';
 import 'book.dart';
 import 'companion.dart' show StoryDraft;
 import 'insights.dart';
-import 'interview_process.dart';
-import 'interview_scoring.dart';
 import 'json.dart';
-import 'process_summary.dart';
 
 /// The interview records of plan I3: role profiles, saved processes, the
 /// panel scoring of a round and stories saved from practice. All of it is

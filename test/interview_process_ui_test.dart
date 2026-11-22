@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:udyoga/domain/interview_plan.dart';
-import 'package:udyoga/domain/interview_process.dart';
+import 'package:interview_engine/interview_engine.dart';
 import 'package:udyoga/ui/interview_process_page.dart';
 import 'package:udyoga/ui/spoken_round_page.dart' show spokenEnginesProvider;
 

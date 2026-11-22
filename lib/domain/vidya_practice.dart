@@ -16,12 +16,12 @@ import 'dart:convert';
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:drift/drift.dart';
+import 'package:interview_engine/interview_engine.dart';
 
 import '../db/database.dart';
 import 'book.dart';
 import 'insights.dart';
 import 'interview_book.dart';
-import 'interview_scoring.dart';
 import 'json.dart';
 import 'vidya_link.dart' show rolePlanId;
 

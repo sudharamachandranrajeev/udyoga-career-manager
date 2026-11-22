@@ -1,3 +1,5 @@
+import 'package:interview_engine/interview_engine.dart' show storyFromAnswer;
+
 import 'json.dart';
 import 'schema.dart';
 
@@ -92,6 +94,25 @@ class StoryDraft {
     'result': string('What changed, with figures only when the source gives them; "" when unknown'),
     'competencies': array(oneOf(competencyNames.keys.toList()), description: 'The competencies it proves'),
   });
+}
+
+/// A story-bank draft from a practice answer, with no AI: the interview
+/// engine sorts the sentences, and the competencies come from
+/// [competencyNames]. The candidate checks it before it counts.
+StoryDraft practiceStory({required String title, required String answer, List<String> criteria = const []}) {
+  final s = storyFromAnswer(
+    title: title,
+    answer: answer,
+    criteria: criteria,
+    competencies: competencyNames.keys,
+  );
+  return StoryDraft(
+    title: s.title,
+    situation: s.situation,
+    action: s.action,
+    result: s.result,
+    competencies: s.competencies,
+  );
 }
 
 /// What the AI read from one document.

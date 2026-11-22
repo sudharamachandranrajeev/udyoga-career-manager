@@ -12,12 +12,13 @@ library;
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:interview_engine/interview_engine.dart';
 
 import '../app/interview_providers.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
+import '../domain/companion.dart' show practiceStory;
 import '../domain/interview_book.dart';
-import '../domain/interview_scoring.dart';
 import '../domain/json.dart';
 import 'common.dart';
 import 'interview_device_ui.dart' show OfflineBadge;
@@ -476,7 +477,7 @@ class _DebriefPageState extends ConsumerState<DebriefPage> {
     final criteria = [
       for (final id in n.evidenced) ?l.data.criteria.where((c) => c.id == id).firstOrNull?.text,
     ];
-    final draft = storyFromAnswer(title: q.question.question, answer: q.heard, criteria: criteria);
+    final draft = practiceStory(title: q.question.question, answer: q.heard, criteria: criteria);
     final id = await ref.mutate(
       (s) => s.book.saveStoryFromPractice(draft, roundId: l.round.id, criteria: criteria, today: today()),
     );

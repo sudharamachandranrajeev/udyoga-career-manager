@@ -7,12 +7,12 @@ library;
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:interview_engine/interview_engine.dart';
 
 import '../db/database.dart';
 import 'book.dart';
 import 'companion_book.dart';
 import 'interview_book.dart';
-import 'interview_scoring.dart';
 import 'json.dart';
 import 'vidya_link.dart' show studyPlanId;
 import 'vidya_practice.dart';

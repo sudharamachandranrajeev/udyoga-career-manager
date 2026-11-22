@@ -1,17 +1,15 @@
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:interview_engine/interview_engine.dart';
 
 import '../app/navigation.dart';
 import '../app/interview_providers.dart';
 import '../app/providers.dart';
 import '../db/database.dart';
-import '../domain/answer_metrics.dart';
 import '../domain/common_questions.dart';
 import '../domain/insights.dart';
 import '../domain/interview_confidence.dart';
-import '../domain/interview_process.dart';
-import '../domain/interview_scoring.dart' show Framework;
 import '../domain/json.dart';
 import 'camera_coach_ui.dart';
 import 'common.dart';

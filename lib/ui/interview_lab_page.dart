@@ -9,15 +9,10 @@ import 'dart:io';
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:interview_engine/interview_engine.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../app/providers.dart';
-import '../domain/offline_guard.dart' show offlineDownloadMessage;
-import '../vision/blazeface.dart';
-import '../vision/face_camera.dart';
-import '../voice/lab.dart';
-import '../voice/models.dart';
-import '../voice/native_engines.dart';
 import 'interview_device_ui.dart' show OfflineBadge, offlinePractice;
 
 /// Device-only: "on" shows the Developer tools (the interview lab).

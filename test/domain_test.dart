@@ -10,7 +10,6 @@ import 'package:http/testing.dart';
 import 'package:udyoga/app/providers.dart';
 import 'package:udyoga/app/security_checks.dart';
 import 'package:udyoga/db/database.dart';
-import 'package:udyoga/domain/answer_metrics.dart';
 import 'package:udyoga/domain/book.dart';
 import 'package:udyoga/domain/calendar.dart';
 import 'package:udyoga/domain/ai.dart';
@@ -704,19 +703,6 @@ void main() {
       );
       expect(near, greaterThan(far));
       expect(near, inInclusiveRange(0, 100));
-    });
-
-    test('answer metrics count fillers, ownership, figures and STAR', () {
-      final m = AnswerMetrics.of(
-        'Um, so basically we had late observations. I set up a pilot and I trained 40 staff. '
-        'As a result late observations fell 30%.',
-      );
-      expect(m.fillers, 2);
-      expect(m.iCount, 2);
-      expect(m.weCount, 1);
-      expect(m.figures, 2);
-      expect(m.star, contains('Result'));
-      expect(m.lengthVerdict, startsWith('Short'));
     });
 
     test('calendar files fold long lines without splitting characters', () {

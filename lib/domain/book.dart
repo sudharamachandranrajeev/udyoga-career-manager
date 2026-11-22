@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:drift/drift.dart';
+import 'package:interview_engine/interview_engine.dart' show CoachPrefs, InterviewDevice, RoundSettings;
 
 import '../db/database.dart';
 import 'ai.dart';
@@ -10,7 +11,6 @@ import 'conversations.dart';
 import 'eligibility.dart';
 import 'feeds.dart';
 import 'insights.dart';
-import 'interview_plan.dart' show CoachPrefs, InterviewDevice, RoundSettings;
 import 'job_identity.dart';
 import 'json.dart';
 import 'linkedin_export.dart';

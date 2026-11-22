@@ -5,13 +5,13 @@ import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, che
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:interview_engine/interview_engine.dart';
 import 'package:udyoga/db/database.dart';
 import 'package:udyoga/domain/book.dart';
 import 'package:udyoga/domain/companion.dart';
 import 'package:udyoga/domain/companion_book.dart';
 import 'package:udyoga/domain/interview_book.dart';
 import 'package:udyoga/domain/interview_confidence.dart';
-import 'package:udyoga/domain/interview_scoring.dart';
 import 'package:udyoga/domain/vidya_link.dart' show studyPlanId;
 
 import 'support.dart';

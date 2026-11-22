@@ -20,6 +20,14 @@ dependencies:
       url: https://github.com/sudharamachandranrajeev/pariksha-interview-kit.git
       path: packages/ui_kit
       ref: main
+  # The mock interviewer: voice, camera set-up cues, question plans and
+  # verified-quote scoring. It brings the native speech and vision
+  # libraries (sherpa_onnx, record, audioplayers, camera, LiteRT).
+  interview_engine:
+    git:
+      url: https://github.com/sudharamachandranrajeev/pariksha-interview-kit.git
+      path: packages/interview_engine
+      ref: main
   archive: ^4.0.0
   drift: ^2.35.2
   file_picker: ^13.1.0
@@ -43,12 +51,9 @@ dependencies:
   workmanager: ^0.10.10
   html: ^0.15.7
   google_mlkit_text_recognition: ^1.0.3
-  record: ^7.2.0
+  # The device checks in tool/ call sherpa_onnx directly; the app itself
+  # gets it through interview_engine.
   sherpa_onnx: ^2.0.2
-  camera: ^0.12.2
-  camera_desktop: ^2.0.0
-  flutter_litert: ^4.2.0
-  audioplayers: ^6.8.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

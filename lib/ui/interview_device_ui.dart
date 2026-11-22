@@ -7,10 +7,9 @@ import 'dart:async';
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:interview_engine/interview_engine.dart';
 
 import '../app/interview_providers.dart';
-import '../domain/interview_plan.dart';
-import '../domain/offline_guard.dart';
 import '../domain/ollama.dart';
 import 'common.dart';
 

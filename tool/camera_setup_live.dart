@@ -10,10 +10,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:interview_engine/interview_engine.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:udyoga/ui/camera_coach_ui.dart';
-import 'package:udyoga/vision/camera_coach.dart';
-import 'package:udyoga/voice/models.dart';
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();

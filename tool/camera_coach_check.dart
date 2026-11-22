@@ -23,12 +23,8 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:interview_engine/interview_engine.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:udyoga/vision/blazeface.dart';
-import 'package:udyoga/vision/camera_coach.dart';
-import 'package:udyoga/vision/face_camera.dart';
-import 'package:udyoga/vision/setup_check.dart';
-import 'package:udyoga/voice/models.dart';
 
 Map<String, Object?> _results(List<SetupResult> rs) => {
   for (final r in rs) r.item.name: r.ok == null ? '… ${r.tip}' : '${r.ok! ? 'OK' : 'TIP'} ${r.tip}',
