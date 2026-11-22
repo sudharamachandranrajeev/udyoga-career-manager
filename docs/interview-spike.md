@@ -661,7 +661,18 @@ The ways to practise, the drills and the gaps come after it.
 
 ### What it does
 
-Plan rule 4 binds all of it. The camera is off at the start of every
+Plan rule 4 binds all of it. Since 2026-11-21 it reads: no emotion,
+identity or eye-contact analysis; delivery cues are information only;
+**video frames are not stored, unless the user opts in to a video take
+for that session.** A video take (interview_engine 0.4.0, used by Vidya)
+is off unless turned on for the session, shows a camera indicator while
+recording, stays only on that device in app-private storage, is never
+synced, backed up or sent to any AI (only the transcript is), and is
+deleted after 14 days by default (user-changeable) with a delete-all
+button. Udyoga does not offer video takes: its rounds stay audio-only,
+so here every frame is still dropped.
+
+The camera is off at the start of every
 round. Turning it on is one button, and a red **Camera on** pill shows
 while it runs; tapping the pill turns it off. Whether it was on is not
 saved. (Since I6 the self-view and hint switches are remembered on the
