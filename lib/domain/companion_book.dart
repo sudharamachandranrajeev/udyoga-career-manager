@@ -303,11 +303,43 @@ extension CompanionBook on CareerBook {
     await saveStory(s.copyWith(tags: encodeTags([...tags, tag])));
   }
 
-  /// The story bank in one line per story, for the AI.
-  static String storyLine(Story s) => [
+  /// The story bank in one line per story, for the AI, with the standards
+  /// it is tagged with (see storyTagLine) so a tailored CV or statement
+  /// can name them. [roles] names person-specification tags.
+  static String storyLine(Story s, {List<EvidenceFramework> roles = const []}) => [
     '${s.title}${s.confirmed ? '' : ' (draft)'}:',
     if (s.situation.isNotEmpty) s.situation,
     s.action,
     if (s.result.isNotEmpty) 'Result: ${s.result}',
+    if (storyTagLine(s, roles: roles) case final tags when tags.isNotEmpty) tags,
   ].join(' ');
+
+  /// The uses already logged for the draft [refId] (a tailored CV).
+  Future<List<StoryUse>> draftUses(String refId) async => [
+    for (final u in await storyUses())
+      if (u.refId == refId && (u.kind == 'cv' || u.kind == 'statement')) u,
+  ];
+
+  /// Logs that the tailored draft [refId] drew on [chosen], each with its
+  /// kind ('cv' or 'statement'), and drops the uses of stories no longer
+  /// ticked. Returns the same-employer warnings, one per story at most.
+  Future<List<String>> saveDraftUses(
+    Map<Story, String> chosen, {
+    required String refId,
+    String employer = '',
+    String role = '',
+    required String at,
+  }) async {
+    final before = await draftUses(refId);
+    final keep = {for (final e in chosen.entries) (e.key.id, e.value)};
+    for (final u in before) {
+      if (!keep.contains((u.storyId, u.kind))) await remove(db.careerStoryUses, u.id);
+    }
+    final warnings = <String>[];
+    for (final e in chosen.entries) {
+      final w = await useStory(e.key, kind: e.value, refId: refId, employer: employer, role: role, at: at);
+      if (w != null && !before.any((u) => u.storyId == e.key.id)) warnings.add('${e.key.title}: $w');
+    }
+    return warnings;
+  }
 }

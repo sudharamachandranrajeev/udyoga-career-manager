@@ -317,6 +317,7 @@ Tailor the CV to this job. Follow the job description, key responsibilities, ess
 - Use the advert's wording where it truthfully describes the candidate's experience, so applicant tracking systems match it. Do not add a skill, duty, qualification or result the candidate does not have; list such keywords as missing instead.
 - Keep it to about two pages: cut or shorten what does not serve this job.
 - Keep the candidate's real job titles, employers and dates.
+- A work story marked "Evidences: ..." shows the standards it is tagged with; when you use it, you may name that standard (for example a value or leadership dimension the advert asks for).
 Then write the cover letter (or supporting statement, if the advert asks for one against criteria), and the notes.''',
       ),
     ],

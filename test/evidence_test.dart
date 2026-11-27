@@ -52,6 +52,7 @@ Story _story(
 /// Records the system prompt of each request; plans nothing.
 class _PlanAi implements Ai {
   final systems = <String>[];
+  final contents = <List<Json>>[];
 
   @override
   String get model => 'test';
@@ -68,6 +69,7 @@ class _PlanAi implements Ai {
     void Function(String status)? onProgress,
   }) async {
     systems.add(system);
+    contents.add(content);
     return AiResult({'questions': <Json>[]});
   }
 }
@@ -413,6 +415,177 @@ void main() {
       );
       expect(personaBlurb(Persona.of(PersonaKind.friendly)), Persona.of(PersonaKind.friendly).about);
       expect(personas.keys, contains(PersonaKind.challenging));
+    });
+  });
+
+  group('story tags in the AI story line (B5)', () {
+    test('names the framework and the standard, capped at four', () {
+      final s = _story(
+        's1',
+        title: 'Night shift handover',
+        action: 'I rewrote the handover sheet.',
+        tags: const [
+          StoryTag('nhs_values', 'compassion'),
+          StoryTag('nhs_hlm', 'engaging_team'),
+          StoryTag('nhs_lmf', 'self_communicating'),
+          StoryTag('nhs_values', 'everyone_counts'),
+          StoryTag('nhs_values', 'improving_lives'),
+          StoryTag('nhs_values', 'no_such_value'),
+        ],
+      );
+      final line = CompanionBook.storyLine(s);
+      expect(
+        line,
+        'Night shift handover: I rewrote the handover sheet. Evidences: NHS Constitution values: Compassion; '
+        'Healthcare Leadership Model: Engaging the team; NHS Leadership and Management Framework: '
+        'Communicating and listening effectively; NHS Constitution values: Everyone counts; and 1 more.',
+      );
+      expect(line, isNot(contains('no_such_value')));
+    });
+
+    test('an untagged story keeps the old line', () {
+      expect(
+        CompanionBook.storyLine(_story('s1', title: 'Rota', action: 'I fixed it.')),
+        'Rota: I fixed it.',
+      );
+    });
+
+    test('a person specification tag is named by its criterion', () {
+      final roles = [
+        personSpecFramework(
+          const RoleProfile(
+            id: 'p1',
+            title: 'Ward clerk',
+            employer: 'Example Trust',
+            criteria: [Criterion(id: 'c1', text: 'Keeps accurate records')],
+          ),
+        ),
+      ];
+      final s = _story('s1', tags: const [StoryTag('role.p1', 'c1')]);
+      expect(storyTagLine(s, roles: roles), 'Evidences: Person specification: Keeps accurate records.');
+      expect(storyTagLine(s), '');
+    });
+
+    test('the tailoring prompt carries the tags from the profile', () async {
+      final book = CareerBook(await Store.open(memoryDatabase()));
+      await book.setPref(PrefKeys.profile, {'name': 'Alex Example', 'currentRole': 'Ward clerk'});
+      await book.save(
+        book.db.careerStories,
+        CareerStoriesCompanion.insert(
+          id: 's1',
+          title: 'Frightened visitor',
+          action: const Value('I sat with them and explained the visiting rules.'),
+          tags: Value(encodeTags([const StoryTag('nhs_values', 'compassion')])),
+          confirmed: const Value(true),
+          added: '2026-11-01',
+        ),
+        's1',
+      );
+      await book.save(
+        book.db.jobListings,
+        JobListingsCompanion.insert(id: 'j1', title: 'Ward clerk', found: '2026-11-20'),
+        'j1',
+      );
+      final p = await book.profile();
+      expect(p.stories.single, endsWith('Evidences: NHS Constitution values: Compassion.'));
+      final ai = _PlanAi();
+      final job = (await book.db.select(book.db.jobListings).get()).single;
+      await Advisor(ai, today: '2026-11-27').tailor(p, job);
+      final prompt = ai.contents.single.map((c) => c['text'] ?? '').join('\n');
+      expect(prompt, contains('Evidences: NHS Constitution values: Compassion.'));
+      expect(prompt, contains('you may name that standard'));
+    });
+  });
+
+  group('stories a draft drew on (B5)', () {
+    final records = _story(
+      's1',
+      title: 'Records clean-up',
+      action: 'I checked every patient record against the clinic list and fixed forty errors.',
+    );
+    final rota = _story('s2', title: 'Rota swap', action: 'I set up a shared swap board for the porters.');
+
+    test('preselects a story whose phrases appear in the draft', () {
+      const cv = 'Ward clerk. Checked every patient record against the clinic list and fixed forty errors.';
+      expect(draftDrawsOn(records, cv), isTrue);
+      expect(draftDrawsOn(rota, cv), isFalse);
+    });
+
+    test('one shared phrase or common words alone are not enough', () {
+      expect(draftDrawsOn(records, 'I checked every box on the form.'), isFalse);
+      expect(draftDrawsOn(records, 'patient record keeping, errors, clinic'), isFalse);
+    });
+
+    test('the use kind is statement when the letter drew on it', () {
+      const letter = 'In my last post I set up a shared swap board for the porters, which cut gaps.';
+      expect(draftUseKind(rota, letter: letter), 'statement');
+      expect(draftUseKind(records, letter: letter), 'cv');
+      expect(draftUseKind(rota, letter: ''), 'cv');
+      expect(storyUseKinds['cv'], 'Tailored CV');
+    });
+
+    test('saving logs the uses, warns on the same employer and drops unticked ones', () async {
+      final book = CareerBook(await Store.open(memoryDatabase()));
+      for (final s in [records, rota]) {
+        await book.save(
+          book.db.careerStories,
+          CareerStoriesCompanion.insert(id: s.id, title: s.title, action: Value(s.action), added: s.added),
+          s.id,
+        );
+      }
+      final stories = await book.stories();
+      final a = stories.firstWhere((s) => s.id == 's1'), b = stories.firstWhere((s) => s.id == 's2');
+      await book.useStory(
+        a,
+        kind: 'application',
+        refId: 'older',
+        employer: 'Example Trust',
+        role: 'Receptionist',
+        at: '2026-10-01T09:00',
+      );
+
+      final warnings = await book.saveDraftUses(
+        {a: 'cv', b: 'statement'},
+        refId: 'cv1',
+        employer: 'Example  trust',
+        role: 'Ward clerk',
+        at: '2026-11-27T10:00',
+      );
+      expect(warnings, hasLength(1));
+      expect(warnings.single, startsWith('Records clean-up: You already used this story with Example Trust'));
+      expect((await book.draftUses('cv1')).map((u) => (u.storyId, u.kind, u.employer, u.role)).toSet(), {
+        ('s1', 'cv', 'Example  trust', 'Ward clerk'),
+        ('s2', 'statement', 'Example  trust', 'Ward clerk'),
+      });
+
+      // Saving again with only the rota story: logged once, the other dropped, no new warning.
+      expect(
+        await book.saveDraftUses(
+          {b: 'statement'},
+          refId: 'cv1',
+          employer: 'Example Trust',
+          at: '2026-11-27T11:00',
+        ),
+        isEmpty,
+      );
+      expect((await book.draftUses('cv1')).map((u) => u.storyId), ['s2']);
+      expect((await book.storyUses()).where((u) => u.refId == 'older'), hasLength(1));
+    });
+  });
+
+  group('monthly capture nudge (B5)', () {
+    test('due when no story was added in the last 30 days', () {
+      expect(captureNudgeDue(const [], today: '2026-11-27'), isTrue);
+      expect(captureNudgeDue([_story('s1', added: '2026-10-28')], today: '2026-11-27'), isFalse);
+      expect(captureNudgeDue([_story('s1', added: '2026-10-27')], today: '2026-11-27'), isTrue);
+      expect(captureNudgeDue([_story('s1', added: '2026-11-20T09:30')], today: '2026-11-27'), isFalse);
+    });
+
+    test('a story that happened long ago but was added this month counts', () {
+      expect(
+        captureNudgeDue([_story('s1', added: '2026-11-25', happened: '2024-03')], today: '2026-11-27'),
+        isFalse,
+      );
     });
   });
 }

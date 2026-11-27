@@ -12,6 +12,7 @@ import '../domain/resume.dart';
 import 'common.dart';
 import 'kit/kit.dart';
 import 'linkedin_page.dart';
+import 'stories_used.dart';
 
 const _docxMime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -134,6 +135,7 @@ class ResumePage extends ConsumerWidget {
           ),
           child: SelectableText(doc.toText()),
         ),
+        if (notes != null) StoriesUsedCard(resume: r, cv: doc.toText(), letter: notes.coverLetter),
       ],
     );
   }
