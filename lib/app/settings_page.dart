@@ -238,6 +238,7 @@ class SettingsPage extends ConsumerWidget {
         const _CheckInCard(),
         if (ref.watch(backgroundSchedulerProvider).supported) const _BackgroundCard(),
         const _CareerFileCard(),
+        if (ref.watch(handoffFolderProvider) != null) const _HandoffCard(),
         const _RecipesCard(),
         if (ref.watch(updaterProvider) case final updater?) _UpdateCard(updater),
         const AppLockCard(),
@@ -575,6 +576,45 @@ class _BackgroundCard extends ConsumerWidget {
           ),
           if (status?.next case final next?)
             Text(next.isBefore(DateTime.now()) ? 'Next run: due now.' : 'Next run: about ${_when(next)}.'),
+        ],
+      ),
+    );
+  }
+}
+
+/// Career items from a helper app on this computer (an app that reads a
+/// social network's messages, say), through the hand-off folder. Off by
+/// default and kept on this device only.
+class _HandoffCard extends ConsumerWidget {
+  const _HandoffCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final on = ref.watch(handoffEnabledProvider).value ?? false;
+    final dir = ref.watch(handoffFolderProvider) ?? '';
+    final status = ref.watch(handoffProvider);
+    return SectionCard(
+      title: 'Helper apps',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Import career items from a helper app'),
+            subtitle: const Text(
+              'Messages that a helper app on this computer picked as career-related (a recruiter '
+              'writing to you, say) are added to Conversations, with any scam warning it found. '
+              'Nothing goes online. On this device only.',
+            ),
+            value: on,
+            onChanged: (v) async {
+              await ref.read(sessionProvider).db.setLocalSetting(LocalKeys.careerHandoff, v ? 'on' : 'off');
+              ref.invalidate(handoffEnabledProvider);
+              if (v) ref.read(handoffProvider.notifier).run().catchError((_) => null).ignore();
+            },
+          ),
+          SelectableText('Folder: $dir', style: Theme.of(context).textTheme.bodySmall),
+          if (on && status.isNotEmpty) Text(status, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );

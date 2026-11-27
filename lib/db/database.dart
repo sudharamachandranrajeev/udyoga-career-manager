@@ -81,7 +81,7 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
   ];
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -197,6 +197,16 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
       if (from < 13) {
         // Role insights. CREATE TABLE IF NOT EXISTS, so it can run again.
         await m.createTable(careerRoleInsights);
+      }
+      if (from < 14) {
+        // Career items from a helper app: the scam check and the reasons a
+        // thread was picked. Only if missing, so it can run again.
+        final have = await customSelect('PRAGMA table_info(career_conversations)')
+            .map((r) => r.read<String>('name'))
+            .get();
+        for (final c in [conversations.scam, conversations.reasons]) {
+          if (!have.contains(c.name)) await m.addColumn(conversations, c);
+        }
       }
     },
     // The background refresh opens the same file from another process (or

@@ -82,6 +82,10 @@ abstract final class LocalKeys {
   /// Folders on this device to read documents from, JSON list of paths.
   static const documentFolders = 'udyoga.documents.folders';
 
+  /// 'on' when this device imports career items a helper app left in the
+  /// career hand-off folder (docs/handoff.md); off by default.
+  static const careerHandoff = 'udyoga.handoff.career';
+
   /// The daily check-in time on this device, HH:mm, and whether to remind.
   static const checkInTime = 'udyoga.checkin.time';
   static const checkInReminder = 'udyoga.checkin.reminder';

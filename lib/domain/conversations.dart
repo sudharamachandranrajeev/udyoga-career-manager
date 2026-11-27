@@ -40,7 +40,12 @@ const threadStatuses = {
 };
 
 /// Where a thread's record came from: "is this the real record or my note?"
-const threadSources = {'api': 'Synced', 'import': 'Imported', 'manual': 'Logged by you'};
+const threadSources = {
+  'api': 'Synced',
+  'import': 'Imported',
+  'manual': 'Logged by you',
+  'helper': 'From a helper app',
+};
 
 /// Where a person was found.
 const sourceKinds = {
@@ -199,10 +204,13 @@ String _nameKey(String name, String company) =>
 
 // ---- what the screens show ----
 
-/// Who an unknown sender is: an imported LinkedIn thread keeps their name
-/// as its subject (its peer is their profile link); otherwise the address.
+/// Who an unknown sender is: an imported LinkedIn thread, or one from a
+/// helper app, keeps their name as its subject (its peer is their profile
+/// link); otherwise the address.
 String senderName(Conversation t) =>
-    t.channel == 'linkedin' && t.mode == 'import' && t.subject.isNotEmpty ? t.subject : t.peer;
+    (t.mode == 'helper' || (t.channel == 'linkedin' && t.mode == 'import')) && t.subject.isNotEmpty
+    ? t.subject
+    : t.peer;
 
 /// The line the user may add to a first message to say how they found the
 /// person (UK GDPR Article 14), or '' when the person knows already (met in

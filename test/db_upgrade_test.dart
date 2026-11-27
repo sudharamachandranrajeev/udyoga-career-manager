@@ -55,6 +55,9 @@ import 'package:udyoga/db/database.dart';
         db.careerPractice.nervesAfter.name,
       ],
     },
+    14: {
+      db.conversations.actualTableName: [db.conversations.scam.name, db.conversations.reasons.name],
+    },
   },
 );
 
@@ -123,14 +126,14 @@ void main() {
   setUp(() async => dir = await Directory.systemTemp.createTemp('udyoga-upgrade-'));
   tearDown(() => dir.delete(recursive: true));
 
-  test('today\'s schema is version 13', () {
+  test('today\'s schema is version 14', () {
     final db = AppDatabase(NativeDatabase.memory());
-    expect(db.schemaVersion, 13);
+    expect(db.schemaVersion, 14);
     addTearDown(db.close);
   });
 
-  for (var from = 1; from < 13; from++) {
-    test('version $from upgrades to 13 and keeps every row', () async {
+  for (var from = 1; from < 14; from++) {
+    test('version $from upgrades to 14 and keeps every row', () async {
       final file = File('${dir.path}/v$from.db');
       var db = AppDatabase(NativeDatabase(file));
       await db.customSelect('SELECT 1').get();
@@ -149,7 +152,7 @@ void main() {
               .get()) {
         await db.customStatement('DROP INDEX "${r.read<String>('name')}"');
       }
-      for (var v = 13; v > from; v--) {
+      for (var v = 14; v > from; v--) {
         for (final t in a.tables[v] ?? const <String>[]) {
           await db.customStatement('DROP TABLE "$t"');
         }
@@ -175,7 +178,7 @@ void main() {
 
       db = AppDatabase(NativeDatabase(file));
       await db.customSelect('SELECT 1').get();
-      expect((await db.customSelect('PRAGMA user_version').getSingle()).data.values.single, 13);
+      expect((await db.customSelect('PRAGMA user_version').getSingle()).data.values.single, 14);
       final after = await _snapshot(db, columns);
       for (final t in columns.keys) {
         expect(after[t]!.length, 3, reason: '$t row count');
@@ -189,7 +192,7 @@ void main() {
       }
       await fresh.close();
       // ignore: avoid_print
-      print('v$from -> 13: ${columns.length} tables, ${columns.length * 3} rows kept');
+      print('v$from -> 14: ${columns.length} tables, ${columns.length * 3} rows kept');
       await db.close();
     });
   }

@@ -211,7 +211,8 @@ class Conversations extends Table with SyncedRow {
   TextColumn get account => text().withDefault(const Constant(''))();
 
   /// api (sent and received by Udyoga) | manual (logged by the user) |
-  /// import (from an export file)
+  /// import (from an export file) | helper (from a helper app on this
+  /// computer, through the career hand-off folder: docs/handoff.md)
   TextColumn get mode => text().withDefault(const Constant('manual'))();
 
   /// The channel's own thread id (a Gmail thread, a Bluesky convo), so a
@@ -231,6 +232,15 @@ class Conversations extends Table with SyncedRow {
   /// Time of the newest message, for sorting.
   TextColumn get lastAt => text()();
   IntColumn get unread => integer().withDefault(const Constant(0))();
+
+  /// The scam check a helper app ran on the thread, as JSON
+  /// {"level": "caution" | "high", "signs": [...]}; '' when none was run or
+  /// nothing was found. Since schema 14.
+  TextColumn get scam => text().withDefault(const Constant(''))();
+
+  /// Why a helper app picked the thread as career-related, as a JSON list
+  /// of short reasons; '' for threads from anywhere else. Since schema 14.
+  TextColumn get reasons => text().withDefault(const Constant(''))();
 }
 
 /// One message in a conversation, or the user's note on it.
@@ -250,7 +260,7 @@ class Messages extends Table with SyncedRow {
   /// When it was sent; for a logged message, when the user says it was.
   TextColumn get sentAt => text()();
 
-  /// api | manual | import | ai_draft
+  /// api | manual | import | ai_draft | helper
   TextColumn get source => text().withDefault(const Constant('manual'))();
 
   /// logged | invite (a LinkedIn connection note, logged) | draft | queued |

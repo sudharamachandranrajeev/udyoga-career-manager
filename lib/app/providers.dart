@@ -12,6 +12,7 @@ import '../db/database.dart';
 import '../domain/advisor.dart';
 import '../domain/bluesky.dart';
 import '../domain/career_file_sync.dart';
+import '../domain/career_handoff.dart';
 import '../domain/book.dart';
 import '../domain/career_data.dart';
 import '../domain/ai.dart';
@@ -572,12 +573,80 @@ final sponsorRegisterProvider = FutureProvider<SponsorRegister?>((ref) async {
   }
 });
 
+/// Whether this device imports career items from a helper app (off by
+/// default; kept on this device only).
+final handoffEnabledProvider = FutureProvider<bool>(
+  (ref) async => await ref.watch(sessionProvider).db.localSetting(LocalKeys.careerHandoff) == 'on',
+);
+
+/// The career hand-off folder a helper app writes to, or null where there
+/// is none (phones).
+final handoffFolderProvider = Provider<String?>((ref) => defaultHandoffFolder());
+
+/// Imports career items from the hand-off folder: on start, on the hourly
+/// tick and, while switched on, soon after a helper drops a file (where the
+/// system can watch folders). [state] is the last result for Settings.
+class HandoffController extends Notifier<String> {
+  bool _running = false;
+
+  @override
+  String build() {
+    final dir = ref.watch(handoffFolderProvider);
+    if (dir == null || !(ref.watch(handoffEnabledProvider).value ?? false)) return '';
+    Timer? wait;
+    StreamSubscription<FileSystemEvent>? sub;
+    () async {
+      try {
+        final inbox = Directory([dir, 'inbox'].join(Platform.pathSeparator));
+        await inbox.create(recursive: true);
+        if (!FileSystemEntity.isWatchSupported) return;
+        sub = inbox.watch().listen((_) {
+          wait?.cancel();
+          wait = Timer(const Duration(seconds: 1), () => run().catchError((_) => null).ignore());
+        }, onError: (_) {});
+      } on FileSystemException {
+        // No watch; the hourly tick still reads the folder.
+      }
+    }();
+    ref.onDispose(() {
+      wait?.cancel();
+      sub?.cancel();
+    });
+    return '';
+  }
+
+  Future<HandoffReport?> run() async {
+    final dir = ref.read(handoffFolderProvider);
+    if (_running || dir == null || !await ref.read(handoffEnabledProvider.future)) return null;
+    _running = true;
+    try {
+      final r = await HandoffFolder(dir).run(ref.read(sessionProvider).book, today: today());
+      if (r.files > 0) {
+        state = 'Last import: $r.';
+        if (r.imported > 0) {
+          ref.read(revisionProvider.notifier).bump();
+          ref.read(syncProvider.notifier).soon();
+        }
+      }
+      return r;
+    } catch (e) {
+      state = 'Could not read the folder: ${describeError(e)}';
+      rethrow;
+    } finally {
+      _running = false;
+    }
+  }
+}
+
+final handoffProvider = NotifierProvider<HandoffController, String>(HandoffController.new);
+
 /// Runs the routine refresh and the mail check now and then hourly while
 /// the app is open; each run does only what is due. Read once at start-up.
 final refreshTickerProvider = Provider<void>((ref) {
   void tick() {
     ref.read(refreshProvider.notifier).run().catchError((_) => null).ignore();
     ref.read(mailSyncProvider.notifier).run().catchError((_) => null).ignore();
+    ref.read(handoffProvider.notifier).run().catchError((_) => null).ignore();
   }
 
   tick();

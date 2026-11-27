@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
 import '../db/database.dart';
+import '../domain/career_handoff.dart';
 import '../domain/conversations.dart';
 import '../domain/countries.dart';
 import '../domain/fill_drafts.dart';
@@ -425,6 +426,7 @@ class SourceBadge extends StatelessWidget {
     icon: switch (mode) {
       'api' => Icons.sync,
       'import' => Icons.download_outlined,
+      'helper' => Icons.move_to_inbox_outlined,
       _ => Icons.edit_note,
     },
   );
@@ -474,6 +476,8 @@ class ThreadView extends ConsumerWidget {
                       ),
                     ),
             ),
+            if (threadScam(row.thread) case final scam when scam.flagged)
+              Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 0), child: ScamBanner(scam)),
             Expanded(child: MessageList(conversationId)),
             // The composer stays at the foot of the thread while the messages
             // scroll. On a short screen it scrolls itself rather than
@@ -744,6 +748,7 @@ class MessageBubble extends ConsumerWidget {
       'api' when m.status == 'sent' => 'Sent from Udyoga',
       'api' => 'Synced',
       'import' => 'Imported',
+      'helper' => 'From a helper app',
       'ai_draft' => 'AI draft',
       _ => 'Logged by you',
     };
@@ -1303,6 +1308,62 @@ class OpenerHint extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// A helper app's warning that a thread shows the signs of a job scam: how
+/// sure it is, the signs it saw, and how to check before replying.
+class ScamBanner extends StatelessWidget {
+  const ScamBanner(this.scam, {super.key});
+  final HandoffScam scam;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!scam.flagged) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    final high = scam.level == 'high';
+    final color = high ? scheme.error : scheme.tertiary;
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(Radii.sm),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(high ? Icons.gpp_bad_outlined : Icons.gpp_maybe_outlined, size: 20, color: color),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    high ? 'This looks like a job scam' : 'Some signs of a job scam',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  for (final sign in scam.signs)
+                    Text('• $sign', style: const TextStyle(fontSize: 12, height: 1.35)),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'How to check: find the company yourself and contact it through its own website. '
+                    'Real employers do not charge fees, ask for bank details or ID before an offer, or ask '
+                    'you to install software or run code to be interviewed. Keep talking where you met '
+                    'until you are sure.',
+                    style: TextStyle(fontSize: 12, height: 1.35),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class Hint extends StatelessWidget {
