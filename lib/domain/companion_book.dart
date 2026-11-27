@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 import '../db/database.dart';
 import 'book.dart';
 import 'companion.dart';
+import 'evidence.dart';
 import 'json.dart';
 
 /// The companion's records: documents read, profile questions, check-ins
@@ -242,6 +243,64 @@ extension CompanionBook on CareerBook {
       }
     }
     return counts;
+  }
+
+  // ---- Story uses (A4) ----
+
+  Future<List<StoryUse>> storyUses() =>
+      (db.select(db.careerStoryUses)
+            ..where((u) => u.deleted.not())
+            ..orderBy([(u) => OrderingTerm.desc(u.at)]))
+          .get();
+
+  /// Records that [s] went into an application, a supporting statement or
+  /// an interview answer (kinds in storyUseKinds). Returns a warning when
+  /// the story was already used with the same employer, else null. The
+  /// same story for the same criterion of the same [refId] is logged once.
+  Future<String?> useStory(
+    Story s, {
+    required String kind,
+    String refId = '',
+    String employer = '',
+    String role = '',
+    String criterion = '',
+    required String at,
+  }) async {
+    final uses = await storyUses();
+    final warning = reuseWarning(uses, storyId: s.id, employer: employer, refId: refId, criterion: criterion);
+    final again = uses.any(
+      (u) =>
+          u.storyId == s.id &&
+          u.kind == kind &&
+          u.refId == refId &&
+          u.criterion == criterion &&
+          refId.isNotEmpty,
+    );
+    if (!again) {
+      final id = newId();
+      await save(
+        db.careerStoryUses,
+        CareerStoryUsesCompanion.insert(
+          id: id,
+          storyId: s.id,
+          kind: kind,
+          refId: Value(refId),
+          employer: Value(employer),
+          role: Value(role),
+          criterion: Value(criterion),
+          at: at,
+        ),
+        id,
+      );
+    }
+    return warning;
+  }
+
+  /// Adds [tag] to [s] if it is not there yet.
+  Future<void> tagStory(Story s, StoryTag tag) async {
+    final tags = tagsOf(s);
+    if (tags.contains(tag)) return;
+    await saveStory(s.copyWith(tags: encodeTags([...tags, tag])));
   }
 
   /// The story bank in one line per story, for the AI.

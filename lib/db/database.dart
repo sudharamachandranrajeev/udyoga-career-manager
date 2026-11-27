@@ -24,6 +24,7 @@ part 'database.g.dart';
     CareerQuestions,
     CareerJournal,
     CareerStories,
+    CareerStoryUses,
     ContactHandles,
     Conversations,
     Messages,
@@ -65,6 +66,7 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     'career_questions',
     'career_journal',
     'career_stories',
+    'career_story_uses',
     'career_handles',
     'career_conversations',
     'career_messages',
@@ -81,7 +83,7 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
   ];
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -198,6 +200,19 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
         // Role insights. CREATE TABLE IF NOT EXISTS, so it can run again.
         await m.createTable(careerRoleInsights);
       }
+      if (from < 14) {
+        // Evidence tags (A4): framework tags and the date a story happened,
+        // and where each story was used. Only what is missing, so it can
+        // run again.
+        final have = await customSelect('PRAGMA table_info(career_stories)')
+            .map((r) => r.read<String>('name'))
+            .get();
+        for (final c in [careerStories.tags, careerStories.happened]) {
+          if (!have.contains(c.name)) await m.addColumn(careerStories, c);
+        }
+        await m.createTable(careerStoryUses);
+        await customStatement(_v14Index);
+      }
     },
     // The background refresh opens the same file from another process (or
     // isolate) while the app may be open: wait for the other's write to end
@@ -215,7 +230,12 @@ class AppDatabase extends _$AppDatabase with SyncedDatabase {
     ..._v4Indexes,
     ..._v5Indexes,
     ..._v8Indexes,
+    _v14Index,
   ];
+
+  /// Added in schema 14 (story uses).
+  static const _v14Index =
+      'CREATE INDEX IF NOT EXISTS career_story_uses_story ON career_story_uses (story_id)';
 
   /// Added in schema 8 (route tracks).
   static const _v8Indexes = ['CREATE INDEX IF NOT EXISTS career_tracks_country ON career_tracks (country)'];

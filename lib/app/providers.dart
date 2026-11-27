@@ -214,6 +214,12 @@ final storiesProvider = _rows<$CareerStoriesTable, Story>(
   ],
 );
 
+/// Where each story was used (A4).
+final storyUsesProvider = _rows<$CareerStoryUsesTable, StoryUse>(
+  (db) => db.careerStoryUses,
+  orderBy: [(u) => OrderingTerm.desc(u.at)],
+);
+
 final handlesProvider = _rows<$ContactHandlesTable, ContactHandle>((db) => db.contactHandles);
 
 /// Every conversation with its person and newest message, newest first.

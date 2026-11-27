@@ -19,7 +19,7 @@ dependencies:
     git:
       url: https://github.com/sudharamachandranrajeev/pariksha-interview-kit.git
       path: packages/ui_kit
-      ref: v0.4.0
+      ref: v0.5.0
   # The mock interviewer: voice, camera set-up cues, question plans and
   # verified-quote scoring. It brings the native speech and vision
   # libraries (sherpa_onnx, record, audioplayers, camera, LiteRT).
@@ -27,7 +27,7 @@ dependencies:
     git:
       url: https://github.com/sudharamachandranrajeev/pariksha-interview-kit.git
       path: packages/interview_engine
-      ref: v0.4.0
+      ref: v0.5.0
   archive: ^4.0.0
   drift: ^2.35.2
   file_picker: ^13.1.0

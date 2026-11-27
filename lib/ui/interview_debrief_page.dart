@@ -25,6 +25,7 @@ import 'common.dart';
 import 'interview_device_ui.dart' show OfflineBadge;
 import 'kit/kit.dart';
 import 'spoken_round_page.dart';
+import 'statement_evidence.dart';
 import 'vidya_practice_ui.dart' show RoleReadinessLine;
 
 Future<void> openRoleProfile(BuildContext context, {String? id, Job? job}) => Navigator.of(context).push(
@@ -367,6 +368,7 @@ class _RoleProfilePageState extends ConsumerState<RoleProfilePage> {
             ],
           ),
         ),
+        if (_profile.id.isNotEmpty && _profile.criteria.isNotEmpty) StatementEvidenceCard(_profile),
         Wrap(
           spacing: 8,
           runSpacing: 8,

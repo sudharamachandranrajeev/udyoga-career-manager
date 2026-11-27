@@ -12,7 +12,9 @@ import 'json.dart';
 
 /// The interview engine's [InterviewBrain] over one of Udyoga's [Ai]
 /// providers. Follow-ups stay on the device ([PromptedInterviewBrain]
-/// returns null), as before.
+/// returns null), as before. The round plan carries the panel's persona:
+/// for the challenging panel the engine's [personaGuidance] (its tone
+/// limits) goes into the planning prompt.
 class AiInterviewBrain extends PromptedInterviewBrain {
   const AiInterviewBrain(this.ai);
   final Ai ai;
@@ -31,3 +33,12 @@ class AiInterviewBrain extends PromptedInterviewBrain {
     return r.data;
   }
 }
+
+/// What the panel chooser says about [p]: Udyoga's own line for the
+/// challenging panel, the engine's for the rest.
+String personaBlurb(Persona p) => switch (p.kind) {
+  PersonaKind.challenging => challengingBlurb,
+  _ => p.about,
+};
+
+const challengingBlurb = 'Firm panel: challenges claims, asks for evidence, interrupts politely. Never rude.';

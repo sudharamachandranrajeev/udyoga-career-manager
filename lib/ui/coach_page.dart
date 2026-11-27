@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:brahma_core/brahma_core.dart' hide Release, UpdateException, checksumsName, updaterProvider;
-import 'package:drift/drift.dart' show Value;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,9 +11,11 @@ import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/companion.dart';
 import '../domain/companion_book.dart';
+import '../domain/evidence.dart';
 import '../domain/json.dart';
 import '../domain/vidya_link.dart';
 import 'common.dart';
+import 'story_editor.dart';
 
 /// The candidate's coach: the daily check-in, questions that keep the
 /// profile true, interview readiness from the story bank, and the documents
@@ -56,6 +57,7 @@ class CoachPage extends ConsumerWidget {
               : Column(children: [for (final q in questions) _QuestionTile(q)]),
         ),
         _Readiness(stories),
+        EvidenceCoverage(stories),
         _StoryBank(stories),
         const _Documents(),
         const _VidyaCard(),
@@ -313,132 +315,114 @@ class _StoryBank extends ConsumerWidget {
   final List<Story> stories;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => SectionCard(
-    title: 'Your stories',
-    trailing: IconButton(
-      icon: const Icon(Icons.add),
-      tooltip: 'Add a story',
-      onPressed: () => _edit(context, ref, null),
-    ),
-    child: stories.isEmpty
-        ? const Text(
-            'Stories come from your check-ins and documents. Each one is an answer ready for interview.',
-          )
-        : Column(
-            children: [
-              for (final s in stories)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    s.confirmed ? Icons.verified_outlined : Icons.pending_outlined,
-                    semanticLabel: s.confirmed ? 'Checked' : 'Draft',
+  Widget build(BuildContext context, WidgetRef ref) {
+    final uses = ref.watch(storyUsesProvider).value ?? const <StoryUse>[];
+    final day = today();
+    return SectionCard(
+      title: 'Your stories',
+      trailing: IconButton(
+        icon: const Icon(Icons.add),
+        tooltip: 'Capture a story',
+        onPressed: () => editStory(context, ref, null),
+      ),
+      child: stories.isEmpty
+          ? const Text(
+              'Stories come from your check-ins and documents. Each one is an answer ready for interview.',
+            )
+          : Column(
+              children: [
+                for (final s in stories)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      s.confirmed ? Icons.verified_outlined : Icons.pending_outlined,
+                      semanticLabel: s.confirmed ? 'Checked' : 'Draft',
+                    ),
+                    title: Text(s.title),
+                    subtitle: Text(
+                      [
+                        CompanionBook.competenciesOf(s).map((c) => competencyNames[c]).join(', '),
+                        if ((s.happened ?? '').isNotEmpty) niceDate(s.happened!),
+                        if (tagsOf(s).isNotEmpty) '${tagsOf(s).length} standards',
+                        if (s.source == 'practice') 'From practice',
+                        if (decodeList(s.criteria).isNotEmpty)
+                          'Evidenced: ${strs(decodeList(s.criteria)).join('; ')}',
+                        if (usedInLines(uses, s.id) case final u when u.isNotEmpty) 'Used in: ${u.first}',
+                        if (needsRefresh(s, today: day)) 'Over a year old: refresh the details',
+                        if (!s.confirmed) 'Draft: check it is true as written',
+                      ].where((t) => t.isNotEmpty).join(' · '),
+                    ),
+                    onTap: () => editStory(context, ref, s),
                   ),
-                  title: Text(s.title),
-                  subtitle: Text(
-                    [
-                      CompanionBook.competenciesOf(s).map((c) => competencyNames[c]).join(', '),
-                      if (s.source == 'practice') 'From practice',
-                      if (decodeList(s.criteria).isNotEmpty)
-                        'Evidenced: ${strs(decodeList(s.criteria)).join('; ')}',
-                      if (!s.confirmed) 'Draft: check it is true as written',
-                    ].where((t) => t.isNotEmpty).join(' · '),
-                  ),
-                  onTap: () => _edit(context, ref, s),
-                ),
-            ],
-          ),
-  );
+              ],
+            ),
+    );
+  }
+}
 
-  Future<void> _edit(BuildContext context, WidgetRef ref, Story? s) async {
-    final title = TextEditingController(text: s?.title ?? '');
-    final situation = TextEditingController(text: s?.situation ?? '');
-    final task = TextEditingController(text: s?.task ?? '');
-    final action = TextEditingController(text: s?.action ?? '');
-    final result = TextEditingController(text: s?.result ?? '');
-    final chosen = {...?(s == null ? null : CompanionBook.competenciesOf(s))};
-    await showFormDialog(
-      context,
-      title: s == null ? 'New story' : 'Story',
-      action: s == null || !s.confirmed ? 'Save as checked' : 'Save',
-      fields: (setState) => [
-        Field(title, 'Title', autofocus: s == null),
-        Field(situation, 'Situation', lines: 2),
-        Field(task, 'Task', lines: 2),
-        Field(action, 'What you did', lines: 3),
-        Field(result, 'Result', lines: 2, helper: 'Figures only if you are sure of them.'),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: [
-            for (final e in competencyNames.entries)
-              FilterChip(
-                label: Text(e.value),
-                selected: chosen.contains(e.key),
-                onSelected: (v) => setState(() => v ? chosen.add(e.key) : chosen.remove(e.key)),
-              ),
-          ],
-        ),
-        if (s != null)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Remove this story'),
-              onPressed: () async {
-                await ref.mutate((x) => x.book.remove(x.db.careerStories, s.id));
-                if (context.mounted) Navigator.pop(context, false);
-              },
-            ),
+/// Coverage of one framework (or a role's person specification): each item
+/// with no story, some evidence, or two or more confirmed stories. A gap
+/// opens a new story already tagged with it.
+class EvidenceCoverage extends ConsumerStatefulWidget {
+  const EvidenceCoverage(this.stories, {super.key});
+  final List<Story> stories;
+
+  @override
+  ConsumerState<EvidenceCoverage> createState() => _EvidenceCoverageState();
+}
+
+class _EvidenceCoverageState extends ConsumerState<EvidenceCoverage> {
+  String _framework = nhsValuesFramework.id;
+
+  @override
+  Widget build(BuildContext context) {
+    final roles = roleFrameworks(ref.watch(roleProfilesProvider).value ?? const []);
+    final all = [...evidenceFrameworks, competencyFramework, ...roles];
+    final f = all.where((x) => x.id == _framework).firstOrNull ?? all.first;
+    final muted = Theme.of(context).textTheme.bodySmall;
+    final rows = coverageOf(f, widget.stories);
+    final ready = rows.where((r) => r.level == CoverageLevel.ready).length;
+    return SectionCard(
+      title: 'Evidence coverage',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Choice<String>(
+            key: ValueKey('coverage-${f.id}'),
+            label: 'Framework',
+            value: f.id,
+            options: {for (final x in all) x.id: x.name},
+            onChanged: (v) => setState(() => _framework = v),
           ),
-      ],
-      onSave: () async {
-        if (title.text.trim().isEmpty || action.text.trim().isEmpty) {
-          return 'A title and what you did, please.';
-        }
-        final fields = (
-          title: title.text.trim(),
-          situation: situation.text.trim(),
-          task: task.text.trim(),
-          action: action.text.trim(),
-          result: result.text.trim(),
-          competencies: jsonEncode(chosen.toList()),
-        );
-        if (s == null) {
-          final id = newId();
-          await ref.mutate(
-            (x) => x.book.save(
-              x.db.careerStories,
-              CareerStoriesCompanion.insert(
-                id: id,
-                title: fields.title,
-                situation: Value(fields.situation),
-                task: Value(fields.task),
-                action: Value(fields.action),
-                result: Value(fields.result),
-                competencies: Value(fields.competencies),
-                confirmed: const Value(true),
-                added: today(),
-              ),
-              id,
+          if (f.about.isNotEmpty) Text(f.about, style: muted),
+          if (f.note.isNotEmpty) Text(f.note, style: muted),
+          Text('$ready of ${rows.length} ready. Tap a gap to add a story for it.', style: muted),
+          const SizedBox(height: 4),
+          for (final r in rows)
+            ListTile(
+              key: ValueKey('coverage-item-${r.item.id}'),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              leading: Icon(switch (r.level) {
+                CoverageLevel.none => Icons.radio_button_unchecked,
+                CoverageLevel.some => Icons.timelapse_outlined,
+                CoverageLevel.ready => Icons.check_circle_outline,
+              }, semanticLabel: r.level.label),
+              title: Text(r.item.title),
+              subtitle: Text([if (r.item.area.isNotEmpty) r.item.area, r.summary].join(' · ')),
+              trailing: r.level == CoverageLevel.ready ? null : const Icon(Icons.add),
+              onTap: r.level == CoverageLevel.ready
+                  ? null
+                  : () => editStory(
+                      context,
+                      ref,
+                      null,
+                      tags: f.id == competencyFramework.id ? const [] : [StoryTag(f.id, r.item.id)],
+                      competencies: f.id == competencyFramework.id ? [r.item.id] : const [],
+                    ),
             ),
-          );
-        } else {
-          await ref.mutate(
-            (x) => x.book.saveStory(
-              s.copyWith(
-                title: fields.title,
-                situation: fields.situation,
-                task: fields.task,
-                action: fields.action,
-                result: fields.result,
-                competencies: fields.competencies,
-                confirmed: true,
-              ),
-            ),
-          );
-        }
-        return null;
-      },
+        ],
+      ),
     );
   }
 }
