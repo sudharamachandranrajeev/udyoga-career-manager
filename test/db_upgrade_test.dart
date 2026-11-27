@@ -29,6 +29,7 @@ import 'package:udyoga/db/database.dart';
     11: [db.careerFileDocs.actualTableName],
     12: [db.careerSavedSearches.actualTableName],
     13: [db.careerRoleInsights.actualTableName],
+    14: [db.careerStoryUses.actualTableName],
   },
   columns: {
     4: {
@@ -54,6 +55,9 @@ import 'package:udyoga/db/database.dart';
         db.careerPractice.nervesBefore.name,
         db.careerPractice.nervesAfter.name,
       ],
+    },
+    14: {
+      db.careerStories.actualTableName: [db.careerStories.tags.name, db.careerStories.happened.name],
     },
   },
 );
@@ -123,14 +127,14 @@ void main() {
   setUp(() async => dir = await Directory.systemTemp.createTemp('udyoga-upgrade-'));
   tearDown(() => dir.delete(recursive: true));
 
-  test('today\'s schema is version 13', () {
+  test('today\'s schema is version 14', () {
     final db = AppDatabase(NativeDatabase.memory());
-    expect(db.schemaVersion, 13);
+    expect(db.schemaVersion, 14);
     addTearDown(db.close);
   });
 
-  for (var from = 1; from < 13; from++) {
-    test('version $from upgrades to 13 and keeps every row', () async {
+  for (var from = 1; from < 14; from++) {
+    test('version $from upgrades to 14 and keeps every row', () async {
       final file = File('${dir.path}/v$from.db');
       var db = AppDatabase(NativeDatabase(file));
       await db.customSelect('SELECT 1').get();
@@ -149,7 +153,7 @@ void main() {
               .get()) {
         await db.customStatement('DROP INDEX "${r.read<String>('name')}"');
       }
-      for (var v = 13; v > from; v--) {
+      for (var v = 14; v > from; v--) {
         for (final t in a.tables[v] ?? const <String>[]) {
           await db.customStatement('DROP TABLE "$t"');
         }
@@ -175,7 +179,7 @@ void main() {
 
       db = AppDatabase(NativeDatabase(file));
       await db.customSelect('SELECT 1').get();
-      expect((await db.customSelect('PRAGMA user_version').getSingle()).data.values.single, 13);
+      expect((await db.customSelect('PRAGMA user_version').getSingle()).data.values.single, 14);
       final after = await _snapshot(db, columns);
       for (final t in columns.keys) {
         expect(after[t]!.length, 3, reason: '$t row count');
@@ -189,8 +193,28 @@ void main() {
       }
       await fresh.close();
       // ignore: avoid_print
-      print('v$from -> 13: ${columns.length} tables, ${columns.length * 3} rows kept');
+      print('v$from -> 14: ${columns.length} tables, ${columns.length * 3} rows kept');
       await db.close();
     });
   }
+
+  test('a story from before version 14 reads with no tags, no date and no uses', () async {
+    final file = File('${dir.path}/stories.db');
+    var db = AppDatabase(NativeDatabase(file));
+    await db.customSelect('SELECT 1').get();
+    await db.customStatement('DROP TABLE career_story_uses');
+    await db.customStatement('ALTER TABLE career_stories DROP COLUMN tags');
+    await db.customStatement('ALTER TABLE career_stories DROP COLUMN happened');
+    await db.customStatement(
+      "INSERT INTO career_stories (id, title, action, added) VALUES ('s1', 'Diary clash', 'I rang them.', '2025-06-01')",
+    );
+    await db.customStatement('PRAGMA user_version = 13');
+    await db.close();
+
+    db = AppDatabase(NativeDatabase(file));
+    final story = await db.select(db.careerStories).getSingle();
+    expect((story.title, story.tags, story.happened), ('Diary clash', '[]', null));
+    expect(await db.select(db.careerStoryUses).get(), isEmpty);
+    await db.close();
+  });
 }

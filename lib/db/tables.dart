@@ -548,6 +548,34 @@ class CareerStories extends Table with SyncedRow {
   /// False until the candidate has checked it is true as written.
   BoolColumn get confirmed => boolean().withDefault(const Constant(false))();
   TextColumn get added => text()();
+
+  /// Framework standards and person-specification criteria the story
+  /// evidences, JSON list of {"framework": id, "item": id}
+  /// (domain/evidence.dart). One story can carry many. Added in schema 14.
+  TextColumn get tags => text().withDefault(const Constant('[]'))();
+
+  /// When it happened, yyyy-MM-dd (or yyyy-MM); null when not given, and
+  /// then [added] stands in. Added in schema 14.
+  TextColumn get happened => text().nullable()();
+}
+
+/// Where a story was used: a supporting statement, an application or an
+/// interview answer, so the same story is not given twice to one employer.
+@DataClassName('StoryUse')
+class CareerStoryUses extends Table with SyncedRow {
+  TextColumn get storyId => text()();
+
+  /// statement | application | interview
+  TextColumn get kind => text()();
+
+  /// The role profile, application or round it went into; '' if none.
+  TextColumn get refId => text().withDefault(const Constant(''))();
+  TextColumn get employer => text().withDefault(const Constant(''))();
+  TextColumn get role => text().withDefault(const Constant(''))();
+
+  /// The criterion it answered, in the person specification's words.
+  TextColumn get criterion => text().withDefault(const Constant(''))();
+  TextColumn get at => text()();
 }
 
 /// Shared with Vidya (see brahma_core's bridges.dart): Udyoga writes the

@@ -12,6 +12,7 @@ import '../db/database.dart';
 import 'book.dart';
 import 'companion.dart';
 import 'companion_book.dart';
+import 'evidence.dart';
 import 'insights.dart';
 import 'interview_book.dart';
 import 'job_identity.dart';
@@ -31,6 +32,7 @@ Json vidyaPlan({
   required List<Story> stories,
   required Map<String, ({int confirmed, int drafts})> storyCounts,
   required List<GrowthItem> learning,
+  List<EvidenceFramework> roles = const [],
 }) {
   final ready = readiness(storyCounts);
   final role = profile.targets.roles.firstOrNull ?? '';
@@ -120,6 +122,14 @@ Json vidyaPlan({
             'Action: ${s.action}',
             if (s.result.isNotEmpty) 'Result: ${s.result}',
           ].join('\n'),
+          // Added for evidence links (A4/A6), only when there are any, so
+          // untagged stories send the same card as before; readers that do
+          // not know these keys ignore them.
+          if (tagsOf(s) case final tags when tags.isNotEmpty)
+            'tags': [
+              for (final t in tags) {...t.toJson(), 'title': tagTitle(t, roles: roles)},
+            ],
+          if ((s.happened ?? '').isNotEmpty) 'happened': s.happened,
         },
   ];
 
@@ -662,6 +672,7 @@ extension VidyaLink on CareerBook {
     jobs: await (db.select(db.jobListings)..where((j) => j.deleted.not())).get(),
     stories: await stories(),
     storyCounts: await storyCounts(),
+    roles: roleFrameworks(await roleProfileRows()),
     learning: await (db.select(
       db.careerGrowth,
     )..where((g) => g.deleted.not() & g.kind.equals(todoKind).not())).get(),

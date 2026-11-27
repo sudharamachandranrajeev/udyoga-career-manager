@@ -511,16 +511,19 @@ Research how this employer or sector interviews now (competency frameworks, valu
 
   /// The interview engine's AI steps (question plans, criteria, scoring)
   /// over this adviser's AI, with the engine's own instructions.
-  InterviewBrain get interviewBrain => AiInterviewBrain(ai);
+  PromptedInterviewBrain get interviewBrain => AiInterviewBrain(ai);
 
   /// Writes the round's question plan (interview plan I2): for each
   /// question, the criterion it tests, the elements a full answer has and
   /// probes for each. Only the questions go: no profile, no answers. The
-  /// probe is later picked on the device from what the answer lacks.
+  /// probe is later picked on the device from what the answer lacks. The
+  /// panel's [persona] shapes the probes: the challenging panel's come with
+  /// the engine's tone limits (personaGuidance).
   Future<List<QuestionPlan>> questionPlan({
     required String role,
     required List<PracticeQuestion> questions,
-  }) => interviewBrain.planRound(role: role, questions: questions);
+    PersonaKind persona = PersonaKind.neutral,
+  }) => interviewBrain.planRound(role: role, questions: questions, persona: persona);
 
   /// Reads an advert and person specification into the criteria a panel
   /// agrees in advance (interview plan I3). Only the advert goes: no

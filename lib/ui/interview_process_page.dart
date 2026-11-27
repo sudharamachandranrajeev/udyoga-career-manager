@@ -14,6 +14,7 @@ import 'package:interview_engine/interview_engine.dart';
 import '../app/providers.dart';
 import '../domain/insights.dart';
 import '../domain/interview_book.dart';
+import '../domain/interview_brain.dart' show personaBlurb;
 import 'common.dart';
 import 'interview_device_ui.dart' show OfflineBadge;
 import 'interview_debrief_page.dart' show openDebrief, openRoleProfile;
@@ -149,7 +150,7 @@ class _ProcessPageState extends ConsumerState<ProcessPage> {
         Choice<PersonaKind>(
           label: 'Panel',
           value: persona,
-          options: {for (final p in personas.values) p.kind: '${p.label}: ${p.about}'},
+          options: {for (final p in personas.values) p.kind: '${p.label}: ${personaBlurb(p)}'},
           onChanged: (v) => setState(() => persona = v),
         ),
         Choice<int>(

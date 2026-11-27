@@ -21,6 +21,7 @@ import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/insights.dart';
 import '../domain/interview_book.dart';
+import '../domain/interview_brain.dart' show personaBlurb;
 import '../domain/interview_confidence.dart';
 import '../domain/json.dart';
 import '../domain/ollama.dart' show Ollama;
@@ -105,13 +106,14 @@ Future<(List<QuestionPlan>, String)> planRound(
   required String role,
   required List<PracticeQuestion> questions,
   required bool useAi,
+  PersonaKind persona = PersonaKind.neutral,
 }) async {
   final templates = [for (final q in questions) templatePlan(q)];
   if (!useAi) return (templates, 'Built-in follow-ups');
   try {
     final advisor = await requireInterviewAdvisor(ref);
     final fromAi = await advisor
-        .questionPlan(role: role, questions: questions)
+        .questionPlan(role: role, questions: questions, persona: persona)
         .timeout(const Duration(seconds: 120));
     final who = advisor.ai is Ollama ? 'the local model' : 'your AI';
     return (mergePlans(questions, fromAi), 'Follow-ups planned by $who');
@@ -273,6 +275,7 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
         role: session.role,
         questions: questions,
         useAi: hasAi && settings.aiPlan,
+        persona: settings.persona,
       );
       // A round from a role profile tests the profile's criteria, whatever
       // the plan called them.
@@ -555,7 +558,7 @@ class _SpokenRoundPageState extends ConsumerState<SpokenRoundPage> {
             options: {for (final p in personas.values) p.kind: p.label},
             onChanged: (v) => _setSettings(r.copyWith(persona: v)),
           ),
-          Text(persona.about, style: muted),
+          Text(personaBlurb(persona), style: muted),
           if (persona.silenceNote.isNotEmpty) ...[
             const SizedBox(height: 8),
             StatusLabel(Status.info, 'Silence is normal'),

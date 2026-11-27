@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Evidence bank (Coach): tag a story with the standards it shows, as many as fit: the NHS Leadership and Management Framework (the September 2025 draft structure, three areas and nine standards, marked "check the final wording"), the Healthcare Leadership Model's nine dimensions, the six NHS Constitution values, or a role profile's own person specification, beside the twelve interview competencies. Evidence coverage shows each standard as no story yet, some evidence, or ready (two or more confirmed stories); tap a gap to capture a story already tagged for it.
+- Capture a story with the date it happened. A story from over a year ago gets a soft hint to refresh the details while you still remember them.
+- Stories for your supporting statement (each role profile): for every criterion, the stories that fit best, tagged ones first and then by shared words, with no AI. Use one in the supporting statement or at interview to copy it, tag it with the criterion and note where it went; each story lists where it was used, and you are warned when the same employer has already seen it.
+- The challenging panel: the panel chooser describes it as "Firm panel: challenges claims, asks for evidence, interrupts politely. Never rude.", and with an AI its question plans now carry the engine's tone limits for that panel (needs `interview_engine` 0.5.0).
+- Vidya story cards carry their tags (`tags: [{framework, item, title}]`) and `happened` date when a story has them; older readers ignore both.
+- Database schema 14: story tags and dates on the story bank, and a new synced table for where each story was used. Older databases gain them on first open with nothing else changed.
+
 - Privacy rule 4 for the interview camera is reworded to the shared engine's opt-in rule: video frames are not stored unless you opt in to a video take for that session (on that device only, never synced, backed up or sent to an AI, deleted after 14 days by default, with delete all). Udyoga does not record video takes: its rounds stay audio-only and every camera frame is still dropped.
 - The interview simulator's engine (spoken rounds, Kokoro voice, Moonshine transcripts, the camera set-up check, question plans, probes, personas, processes and verified-quote scoring) moved into the shared `interview_engine` package, which Vidya will use too. Rounds, follow-ups and scores work as before. Each saved score now records the engine version that made it.
 - Speech and face models on Linux, Windows and macOS now live in one folder shared with Vidya (`~/.local/share/pariksha/models` on Linux, `%APPDATA%\pariksha\models` on Windows). Models already downloaded move there once, after their checksum check, so nothing is downloaded again. Android is unchanged.

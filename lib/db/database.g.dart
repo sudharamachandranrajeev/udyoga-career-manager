@@ -8786,6 +8786,25 @@ class $CareerStoriesTable extends CareerStories with TableInfo<$CareerStoriesTab
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _tagsMeta = const VerificationMeta('tags');
+  @override
+  late final GeneratedColumn<String> tags = GeneratedColumn<String>(
+    'tags',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _happenedMeta = const VerificationMeta('happened');
+  @override
+  late final GeneratedColumn<String> happened = GeneratedColumn<String>(
+    'happened',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -8802,6 +8821,8 @@ class $CareerStoriesTable extends CareerStories with TableInfo<$CareerStoriesTab
     criteria,
     confirmed,
     added,
+    tags,
+    happened,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -8863,6 +8884,12 @@ class $CareerStoriesTable extends CareerStories with TableInfo<$CareerStoriesTab
     } else if (isInserting) {
       context.missing(_addedMeta);
     }
+    if (data.containsKey('tags')) {
+      context.handle(_tagsMeta, tags.isAcceptableOrUnknown(data['tags']!, _tagsMeta));
+    }
+    if (data.containsKey('happened')) {
+      context.handle(_happenedMeta, happened.isAcceptableOrUnknown(data['happened']!, _happenedMeta));
+    }
     return context;
   }
 
@@ -8889,6 +8916,8 @@ class $CareerStoriesTable extends CareerStories with TableInfo<$CareerStoriesTab
       criteria: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}criteria'])!,
       confirmed: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}confirmed'])!,
       added: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}added'])!,
+      tags: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}tags'])!,
+      happened: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}happened']),
     );
   }
 
@@ -8921,6 +8950,15 @@ class Story extends DataClass implements Insertable<Story> {
   /// False until the candidate has checked it is true as written.
   final bool confirmed;
   final String added;
+
+  /// Framework standards and person-specification criteria the story
+  /// evidences, JSON list of {"framework": id, "item": id}
+  /// (domain/evidence.dart). One story can carry many. Added in schema 14.
+  final String tags;
+
+  /// When it happened, yyyy-MM-dd (or yyyy-MM); null when not given, and
+  /// then [added] stands in. Added in schema 14.
+  final String? happened;
   const Story({
     required this.id,
     required this.hlc,
@@ -8936,6 +8974,8 @@ class Story extends DataClass implements Insertable<Story> {
     required this.criteria,
     required this.confirmed,
     required this.added,
+    required this.tags,
+    this.happened,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -8956,6 +8996,10 @@ class Story extends DataClass implements Insertable<Story> {
     map['criteria'] = Variable<String>(criteria);
     map['confirmed'] = Variable<bool>(confirmed);
     map['added'] = Variable<String>(added);
+    map['tags'] = Variable<String>(tags);
+    if (!nullToAbsent || happened != null) {
+      map['happened'] = Variable<String>(happened);
+    }
     return map;
   }
 
@@ -8975,6 +9019,8 @@ class Story extends DataClass implements Insertable<Story> {
       criteria: Value(criteria),
       confirmed: Value(confirmed),
       added: Value(added),
+      tags: Value(tags),
+      happened: happened == null && nullToAbsent ? const Value.absent() : Value(happened),
     );
   }
 
@@ -8995,6 +9041,8 @@ class Story extends DataClass implements Insertable<Story> {
       criteria: serializer.fromJson<String>(json['criteria']),
       confirmed: serializer.fromJson<bool>(json['confirmed']),
       added: serializer.fromJson<String>(json['added']),
+      tags: serializer.fromJson<String>(json['tags']),
+      happened: serializer.fromJson<String?>(json['happened']),
     );
   }
   @override
@@ -9015,6 +9063,8 @@ class Story extends DataClass implements Insertable<Story> {
       'criteria': serializer.toJson<String>(criteria),
       'confirmed': serializer.toJson<bool>(confirmed),
       'added': serializer.toJson<String>(added),
+      'tags': serializer.toJson<String>(tags),
+      'happened': serializer.toJson<String?>(happened),
     };
   }
 
@@ -9033,6 +9083,8 @@ class Story extends DataClass implements Insertable<Story> {
     String? criteria,
     bool? confirmed,
     String? added,
+    String? tags,
+    Value<String?> happened = const Value.absent(),
   }) => Story(
     id: id ?? this.id,
     hlc: hlc ?? this.hlc,
@@ -9048,6 +9100,8 @@ class Story extends DataClass implements Insertable<Story> {
     criteria: criteria ?? this.criteria,
     confirmed: confirmed ?? this.confirmed,
     added: added ?? this.added,
+    tags: tags ?? this.tags,
+    happened: happened.present ? happened.value : this.happened,
   );
   Story copyWithCompanion(CareerStoriesCompanion data) {
     return Story(
@@ -9065,6 +9119,8 @@ class Story extends DataClass implements Insertable<Story> {
       criteria: data.criteria.present ? data.criteria.value : this.criteria,
       confirmed: data.confirmed.present ? data.confirmed.value : this.confirmed,
       added: data.added.present ? data.added.value : this.added,
+      tags: data.tags.present ? data.tags.value : this.tags,
+      happened: data.happened.present ? data.happened.value : this.happened,
     );
   }
 
@@ -9084,7 +9140,9 @@ class Story extends DataClass implements Insertable<Story> {
           ..write('sourceId: $sourceId, ')
           ..write('criteria: $criteria, ')
           ..write('confirmed: $confirmed, ')
-          ..write('added: $added')
+          ..write('added: $added, ')
+          ..write('tags: $tags, ')
+          ..write('happened: $happened')
           ..write(')'))
         .toString();
   }
@@ -9105,6 +9163,8 @@ class Story extends DataClass implements Insertable<Story> {
     criteria,
     confirmed,
     added,
+    tags,
+    happened,
   );
   @override
   bool operator ==(Object other) =>
@@ -9123,7 +9183,9 @@ class Story extends DataClass implements Insertable<Story> {
           other.sourceId == this.sourceId &&
           other.criteria == this.criteria &&
           other.confirmed == this.confirmed &&
-          other.added == this.added);
+          other.added == this.added &&
+          other.tags == this.tags &&
+          other.happened == this.happened);
 }
 
 class CareerStoriesCompanion extends UpdateCompanion<Story> {
@@ -9141,6 +9203,8 @@ class CareerStoriesCompanion extends UpdateCompanion<Story> {
   final Value<String> criteria;
   final Value<bool> confirmed;
   final Value<String> added;
+  final Value<String> tags;
+  final Value<String?> happened;
   final Value<int> rowid;
   const CareerStoriesCompanion({
     this.id = const Value.absent(),
@@ -9157,6 +9221,8 @@ class CareerStoriesCompanion extends UpdateCompanion<Story> {
     this.criteria = const Value.absent(),
     this.confirmed = const Value.absent(),
     this.added = const Value.absent(),
+    this.tags = const Value.absent(),
+    this.happened = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CareerStoriesCompanion.insert({
@@ -9174,6 +9240,8 @@ class CareerStoriesCompanion extends UpdateCompanion<Story> {
     this.criteria = const Value.absent(),
     this.confirmed = const Value.absent(),
     required String added,
+    this.tags = const Value.absent(),
+    this.happened = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        title = Value(title),
@@ -9193,6 +9261,8 @@ class CareerStoriesCompanion extends UpdateCompanion<Story> {
     Expression<String>? criteria,
     Expression<bool>? confirmed,
     Expression<String>? added,
+    Expression<String>? tags,
+    Expression<String>? happened,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -9210,6 +9280,8 @@ class CareerStoriesCompanion extends UpdateCompanion<Story> {
       if (criteria != null) 'criteria': criteria,
       if (confirmed != null) 'confirmed': confirmed,
       if (added != null) 'added': added,
+      if (tags != null) 'tags': tags,
+      if (happened != null) 'happened': happened,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -9229,6 +9301,8 @@ class CareerStoriesCompanion extends UpdateCompanion<Story> {
     Value<String>? criteria,
     Value<bool>? confirmed,
     Value<String>? added,
+    Value<String>? tags,
+    Value<String?>? happened,
     Value<int>? rowid,
   }) {
     return CareerStoriesCompanion(
@@ -9246,6 +9320,8 @@ class CareerStoriesCompanion extends UpdateCompanion<Story> {
       criteria: criteria ?? this.criteria,
       confirmed: confirmed ?? this.confirmed,
       added: added ?? this.added,
+      tags: tags ?? this.tags,
+      happened: happened ?? this.happened,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -9295,6 +9371,12 @@ class CareerStoriesCompanion extends UpdateCompanion<Story> {
     if (added.present) {
       map['added'] = Variable<String>(added.value);
     }
+    if (tags.present) {
+      map['tags'] = Variable<String>(tags.value);
+    }
+    if (happened.present) {
+      map['happened'] = Variable<String>(happened.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -9318,6 +9400,518 @@ class CareerStoriesCompanion extends UpdateCompanion<Story> {
           ..write('criteria: $criteria, ')
           ..write('confirmed: $confirmed, ')
           ..write('added: $added, ')
+          ..write('tags: $tags, ')
+          ..write('happened: $happened, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CareerStoryUsesTable extends CareerStoryUses with TableInfo<$CareerStoryUsesTable, StoryUse> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CareerStoryUsesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hlcMeta = const VerificationMeta('hlc');
+  @override
+  late final GeneratedColumn<String> hlc = GeneratedColumn<String>(
+    'hlc',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta('deleted');
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("deleted" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _storyIdMeta = const VerificationMeta('storyId');
+  @override
+  late final GeneratedColumn<String> storyId = GeneratedColumn<String>(
+    'story_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _refIdMeta = const VerificationMeta('refId');
+  @override
+  late final GeneratedColumn<String> refId = GeneratedColumn<String>(
+    'ref_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _employerMeta = const VerificationMeta('employer');
+  @override
+  late final GeneratedColumn<String> employer = GeneratedColumn<String>(
+    'employer',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+    'role',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _criterionMeta = const VerificationMeta('criterion');
+  @override
+  late final GeneratedColumn<String> criterion = GeneratedColumn<String>(
+    'criterion',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _atMeta = const VerificationMeta('at');
+  @override
+  late final GeneratedColumn<String> at = GeneratedColumn<String>(
+    'at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    hlc,
+    deleted,
+    storyId,
+    kind,
+    refId,
+    employer,
+    role,
+    criterion,
+    at,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'career_story_uses';
+  @override
+  VerificationContext validateIntegrity(Insertable<StoryUse> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('hlc')) {
+      context.handle(_hlcMeta, hlc.isAcceptableOrUnknown(data['hlc']!, _hlcMeta));
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(_deletedMeta, deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta));
+    }
+    if (data.containsKey('story_id')) {
+      context.handle(_storyIdMeta, storyId.isAcceptableOrUnknown(data['story_id']!, _storyIdMeta));
+    } else if (isInserting) {
+      context.missing(_storyIdMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(_kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('ref_id')) {
+      context.handle(_refIdMeta, refId.isAcceptableOrUnknown(data['ref_id']!, _refIdMeta));
+    }
+    if (data.containsKey('employer')) {
+      context.handle(_employerMeta, employer.isAcceptableOrUnknown(data['employer']!, _employerMeta));
+    }
+    if (data.containsKey('role')) {
+      context.handle(_roleMeta, role.isAcceptableOrUnknown(data['role']!, _roleMeta));
+    }
+    if (data.containsKey('criterion')) {
+      context.handle(_criterionMeta, criterion.isAcceptableOrUnknown(data['criterion']!, _criterionMeta));
+    }
+    if (data.containsKey('at')) {
+      context.handle(_atMeta, at.isAcceptableOrUnknown(data['at']!, _atMeta));
+    } else if (isInserting) {
+      context.missing(_atMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StoryUse map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StoryUse(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      hlc: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}hlc'])!,
+      deleted: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}deleted'])!,
+      storyId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}story_id'])!,
+      kind: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+      refId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}ref_id'])!,
+      employer: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}employer'])!,
+      role: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}role'])!,
+      criterion: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}criterion'])!,
+      at: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}at'])!,
+    );
+  }
+
+  @override
+  $CareerStoryUsesTable createAlias(String alias) {
+    return $CareerStoryUsesTable(attachedDatabase, alias);
+  }
+}
+
+class StoryUse extends DataClass implements Insertable<StoryUse> {
+  final String id;
+  final String hlc;
+  final bool deleted;
+  final String storyId;
+
+  /// statement | application | interview
+  final String kind;
+
+  /// The role profile, application or round it went into; '' if none.
+  final String refId;
+  final String employer;
+  final String role;
+
+  /// The criterion it answered, in the person specification's words.
+  final String criterion;
+  final String at;
+  const StoryUse({
+    required this.id,
+    required this.hlc,
+    required this.deleted,
+    required this.storyId,
+    required this.kind,
+    required this.refId,
+    required this.employer,
+    required this.role,
+    required this.criterion,
+    required this.at,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['hlc'] = Variable<String>(hlc);
+    map['deleted'] = Variable<bool>(deleted);
+    map['story_id'] = Variable<String>(storyId);
+    map['kind'] = Variable<String>(kind);
+    map['ref_id'] = Variable<String>(refId);
+    map['employer'] = Variable<String>(employer);
+    map['role'] = Variable<String>(role);
+    map['criterion'] = Variable<String>(criterion);
+    map['at'] = Variable<String>(at);
+    return map;
+  }
+
+  CareerStoryUsesCompanion toCompanion(bool nullToAbsent) {
+    return CareerStoryUsesCompanion(
+      id: Value(id),
+      hlc: Value(hlc),
+      deleted: Value(deleted),
+      storyId: Value(storyId),
+      kind: Value(kind),
+      refId: Value(refId),
+      employer: Value(employer),
+      role: Value(role),
+      criterion: Value(criterion),
+      at: Value(at),
+    );
+  }
+
+  factory StoryUse.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StoryUse(
+      id: serializer.fromJson<String>(json['id']),
+      hlc: serializer.fromJson<String>(json['hlc']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
+      storyId: serializer.fromJson<String>(json['storyId']),
+      kind: serializer.fromJson<String>(json['kind']),
+      refId: serializer.fromJson<String>(json['refId']),
+      employer: serializer.fromJson<String>(json['employer']),
+      role: serializer.fromJson<String>(json['role']),
+      criterion: serializer.fromJson<String>(json['criterion']),
+      at: serializer.fromJson<String>(json['at']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'hlc': serializer.toJson<String>(hlc),
+      'deleted': serializer.toJson<bool>(deleted),
+      'storyId': serializer.toJson<String>(storyId),
+      'kind': serializer.toJson<String>(kind),
+      'refId': serializer.toJson<String>(refId),
+      'employer': serializer.toJson<String>(employer),
+      'role': serializer.toJson<String>(role),
+      'criterion': serializer.toJson<String>(criterion),
+      'at': serializer.toJson<String>(at),
+    };
+  }
+
+  StoryUse copyWith({
+    String? id,
+    String? hlc,
+    bool? deleted,
+    String? storyId,
+    String? kind,
+    String? refId,
+    String? employer,
+    String? role,
+    String? criterion,
+    String? at,
+  }) => StoryUse(
+    id: id ?? this.id,
+    hlc: hlc ?? this.hlc,
+    deleted: deleted ?? this.deleted,
+    storyId: storyId ?? this.storyId,
+    kind: kind ?? this.kind,
+    refId: refId ?? this.refId,
+    employer: employer ?? this.employer,
+    role: role ?? this.role,
+    criterion: criterion ?? this.criterion,
+    at: at ?? this.at,
+  );
+  StoryUse copyWithCompanion(CareerStoryUsesCompanion data) {
+    return StoryUse(
+      id: data.id.present ? data.id.value : this.id,
+      hlc: data.hlc.present ? data.hlc.value : this.hlc,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+      storyId: data.storyId.present ? data.storyId.value : this.storyId,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      refId: data.refId.present ? data.refId.value : this.refId,
+      employer: data.employer.present ? data.employer.value : this.employer,
+      role: data.role.present ? data.role.value : this.role,
+      criterion: data.criterion.present ? data.criterion.value : this.criterion,
+      at: data.at.present ? data.at.value : this.at,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoryUse(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('storyId: $storyId, ')
+          ..write('kind: $kind, ')
+          ..write('refId: $refId, ')
+          ..write('employer: $employer, ')
+          ..write('role: $role, ')
+          ..write('criterion: $criterion, ')
+          ..write('at: $at')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, hlc, deleted, storyId, kind, refId, employer, role, criterion, at);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StoryUse &&
+          other.id == this.id &&
+          other.hlc == this.hlc &&
+          other.deleted == this.deleted &&
+          other.storyId == this.storyId &&
+          other.kind == this.kind &&
+          other.refId == this.refId &&
+          other.employer == this.employer &&
+          other.role == this.role &&
+          other.criterion == this.criterion &&
+          other.at == this.at);
+}
+
+class CareerStoryUsesCompanion extends UpdateCompanion<StoryUse> {
+  final Value<String> id;
+  final Value<String> hlc;
+  final Value<bool> deleted;
+  final Value<String> storyId;
+  final Value<String> kind;
+  final Value<String> refId;
+  final Value<String> employer;
+  final Value<String> role;
+  final Value<String> criterion;
+  final Value<String> at;
+  final Value<int> rowid;
+  const CareerStoryUsesCompanion({
+    this.id = const Value.absent(),
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.storyId = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.refId = const Value.absent(),
+    this.employer = const Value.absent(),
+    this.role = const Value.absent(),
+    this.criterion = const Value.absent(),
+    this.at = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CareerStoryUsesCompanion.insert({
+    required String id,
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    required String storyId,
+    required String kind,
+    this.refId = const Value.absent(),
+    this.employer = const Value.absent(),
+    this.role = const Value.absent(),
+    this.criterion = const Value.absent(),
+    required String at,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       storyId = Value(storyId),
+       kind = Value(kind),
+       at = Value(at);
+  static Insertable<StoryUse> custom({
+    Expression<String>? id,
+    Expression<String>? hlc,
+    Expression<bool>? deleted,
+    Expression<String>? storyId,
+    Expression<String>? kind,
+    Expression<String>? refId,
+    Expression<String>? employer,
+    Expression<String>? role,
+    Expression<String>? criterion,
+    Expression<String>? at,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (hlc != null) 'hlc': hlc,
+      if (deleted != null) 'deleted': deleted,
+      if (storyId != null) 'story_id': storyId,
+      if (kind != null) 'kind': kind,
+      if (refId != null) 'ref_id': refId,
+      if (employer != null) 'employer': employer,
+      if (role != null) 'role': role,
+      if (criterion != null) 'criterion': criterion,
+      if (at != null) 'at': at,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CareerStoryUsesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? hlc,
+    Value<bool>? deleted,
+    Value<String>? storyId,
+    Value<String>? kind,
+    Value<String>? refId,
+    Value<String>? employer,
+    Value<String>? role,
+    Value<String>? criterion,
+    Value<String>? at,
+    Value<int>? rowid,
+  }) {
+    return CareerStoryUsesCompanion(
+      id: id ?? this.id,
+      hlc: hlc ?? this.hlc,
+      deleted: deleted ?? this.deleted,
+      storyId: storyId ?? this.storyId,
+      kind: kind ?? this.kind,
+      refId: refId ?? this.refId,
+      employer: employer ?? this.employer,
+      role: role ?? this.role,
+      criterion: criterion ?? this.criterion,
+      at: at ?? this.at,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (hlc.present) {
+      map['hlc'] = Variable<String>(hlc.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
+    if (storyId.present) {
+      map['story_id'] = Variable<String>(storyId.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (refId.present) {
+      map['ref_id'] = Variable<String>(refId.value);
+    }
+    if (employer.present) {
+      map['employer'] = Variable<String>(employer.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (criterion.present) {
+      map['criterion'] = Variable<String>(criterion.value);
+    }
+    if (at.present) {
+      map['at'] = Variable<String>(at.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CareerStoryUsesCompanion(')
+          ..write('id: $id, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('storyId: $storyId, ')
+          ..write('kind: $kind, ')
+          ..write('refId: $refId, ')
+          ..write('employer: $employer, ')
+          ..write('role: $role, ')
+          ..write('criterion: $criterion, ')
+          ..write('at: $at, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -16517,6 +17111,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CareerQuestionsTable careerQuestions = $CareerQuestionsTable(this);
   late final $CareerJournalTable careerJournal = $CareerJournalTable(this);
   late final $CareerStoriesTable careerStories = $CareerStoriesTable(this);
+  late final $CareerStoryUsesTable careerStoryUses = $CareerStoryUsesTable(this);
   late final $ContactHandlesTable contactHandles = $ContactHandlesTable(this);
   late final $ConversationsTable conversations = $ConversationsTable(this);
   late final $MessagesTable messages = $MessagesTable(this);
@@ -16553,6 +17148,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     careerQuestions,
     careerJournal,
     careerStories,
+    careerStoryUses,
     contactHandles,
     conversations,
     messages,
@@ -20467,6 +21063,8 @@ typedef $$CareerStoriesTableCreateCompanionBuilder = CareerStoriesCompanion Func
   Value<String> criteria,
   Value<bool> confirmed,
   required String added,
+  Value<String> tags,
+  Value<String?> happened,
   Value<int> rowid,
 });
 typedef $$CareerStoriesTableUpdateCompanionBuilder = CareerStoriesCompanion Function({
@@ -20484,6 +21082,8 @@ typedef $$CareerStoriesTableUpdateCompanionBuilder = CareerStoriesCompanion Func
   Value<String> criteria,
   Value<bool> confirmed,
   Value<String> added,
+  Value<String> tags,
+  Value<String?> happened,
   Value<int> rowid,
 });
 
@@ -20536,6 +21136,12 @@ class $$CareerStoriesTableFilterComposer extends Composer<_$AppDatabase, $Career
 
   ColumnFilters<String> get added =>
       $composableBuilder(column: $table.added, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get tags =>
+      $composableBuilder(column: $table.tags, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get happened =>
+      $composableBuilder(column: $table.happened, builder: (column) => ColumnFilters(column));
 }
 
 class $$CareerStoriesTableOrderingComposer extends Composer<_$AppDatabase, $CareerStoriesTable> {
@@ -20587,6 +21193,12 @@ class $$CareerStoriesTableOrderingComposer extends Composer<_$AppDatabase, $Care
 
   ColumnOrderings<String> get added =>
       $composableBuilder(column: $table.added, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get tags =>
+      $composableBuilder(column: $table.tags, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get happened =>
+      $composableBuilder(column: $table.happened, builder: (column) => ColumnOrderings(column));
 }
 
 class $$CareerStoriesTableAnnotationComposer extends Composer<_$AppDatabase, $CareerStoriesTable> {
@@ -20633,6 +21245,11 @@ class $$CareerStoriesTableAnnotationComposer extends Composer<_$AppDatabase, $Ca
       $composableBuilder(column: $table.confirmed, builder: (column) => column);
 
   GeneratedColumn<String> get added => $composableBuilder(column: $table.added, builder: (column) => column);
+
+  GeneratedColumn<String> get tags => $composableBuilder(column: $table.tags, builder: (column) => column);
+
+  GeneratedColumn<String> get happened =>
+      $composableBuilder(column: $table.happened, builder: (column) => column);
 }
 
 class $$CareerStoriesTableTableManager
@@ -20674,6 +21291,8 @@ class $$CareerStoriesTableTableManager
                 Value<String> criteria = const Value.absent(),
                 Value<bool> confirmed = const Value.absent(),
                 Value<String> added = const Value.absent(),
+                Value<String> tags = const Value.absent(),
+                Value<String?> happened = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CareerStoriesCompanion(
                 id: id,
@@ -20690,6 +21309,8 @@ class $$CareerStoriesTableTableManager
                 criteria: criteria,
                 confirmed: confirmed,
                 added: added,
+                tags: tags,
+                happened: happened,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -20708,6 +21329,8 @@ class $$CareerStoriesTableTableManager
                 Value<String> criteria = const Value.absent(),
                 Value<bool> confirmed = const Value.absent(),
                 required String added,
+                Value<String> tags = const Value.absent(),
+                Value<String?> happened = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CareerStoriesCompanion.insert(
                 id: id,
@@ -20724,6 +21347,8 @@ class $$CareerStoriesTableTableManager
                 criteria: criteria,
                 confirmed: confirmed,
                 added: added,
+                tags: tags,
+                happened: happened,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -20751,6 +21376,246 @@ typedef $$CareerStoriesTableProcessedTableManager =
       $$CareerStoriesTableUpdateCompanionBuilder,
       (Story, BaseReferences<_$AppDatabase, $CareerStoriesTable, Story>),
       Story,
+      PrefetchHooks Function()
+    >;
+typedef $$CareerStoryUsesTableCreateCompanionBuilder = CareerStoryUsesCompanion Function({
+  required String id,
+  Value<String> hlc,
+  Value<bool> deleted,
+  required String storyId,
+  required String kind,
+  Value<String> refId,
+  Value<String> employer,
+  Value<String> role,
+  Value<String> criterion,
+  required String at,
+  Value<int> rowid,
+});
+typedef $$CareerStoryUsesTableUpdateCompanionBuilder = CareerStoryUsesCompanion Function({
+  Value<String> id,
+  Value<String> hlc,
+  Value<bool> deleted,
+  Value<String> storyId,
+  Value<String> kind,
+  Value<String> refId,
+  Value<String> employer,
+  Value<String> role,
+  Value<String> criterion,
+  Value<String> at,
+  Value<int> rowid,
+});
+
+class $$CareerStoryUsesTableFilterComposer extends Composer<_$AppDatabase, $CareerStoryUsesTable> {
+  $$CareerStoryUsesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get storyId =>
+      $composableBuilder(column: $table.storyId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get refId =>
+      $composableBuilder(column: $table.refId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get employer =>
+      $composableBuilder(column: $table.employer, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get criterion =>
+      $composableBuilder(column: $table.criterion, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get at =>
+      $composableBuilder(column: $table.at, builder: (column) => ColumnFilters(column));
+}
+
+class $$CareerStoryUsesTableOrderingComposer extends Composer<_$AppDatabase, $CareerStoryUsesTable> {
+  $$CareerStoryUsesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get storyId =>
+      $composableBuilder(column: $table.storyId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get refId =>
+      $composableBuilder(column: $table.refId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get employer =>
+      $composableBuilder(column: $table.employer, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get criterion =>
+      $composableBuilder(column: $table.criterion, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get at =>
+      $composableBuilder(column: $table.at, builder: (column) => ColumnOrderings(column));
+}
+
+class $$CareerStoryUsesTableAnnotationComposer extends Composer<_$AppDatabase, $CareerStoryUsesTable> {
+  $$CareerStoryUsesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get hlc => $composableBuilder(column: $table.hlc, builder: (column) => column);
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
+
+  GeneratedColumn<String> get storyId =>
+      $composableBuilder(column: $table.storyId, builder: (column) => column);
+
+  GeneratedColumn<String> get kind => $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get refId => $composableBuilder(column: $table.refId, builder: (column) => column);
+
+  GeneratedColumn<String> get employer =>
+      $composableBuilder(column: $table.employer, builder: (column) => column);
+
+  GeneratedColumn<String> get role => $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<String> get criterion =>
+      $composableBuilder(column: $table.criterion, builder: (column) => column);
+
+  GeneratedColumn<String> get at => $composableBuilder(column: $table.at, builder: (column) => column);
+}
+
+class $$CareerStoryUsesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CareerStoryUsesTable,
+          StoryUse,
+          $$CareerStoryUsesTableFilterComposer,
+          $$CareerStoryUsesTableOrderingComposer,
+          $$CareerStoryUsesTableAnnotationComposer,
+          $$CareerStoryUsesTableCreateCompanionBuilder,
+          $$CareerStoryUsesTableUpdateCompanionBuilder,
+          (StoryUse, BaseReferences<_$AppDatabase, $CareerStoryUsesTable, StoryUse>),
+          StoryUse,
+          PrefetchHooks Function()
+        > {
+  $$CareerStoryUsesTableTableManager(_$AppDatabase db, $CareerStoryUsesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$CareerStoryUsesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$CareerStoryUsesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$CareerStoryUsesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<String> storyId = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> refId = const Value.absent(),
+                Value<String> employer = const Value.absent(),
+                Value<String> role = const Value.absent(),
+                Value<String> criterion = const Value.absent(),
+                Value<String> at = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CareerStoryUsesCompanion(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                storyId: storyId,
+                kind: kind,
+                refId: refId,
+                employer: employer,
+                role: role,
+                criterion: criterion,
+                at: at,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                required String storyId,
+                required String kind,
+                Value<String> refId = const Value.absent(),
+                Value<String> employer = const Value.absent(),
+                Value<String> role = const Value.absent(),
+                Value<String> criterion = const Value.absent(),
+                required String at,
+                Value<int> rowid = const Value.absent(),
+              }) => CareerStoryUsesCompanion.insert(
+                id: id,
+                hlc: hlc,
+                deleted: deleted,
+                storyId: storyId,
+                kind: kind,
+                refId: refId,
+                employer: employer,
+                role: role,
+                criterion: criterion,
+                at: at,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CareerStoryUsesTable, StoryUse>(table),
+                  BaseReferences<_$AppDatabase, $CareerStoryUsesTable, StoryUse>(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CareerStoryUsesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CareerStoryUsesTable,
+      StoryUse,
+      $$CareerStoryUsesTableFilterComposer,
+      $$CareerStoryUsesTableOrderingComposer,
+      $$CareerStoryUsesTableAnnotationComposer,
+      $$CareerStoryUsesTableCreateCompanionBuilder,
+      $$CareerStoryUsesTableUpdateCompanionBuilder,
+      (StoryUse, BaseReferences<_$AppDatabase, $CareerStoryUsesTable, StoryUse>),
+      StoryUse,
       PrefetchHooks Function()
     >;
 typedef $$ContactHandlesTableCreateCompanionBuilder = ContactHandlesCompanion Function({
@@ -24220,6 +25085,8 @@ class $AppDatabaseManager {
       $$CareerJournalTableTableManager(_db, _db.careerJournal);
   $$CareerStoriesTableTableManager get careerStories =>
       $$CareerStoriesTableTableManager(_db, _db.careerStories);
+  $$CareerStoryUsesTableTableManager get careerStoryUses =>
+      $$CareerStoryUsesTableTableManager(_db, _db.careerStoryUses);
   $$ContactHandlesTableTableManager get contactHandles =>
       $$ContactHandlesTableTableManager(_db, _db.contactHandles);
   $$ConversationsTableTableManager get conversations =>
