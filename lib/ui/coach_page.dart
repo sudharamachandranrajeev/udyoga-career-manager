@@ -159,19 +159,27 @@ class _CheckInCardState extends ConsumerState<_CheckInCard> {
     final c = widget.checkIn;
     final settings = ref.watch(checkInSettingsProvider).value;
     final digest = c == null || c.digest.isEmpty ? null : CheckInDigest.fromJson(decodeObject(c.digest));
+    final nudge = captureNudgeDue(ref.watch(storiesProvider).value ?? const [], today: today());
     return SectionCard(
       title: "Today's check-in",
       trailing: settings == null ? null : Text('Every day at ${settings.time}'),
       child: c == null
-          ? Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton.icon(
-                icon: busy
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.wb_twilight_outlined),
-                label: const Text('How was your day?'),
-                onPressed: busy ? null : _start,
-              ),
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FilledButton.icon(
+                  icon: busy
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.wb_twilight_outlined),
+                  label: const Text('How was your day?'),
+                  onPressed: busy ? null : _start,
+                ),
+                if (nudge) CaptureStoryNudge(onTap: () => captureThisMonth(context, ref)),
+              ],
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -195,11 +203,35 @@ class _CheckInCardState extends ConsumerState<_CheckInCard> {
                   const SizedBox(height: 8),
                   Text(digest.summary, style: Theme.of(context).textTheme.bodySmall),
                 ],
+                if (nudge) CaptureStoryNudge(onTap: () => captureThisMonth(context, ref)),
               ],
             ),
     );
   }
 }
+
+/// The monthly nudge (plan B5): no story was captured in the last 30 days,
+/// so the check-in offers one from this month, while it is fresh. The
+/// tile goes once the story is saved, so the page opens the editor from
+/// its own context (see captureThisMonth), not the tile's.
+class CaptureStoryNudge extends StatelessWidget {
+  const CaptureStoryNudge({super.key, required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    key: const ValueKey('capture-story-nudge'),
+    contentPadding: EdgeInsets.zero,
+    leading: const Icon(Icons.auto_stories_outlined),
+    title: const Text('Capture a story from this month'),
+    subtitle: const Text('No story in the last 30 days. Two minutes now saves an hour before an interview.'),
+    onTap: onTap,
+  );
+}
+
+/// Opens a new story dated this month (yyyy-MM).
+Future<bool> captureThisMonth(BuildContext context, WidgetRef ref) =>
+    editStory(context, ref, null, happened: today().substring(0, 7));
 
 /// One question about the profile: pick a choice, type an answer or skip.
 class _QuestionTile extends ConsumerWidget {

@@ -8,6 +8,7 @@ import '../app/providers.dart';
 import '../db/database.dart';
 import '../domain/conversations.dart';
 import '../domain/employers.dart';
+import '../domain/evidence.dart' show captureNudgeDue;
 import '../domain/pipeline.dart';
 import '../domain/profile.dart';
 import '../domain/visa_clock.dart';
@@ -399,6 +400,10 @@ class TodayPage extends ConsumerWidget {
                     onTap: () =>
                         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CoachPage())),
                   ),
+                if (eveningNow &&
+                    (checkIn == null || checkIn.entry.isEmpty) &&
+                    captureNudgeDue(ref.watch(storiesProvider).value ?? const [], today: today()))
+                  CaptureStoryNudge(onTap: () => captureThisMonth(context, ref)),
                 if (fromVidya > 0)
                   ListTile(
                     contentPadding: EdgeInsets.zero,

@@ -19,17 +19,19 @@ import 'common.dart';
 
 /// Opens the story [s] to edit, or a new one when null. A new story can
 /// start with [tags] and [competencies] already chosen, e.g. from a gap in
-/// a coverage map. Returns true when it was saved.
+/// a coverage map, and with [happened] in place of today (e.g. this month,
+/// yyyy-MM, from the monthly nudge). Returns true when it was saved.
 Future<bool> editStory(
   BuildContext context,
   WidgetRef ref,
   Story? s, {
   List<StoryTag> tags = const [],
   List<String> competencies = const [],
+  String? happened,
 }) async {
   final day = today();
   final title = TextEditingController(text: s?.title ?? '');
-  final happened = TextEditingController(text: s == null ? day : (s.happened ?? ''));
+  final happenedField = TextEditingController(text: s == null ? happened ?? day : (s.happened ?? ''));
   final situation = TextEditingController(text: s?.situation ?? '');
   final task = TextEditingController(text: s?.task ?? '');
   final action = TextEditingController(text: s?.action ?? '');
@@ -48,12 +50,12 @@ Future<bool> editStory(
     fields: (setState) => [
       Field(title, 'Title', autofocus: s == null),
       Field(
-        happened,
+        happenedField,
         'When it happened',
         hint: 'yyyy-mm-dd or yyyy-mm',
         helper: 'Capture it while it is fresh: the details fade within weeks.',
       ),
-      if (s != null && needsRefresh(s.copyWith(happened: Value(happened.text.trim())), today: day))
+      if (s != null && needsRefresh(s.copyWith(happened: Value(happenedField.text.trim())), today: day))
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Row(
@@ -133,7 +135,7 @@ Future<bool> editStory(
       if (title.text.trim().isEmpty || action.text.trim().isEmpty) {
         return 'A title and what you did, please.';
       }
-      final when = happened.text.trim();
+      final when = happenedField.text.trim();
       if (when.isNotEmpty && !validStoryDate(when)) return 'Write the date as yyyy-mm-dd or yyyy-mm.';
       if (when.compareTo(day) > 0) return 'The date it happened is in the future.';
       final fields = (

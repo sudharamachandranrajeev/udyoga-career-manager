@@ -9,8 +9,10 @@ import 'ai.dart';
 import 'companion_book.dart';
 import 'conversations.dart';
 import 'eligibility.dart';
+import 'evidence.dart';
 import 'feeds.dart';
 import 'insights.dart';
+import 'interview_book.dart';
 import 'job_identity.dart';
 import 'json.dart';
 import 'linkedin_export.dart';
@@ -129,17 +131,19 @@ class CareerBook {
   /// The profile, with the candidate's ideas and wins from the Growth page
   /// as [CandidateProfile.notes], their story bank and the facts they have
   /// confirmed, so every AI request knows them.
-  Future<CandidateProfile> profile() async =>
-      CandidateProfile.fromJson(await pref<Map<String, Object?>>(PrefKeys.profile, const {})).copyWith(
-        notes: [
-          for (final n in await notes())
-            '${noteKinds[n.kind]}: ${n.title}${n.why.isEmpty ? '' : ' (${n.why})'}'
-                '${n.url.isEmpty ? '' : ' ${n.url}'}',
-        ],
-        stories: [for (final s in await stories()) CompanionBook.storyLine(s)],
-        confirmed: [for (final q in await questions(status: 'answered')) '${q.topic}: ${q.answer}'],
-        rights: await workRights(),
-      );
+  Future<CandidateProfile> profile() async {
+    final roles = roleFrameworks(await roleProfileRows());
+    return CandidateProfile.fromJson(await pref<Map<String, Object?>>(PrefKeys.profile, const {})).copyWith(
+      notes: [
+        for (final n in await notes())
+          '${noteKinds[n.kind]}: ${n.title}${n.why.isEmpty ? '' : ' (${n.why})'}'
+              '${n.url.isEmpty ? '' : ' ${n.url}'}',
+      ],
+      stories: [for (final s in await stories()) CompanionBook.storyLine(s, roles: roles)],
+      confirmed: [for (final q in await questions(status: 'answered')) '${q.topic}: ${q.answer}'],
+      rights: await workRights(),
+    );
+  }
 
   /// Passports, rights to work and languages.
   Future<WorkRights> workRights() async =>

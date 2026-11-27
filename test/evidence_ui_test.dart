@@ -10,8 +10,11 @@ import 'package:udyoga/db/database.dart';
 import 'package:udyoga/domain/companion_book.dart';
 import 'package:udyoga/domain/evidence.dart';
 import 'package:udyoga/domain/interview_book.dart';
+import 'package:udyoga/domain/resume.dart';
 import 'package:udyoga/ui/coach_page.dart';
+import 'package:brahma_core/brahma_core.dart' show today;
 import 'package:udyoga/ui/interview_debrief_page.dart';
+import 'package:udyoga/ui/resume_page.dart';
 
 import 'app_harness.dart';
 
@@ -138,6 +141,144 @@ void main() {
     );
     final story = (await tester.runAsync(app.book.stories))!.single;
     expect(tagsOf(story), [StoryTag('role.$profileId', 'c1')]);
+    await app.close();
+  });
+
+  testWidgets('a tailored CV notes the stories it used, preselected from its text, and flags reuse', (
+    tester,
+  ) async {
+    final app = AppHarness(tester)..desktop();
+    late String cvId;
+    await app.open(
+      seed: (book) async {
+        await book.save(
+          book.db.jobListings,
+          JobListingsCompanion.insert(
+            id: 'j1',
+            title: 'Ward clerk',
+            company: const Value('Example Trust'),
+            found: '2026-11-20',
+          ),
+          'j1',
+        );
+        await book.save(
+          book.db.careerStories,
+          CareerStoriesCompanion.insert(
+            id: 's1',
+            title: 'Records clean-up',
+            action: const Value(
+              'I checked every patient record against the clinic list and fixed the errors.',
+            ),
+            confirmed: const Value(true),
+            added: '2026-11-01',
+          ),
+          's1',
+        );
+        await book.save(
+          book.db.careerStories,
+          CareerStoriesCompanion.insert(
+            id: 's2',
+            title: 'Rota swap',
+            action: const Value('I set up a shared swap board for the porters.'),
+            confirmed: const Value(true),
+            added: '2026-11-02',
+          ),
+          's2',
+        );
+        await book.useStory(
+          (await book.stories()).firstWhere((s) => s.id == 's1'),
+          kind: 'interview',
+          refId: 'older',
+          employer: 'Example Trust',
+          role: 'Receptionist',
+          at: '2026-10-01T09:00',
+        );
+        cvId = await book.saveResume(
+          name: 'CV for Ward clerk, Example Trust',
+          doc: const ResumeDoc(
+            name: 'Alex Example',
+            summary:
+                'Ward clerk who checked every patient record against the clinic list and fixed the errors.',
+          ),
+          jobId: 'j1',
+          tailoring: {'coverLetter': 'Dear panel, I would like to apply.'},
+          today: '2026-11-27',
+        );
+      },
+    );
+    await app.run(home: ResumePage(cvId));
+    expect(find.text('Stories used'), findsOneWidget);
+
+    await app.tap(find.byKey(const ValueKey('stories-used-pick')));
+    bool ticked(String id) =>
+        tester.widget<CheckboxListTile>(find.byKey(ValueKey('story-used-$id'))).value ?? false;
+    expect(ticked('s1'), isTrue);
+    expect(ticked('s2'), isFalse);
+    await app.tap(find.byKey(const ValueKey('story-used-s2')));
+    await app.tapText('Save');
+
+    expect(find.text('Used with this employer before'), findsOneWidget);
+    expect(
+      find.textContaining('Records clean-up: You already used this story with Example Trust'),
+      findsOneWidget,
+    );
+    await app.tapText('OK');
+    expect(find.byKey(const ValueKey('used-s1')), findsOneWidget);
+    expect(find.text('Rota swap · Tailored CV'), findsOneWidget);
+
+    final uses = (await tester.runAsync(() => app.book.draftUses(cvId)))!;
+    expect(uses.map((u) => (u.storyId, u.kind, u.employer, u.role)).toSet(), {
+      ('s1', 'cv', 'Example Trust', 'Ward clerk'),
+      ('s2', 'cv', 'Example Trust', 'Ward clerk'),
+    });
+    await app.close();
+  });
+
+  testWidgets('the check-in offers to capture a story from this month when none came in 30 days', (
+    tester,
+  ) async {
+    final app = AppHarness(tester)..desktop();
+    await app.open(
+      seed: (book) async {
+        await book.save(
+          book.db.careerStories,
+          CareerStoriesCompanion.insert(id: 's1', title: 'Old story', added: '2020-01-01'),
+          's1',
+        );
+      },
+    );
+    await app.run(home: const CoachPage());
+    expect(find.byKey(const ValueKey('capture-story-nudge')), findsOneWidget);
+
+    await app.tap(find.byKey(const ValueKey('capture-story-nudge')));
+    expect(find.text('Capture a story'), findsOneWidget);
+    final month = today().substring(0, 7);
+    expect(find.widgetWithText(TextField, month), findsOneWidget);
+    await app.enter('Title', 'Tidy discharge lounge');
+    await app.enter('What you did', 'I sorted the lounge bookings so families knew when to come.');
+    await app.tapText('Save as checked');
+
+    final saved = (await tester.runAsync(app.book.stories))!.firstWhere((s) => s.id != 's1');
+    expect(saved.happened, month);
+    // A story captured today: no nudge until the next quiet month.
+    expect(find.byKey(const ValueKey('capture-story-nudge')), findsNothing);
+    await app.close();
+  });
+
+  testWidgets('no nudge when a story was captured this month', (tester) async {
+    final app = AppHarness(tester)..desktop();
+    await app.open(
+      seed: (book) async {
+        await book.save(
+          book.db.careerStories,
+          CareerStoriesCompanion.insert(id: 's1', title: 'Fresh story', added: today()),
+          's1',
+        );
+      },
+    );
+    await app.run(home: const CoachPage());
+    expect(find.text("Today's check-in"), findsOneWidget);
+    expect(find.byKey(const ValueKey('capture-story-nudge')), findsNothing);
     await app.close();
   });
 }

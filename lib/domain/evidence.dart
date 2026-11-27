@@ -380,6 +380,7 @@ bool needsRefresh(Story s, {required String today}) {
 // ---- uses ----
 
 const storyUseKinds = <String, String>{
+  'cv': 'Tailored CV',
   'statement': 'Supporting statement',
   'application': 'Application',
   'interview': 'Interview',
@@ -445,4 +446,83 @@ List<String> usedInLines(List<StoryUse> uses, String storyId) {
         u.at.split('T').first,
       ].where((x) => x.isNotEmpty).join(' · '),
   ];
+}
+
+// ---- the AI story line (B5) ----
+
+/// The most tags a story brings to the AI line, to keep the prompt small.
+const maxTagsInStoryLine = 4;
+
+/// The standards [s] is tagged with, for the AI story line, e.g.
+/// "Evidences: NHS Constitution values: Compassion; Healthcare Leadership
+/// Model: Engaging the team." At most [max] tags (then "and N more");
+/// unknown tags are left out; '' when there is none. A person
+/// specification is named by its role, not its long heading.
+String storyTagLine(Story s, {List<EvidenceFramework> roles = const [], int max = maxTagsInStoryLine}) {
+  final named = <String>[];
+  for (final t in tagsOf(s)) {
+    final f = builtInFramework(t.framework) ?? roles.where((r) => r.id == t.framework).firstOrNull;
+    final title = f?.item(t.item)?.title ?? '';
+    if (f == null || title.isEmpty) continue;
+    named.add('${f.isRole ? 'Person specification' : f.name}: $title');
+  }
+  if (named.isEmpty) return '';
+  final shown = named.take(max).join('; ');
+  final more = named.length - max;
+  return 'Evidences: $shown${more > 0 ? '; and $more more' : ''}.';
+}
+
+// ---- stories a draft drew on (B5) ----
+
+List<String> _words(String text) => [
+  for (final w in text.toLowerCase().split(RegExp(r'[^a-z0-9]+')))
+    if (w.isNotEmpty) w,
+];
+
+/// The distinctive phrases of [s]: each run of three words from its title,
+/// situation, task, action and result that holds at least one keyword
+/// (see [keywords]).
+Set<String> storyPhrases(Story s) {
+  final phrases = <String>{};
+  for (final part in [s.title, s.situation, s.task, s.action, s.result]) {
+    final w = _words(part);
+    for (var i = 0; i + 3 <= w.length; i++) {
+      final run = w.sublist(i, i + 3);
+      if (run.any((x) => x.length >= 4 && !_stop.contains(x))) phrases.add(run.join(' '));
+    }
+  }
+  return phrases;
+}
+
+/// True when [draft] shares at least [min] distinctive phrases with [s], or
+/// holds its title whole: a simple sign the draft drew on the story.
+bool draftDrawsOn(Story s, String draft, {int min = 2}) {
+  final text = ' ${_words(draft).join(' ')} ';
+  final title = _words(s.title).join(' ');
+  if (_words(s.title).length >= 3 && text.contains(' $title ')) return true;
+  var n = 0;
+  for (final p in storyPhrases(s)) {
+    if (text.contains(' $p ') && ++n >= min) return true;
+  }
+  return false;
+}
+
+/// The use kind for a story in a tailored draft: 'statement' when the
+/// cover letter or supporting statement drew on it, else 'cv'.
+String draftUseKind(Story s, {required String letter}) =>
+    letter.isNotEmpty && draftDrawsOn(s, letter) ? 'statement' : 'cv';
+
+// ---- monthly capture nudge (B5) ----
+
+/// True when no story was captured in the [days] days up to [today]
+/// (yyyy-MM-dd): the check-in then offers to capture one from this month.
+bool captureNudgeDue(List<Story> stories, {required String today, int days = 30}) {
+  final now = DateTime.tryParse(today);
+  if (now == null) return false;
+  final since = DateTime(now.year, now.month, now.day - days);
+  return !stories.any((s) {
+    if (s.deleted) return false;
+    final added = DateTime.tryParse(s.added.length >= 10 ? s.added.substring(0, 10) : s.added);
+    return added != null && !added.isBefore(since);
+  });
 }
