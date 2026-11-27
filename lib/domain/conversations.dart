@@ -325,19 +325,60 @@ abstract final class PaceLimits {
 
 enum PaceLevel { calm, busy, slowDown }
 
+/// What a helper app has left of one kind of LinkedIn action. A limit of 0
+/// (and -1 left) means it sets no cap.
+typedef Allowance = ({int dayLeft, int dayLimit, int weekLeft, int weekLimit});
+
 /// What the user has sent by hand on LinkedIn in the last day and week. It
-/// only advises: nothing is ever blocked.
+/// only advises: nothing is ever blocked. While a helper app sends for the
+/// user (docs/handoff.md), its own budget is shown instead ([Pace.helper]).
 class Pace {
-  const Pace({this.invitesDay = 0, this.invitesWeek = 0, this.messagesDay = 0, this.messagesWeek = 0});
+  const Pace({
+    this.invitesDay = 0,
+    this.invitesWeek = 0,
+    this.messagesDay = 0,
+    this.messagesWeek = 0,
+    this.helperMessages,
+    this.helperInvites,
+  });
+
+  /// The helper app's budget: what it has used of its limits, and what is
+  /// left.
+  factory Pace.helper({Allowance? messages, Allowance? invites}) {
+    int used(int limit, int left) => limit > 0 && left >= 0 ? limit - left : 0;
+    return Pace(
+      messagesDay: messages == null ? 0 : used(messages.dayLimit, messages.dayLeft),
+      messagesWeek: messages == null ? 0 : used(messages.weekLimit, messages.weekLeft),
+      invitesDay: invites == null ? 0 : used(invites.dayLimit, invites.dayLeft),
+      invitesWeek: invites == null ? 0 : used(invites.weekLimit, invites.weekLeft),
+      helperMessages: messages,
+      helperInvites: invites,
+    );
+  }
+
   final int invitesDay, invitesWeek, messagesDay, messagesWeek;
+  final Allowance? helperMessages, helperInvites;
+
+  /// Whether these are the helper app's numbers.
+  bool get fromHelper => helperMessages != null || helperInvites != null;
 
   /// Each count as a share of its limit.
-  double get _load => [
-    invitesDay / PaceLimits.invitesDay,
-    invitesWeek / PaceLimits.invitesWeek,
-    messagesDay / PaceLimits.messagesDay,
-    messagesWeek / PaceLimits.messagesWeek,
-  ].reduce((a, b) => a > b ? a : b);
+  double get _load {
+    if (fromHelper) {
+      double share(int limit, int left) => limit > 0 && left >= 0 ? (limit - left) / limit : 0;
+      final m = helperMessages, i = helperInvites;
+      return [
+        if (m != null) ...[share(m.dayLimit, m.dayLeft), share(m.weekLimit, m.weekLeft)],
+        if (i != null) ...[share(i.dayLimit, i.dayLeft), share(i.weekLimit, i.weekLeft)],
+      ].fold(0, (a, b) => a > b ? a : b);
+    }
+    return [
+      invitesDay / PaceLimits.invitesDay,
+      invitesWeek / PaceLimits.invitesWeek,
+      messagesDay / PaceLimits.messagesDay,
+      messagesWeek / PaceLimits.messagesWeek,
+    ].reduce((a, b) => a > b ? a : b);
+  }
 
   PaceLevel get level => _load >= 1
       ? PaceLevel.slowDown
@@ -345,12 +386,21 @@ class Pace {
       ? PaceLevel.busy
       : PaceLevel.calm;
 
-  String get summary =>
-      'Sent by hand on LinkedIn: $invitesDay invitation${invitesDay == 1 ? '' : 's'} and $messagesDay '
-      'message${messagesDay == 1 ? '' : 's'} today; $invitesWeek and $messagesWeek this week.';
+  String get summary {
+    if (fromHelper) {
+      String left(Allowance a, String what) => a.dayLimit <= 0
+          ? 'no cap on $what'
+          : '${a.dayLeft} of ${a.dayLimit} $what left today, ${a.weekLeft} of ${a.weekLimit} this week';
+      return 'The helper app\'s LinkedIn budget: ${[if (helperMessages != null) left(helperMessages!, 'messages'), if (helperInvites != null) left(helperInvites!, 'invitations')].join('; ')}.';
+    }
+    return 'Sent by hand on LinkedIn: $invitesDay invitation${invitesDay == 1 ? '' : 's'} and $messagesDay '
+        'message${messagesDay == 1 ? '' : 's'} today; $invitesWeek and $messagesWeek this week.';
+  }
 
   String get advice => switch (level) {
     PaceLevel.calm => '',
+    PaceLevel.slowDown when fromHelper =>
+      'The helper app\'s LinkedIn budget is used up; it holds messages until there is room again.',
     PaceLevel.busy => 'A busy day. LinkedIn watches for bursts; spread the rest over the week.',
     PaceLevel.slowDown =>
       'Time to slow down. LinkedIn restricts accounts that send this many; wait a day or two before more.',

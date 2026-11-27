@@ -10,6 +10,7 @@ import '../domain/career_handoff.dart';
 import '../domain/conversations.dart';
 import '../domain/countries.dart';
 import '../domain/fill_drafts.dart';
+import '../domain/helper_drafts.dart';
 import '../domain/humanizer.dart';
 import '../domain/pipeline.dart';
 import '../domain/vidya_drafts.dart';
@@ -748,6 +749,15 @@ class MessageBubble extends ConsumerWidget {
       'api' when m.status == 'sent' => 'Sent from Udyoga',
       'api' => 'Synced',
       'import' => 'Imported',
+      'helper' when m.direction == 'out' => switch (m.status) {
+        'queued' => 'In the helper app: check it and press Send there',
+        'waiting' => 'Held by the helper app',
+        'sending' => 'Sending through the helper app…',
+        'sent' => 'Sent through the helper app',
+        'failed' => 'Not sent (helper app)',
+        'cancelled' => 'Cancelled in the helper app',
+        _ => 'From a helper app',
+      },
       'helper' => 'From a helper app',
       'ai_draft' => 'AI draft',
       _ => 'Logged by you',
@@ -874,6 +884,13 @@ class _ComposerState extends ConsumerState<Composer> {
     final opener = howIFoundYou(l);
     final sender = senderFor(thread, ref.watch(channelSendersProvider));
     final target = sender != null ? null : openTarget(thread, l, subject: thread.subject, body: '');
+    // A helper app on this computer that sends LinkedIn messages after the
+    // user checks them there: only with the hand-off on and its status
+    // fresh. Connection notes still go by hand.
+    final folder = ref.watch(handoffFolderProvider);
+    final helper = thread.channel == 'linkedin' && sender == null && folder != null && !invite
+        ? ref.watch(helperStatusProvider).value?.usable('linkedin', DateTime.now())
+        : null;
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -931,8 +948,16 @@ class _ComposerState extends ConsumerState<Composer> {
                     icon: const Icon(Icons.send),
                     label: Text('Send from ${sender.account}'),
                   ),
-                if (target != null)
+                if (helper != null)
                   FilledButton.icon(
+                    key: const Key('composer-send-via-helper'),
+                    onPressed: sending ? null : () => _sendViaHelper(folder!),
+                    icon: const Icon(Icons.outbox_outlined),
+                    label: const Text('Send via LinkedIn helper'),
+                  ),
+                if (target != null && helper == null)
+                  FilledButton.icon(
+                    key: const Key('composer-copy-open'),
                     onPressed: _copyAndOpen,
                     icon: const Icon(Icons.open_in_new),
                     label: Text(thread.channel == 'email' ? 'Copy & open mail' : 'Copy & open'),
@@ -995,6 +1020,24 @@ class _ComposerState extends ConsumerState<Composer> {
       if (mounted) showError(context, e);
     } finally {
       ref.changed();
+      if (mounted) setState(() => sending = false);
+    }
+  }
+
+  /// Leaves the message for the helper app, which sends it once the user
+  /// checks it there and presses Send. Its answers move the message on.
+  Future<void> _sendViaHelper(String folder) async {
+    final body = text.text.trim();
+    if (body.isEmpty) return showMessage(context, 'Write the message first.');
+    setState(() => sending = true);
+    try {
+      await ref.mutate((s) => s.book.sendViaHelper(folder, thread.id, body, now: DateTime.now()));
+      if (!mounted) return;
+      text.clear();
+      showMessage(context, 'Left for the helper app. Check it there and press Send.');
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
       if (mounted) setState(() => sending = false);
     }
   }
@@ -1264,11 +1307,17 @@ class PaceNotice extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = ref.watch(paceProvider).value;
-    if (p == null || p.level == PaceLevel.calm) return const SizedBox.shrink();
+    // The helper app's budget is always shown while it sends for the user.
+    if (p == null || (p.level == PaceLevel.calm && !p.fromHelper)) return const SizedBox.shrink();
     return Hint(
+      key: const Key('pace-notice'),
       icon: Icons.speed,
-      color: (p.level == PaceLevel.slowDown ? Status.serious : Status.warning).color,
-      text: '${p.advice} ${p.summary}',
+      color: switch (p.level) {
+        PaceLevel.slowDown => Status.serious,
+        PaceLevel.busy => Status.warning,
+        PaceLevel.calm => Status.info,
+      }.color,
+      text: '${p.advice} ${p.summary}'.trim(),
     );
   }
 }

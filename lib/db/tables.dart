@@ -264,7 +264,8 @@ class Messages extends Table with SyncedRow {
   TextColumn get source => text().withDefault(const Constant('manual'))();
 
   /// logged | invite (a LinkedIn connection note, logged) | draft | queued |
-  /// sent | failed | received
+  /// sent | failed | received; through a helper app also sending | waiting |
+  /// cancelled (docs/handoff.md)
   TextColumn get status => text().withDefault(const Constant('logged'))();
 
   /// The provider's message id (Message-ID...), so nothing is stored twice.

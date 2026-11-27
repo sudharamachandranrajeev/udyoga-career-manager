@@ -13,6 +13,7 @@ import '../domain/advisor.dart';
 import '../domain/bluesky.dart';
 import '../domain/career_file_sync.dart';
 import '../domain/career_handoff.dart';
+import '../domain/helper_drafts.dart';
 import '../domain/book.dart';
 import '../domain/career_data.dart';
 import '../domain/ai.dart';
@@ -247,9 +248,13 @@ class OpenThread extends Notifier<String?> {
 
 final openThreadProvider = NotifierProvider<OpenThread, String?>(OpenThread.new);
 
-/// What the user has sent by hand on LinkedIn lately (see [Pace]).
-final paceProvider = FutureProvider<Pace>((ref) {
+/// What the user has sent by hand on LinkedIn lately (see [Pace]); while a
+/// helper app sends for the user and its status.json is fresh, the
+/// helper's own budget instead.
+final paceProvider = FutureProvider<Pace>((ref) async {
   ref.watch(revisionProvider);
+  final li = ref.watch(helperStatusProvider).value?.usable('linkedin', DateTime.now());
+  if (li != null) return Pace.helper(messages: li.messages, invites: li.invites);
   return ref.watch(sessionProvider).book.pace(DateTime.now());
 });
 
@@ -583,6 +588,16 @@ final handoffEnabledProvider = FutureProvider<bool>(
 /// is none (phones).
 final handoffFolderProvider = Provider<String?>((ref) => defaultHandoffFolder());
 
+/// The helper app's status.json while the hand-off is on (read again every
+/// half minute), or null.
+final helperStatusProvider = FutureProvider<HelperStatus?>((ref) async {
+  final dir = ref.watch(handoffFolderProvider);
+  if (dir == null || !await ref.watch(handoffEnabledProvider.future)) return null;
+  final t = Timer(const Duration(seconds: 30), ref.invalidateSelf);
+  ref.onDispose(t.cancel);
+  return readHelperStatus(dir);
+});
+
 /// Imports career items from the hand-off folder: on start, on the hourly
 /// tick and, while switched on, soon after a helper drops a file (where the
 /// system can watch folders). [state] is the last result for Settings.
@@ -594,23 +609,33 @@ class HandoffController extends Notifier<String> {
     final dir = ref.watch(handoffFolderProvider);
     if (dir == null || !(ref.watch(handoffEnabledProvider).value ?? false)) return '';
     Timer? wait;
-    StreamSubscription<FileSystemEvent>? sub;
+    final subs = <StreamSubscription<FileSystemEvent>>[];
     () async {
-      try {
-        final inbox = Directory([dir, 'inbox'].join(Platform.pathSeparator));
-        await inbox.create(recursive: true);
-        if (!FileSystemEntity.isWatchSupported) return;
-        sub = inbox.watch().listen((_) {
-          wait?.cancel();
-          wait = Timer(const Duration(seconds: 1), () => run().catchError((_) => null).ignore());
-        }, onError: (_) {});
-      } on FileSystemException {
-        // No watch; the hourly tick still reads the folder.
+      // inbox/ for career items, status/ for the helper's answers to drafts.
+      for (final sub in ['inbox', 'status']) {
+        try {
+          final d = Directory([dir, sub].join(Platform.pathSeparator));
+          await d.create(recursive: true);
+          if (!FileSystemEntity.isWatchSupported) continue;
+          subs.add(
+            d.watch().listen((_) {
+              wait?.cancel();
+              wait = Timer(const Duration(seconds: 1), () => run().catchError((_) => null).ignore());
+            }, onError: (_) {}),
+          );
+        } on FileSystemException {
+          // No watch; the timers still read the folder.
+        }
       }
     }();
+    // Answers to drafts also every minute, where folders cannot be watched.
+    final tick = Timer.periodic(const Duration(minutes: 1), (_) => run().catchError((_) => null).ignore());
     ref.onDispose(() {
       wait?.cancel();
-      sub?.cancel();
+      tick.cancel();
+      for (final s in subs) {
+        s.cancel();
+      }
     });
     return '';
   }
@@ -620,13 +645,13 @@ class HandoffController extends Notifier<String> {
     if (_running || dir == null || !await ref.read(handoffEnabledProvider.future)) return null;
     _running = true;
     try {
-      final r = await HandoffFolder(dir).run(ref.read(sessionProvider).book, today: today());
-      if (r.files > 0) {
-        state = 'Last import: $r.';
-        if (r.imported > 0) {
-          ref.read(revisionProvider.notifier).bump();
-          ref.read(syncProvider.notifier).soon();
-        }
+      final book = ref.read(sessionProvider).book;
+      final r = await HandoffFolder(dir).run(book, today: today());
+      final answers = await book.importHelperStatuses(dir);
+      if (r.files > 0) state = 'Last import: $r.';
+      if (r.imported > 0 || answers > 0) {
+        ref.read(revisionProvider.notifier).bump();
+        ref.read(syncProvider.notifier).soon();
       }
       return r;
     } catch (e) {
