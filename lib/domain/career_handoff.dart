@@ -14,6 +14,7 @@ import 'package:drift/drift.dart';
 import '../db/database.dart';
 import 'book.dart';
 import 'conversations.dart';
+import 'handoff_signals.dart';
 import 'json.dart';
 import 'linkedin_messages.dart' show closeInTime, similarText;
 
@@ -21,8 +22,7 @@ import 'linkedin_messages.dart' show closeInTime, similarText;
 /// skipped (left in the read file under done/), never guessed at.
 const handoffVersion = 1;
 
-/// Record kinds. Only messages are imported for now; the others are
-/// reserved and skipped until Udyoga reads them.
+/// Record kinds: messages, and the career signals in handoff_signals.dart.
 const handoffKinds = {'message', 'job_alert', 'application_status', 'invite_accepted', 'profile_view'};
 
 /// How long read files (done/) and refused lines (rejected/) are kept.
@@ -199,6 +199,11 @@ class GoodLine extends HandoffLine {
   final HandoffRecord record;
 }
 
+class SignalLine extends HandoffLine {
+  const SignalLine(super.number, super.raw, this.signal);
+  final HandoffSignal signal;
+}
+
 class SkippedLine extends HandoffLine {
   const SkippedLine(super.number, super.raw, this.why);
   final String why;
@@ -237,20 +242,16 @@ List<HandoffLine> readHandoffLines(String content) {
       out.add(SkippedLine(n, raw, 'format version $v is not read by this Udyoga'));
       continue;
     }
-    if (j['kind'] is String && j['kind'] != 'message') {
-      out.add(
-        SkippedLine(
-          n,
-          raw,
-          handoffKinds.contains(j['kind'])
-              ? 'kind "${j['kind']}" is not imported yet'
-              : 'unknown kind "${j['kind']}"',
-        ),
-      );
+    if (j['kind'] is String && !handoffKinds.contains(j['kind'])) {
+      out.add(SkippedLine(n, raw, 'unknown kind "${j['kind']}"'));
       continue;
     }
     try {
-      out.add(GoodLine(n, raw, HandoffRecord.fromJson(j)));
+      out.add(
+        signalKinds.contains(j['kind'])
+            ? SignalLine(n, raw, HandoffSignal.fromJson(j))
+            : GoodLine(n, raw, HandoffRecord.fromJson(j)),
+      );
     } on FormatException catch (e) {
       out.add(BadLine(n, raw, e.message));
     }
@@ -425,12 +426,16 @@ class HandoffFolder {
     final bad = lines.whereType<BadLine>().toList();
     final skippedLines = lines.whereType<SkippedLine>().length;
     final r = await book.importHandoffRecords(good, today: today);
+    final signals = [for (final l in lines.whereType<SignalLine>()) l.signal];
+    final sr = signals.isEmpty
+        ? (imported: 0, skipped: 0)
+        : await book.importHandoffSignals(signals, today: today);
     if (bad.isNotEmpty) await _reject(name, bad);
     await _move(f, name);
     return HandoffReport(
       files: 1,
-      imported: r.imported,
-      skipped: r.skipped + skippedLines,
+      imported: r.imported + sr.imported,
+      skipped: r.skipped + sr.skipped + skippedLines,
       rejected: bad.length,
     );
   }

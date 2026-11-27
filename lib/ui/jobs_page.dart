@@ -456,6 +456,7 @@ String sourceName(String source) => switch (source) {
   'page' => 'a page you read',
   'recipe' => 'a site recipe',
   'ai' => 'AI search',
+  'linkedin_helper' => 'LinkedIn alert via helper',
   _ => 'you',
 };
 

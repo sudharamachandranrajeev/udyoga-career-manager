@@ -158,7 +158,7 @@ void main() {
         jsonEncode({..._rec(id: 'linkedin:m2'), 'id': null}),
         jsonEncode({..._rec(id: 'linkedin:m3'), 'direction': 'sideways'}),
         jsonEncode({..._rec(id: 'linkedin:m4'), 'v': 2}),
-        jsonEncode({..._rec(id: 'linkedin:m5'), 'kind': 'job_alert'}),
+        jsonEncode({..._rec(id: 'linkedin:m5'), 'kind': 'calendar_invite'}),
         '',
       ].join('\n'),
     );

@@ -86,6 +86,11 @@ abstract final class LocalKeys {
   /// career hand-off folder (docs/handoff.md); off by default.
   static const careerHandoff = 'udyoga.handoff.career';
 
+  /// Application updates from a helper app that matched no application
+  /// surely enough to apply by themselves, waiting for the user to say
+  /// which application they are about (lib/domain/handoff_signals.dart).
+  static const handoffSuggestions = 'udyoga.handoff.suggestions';
+
   /// The daily check-in time on this device, HH:mm, and whether to remind.
   static const checkInTime = 'udyoga.checkin.time';
   static const checkInReminder = 'udyoga.checkin.reminder';
@@ -660,48 +665,59 @@ class CareerBook {
 
   /// Moves an application to [stage] on [date], records it (at [at] when the
   /// time is known, as for a booked interview) and sets the next follow-up.
-  Future<void> moveTo(String id, Stage stage, {required String date, String summary = '', String? at}) =>
-      db.transaction(() async {
-        final a = await application(id);
-        final from = Stage.of(a.stage);
-        final job = a.jobId == null
-            ? null
-            : await (db.select(db.jobListings)..where((j) => j.id.equals(a.jobId!))).getSingleOrNull();
-        final (followUp, note) = switch (stage) {
-          Stage.preparing when job?.closing != null => (
-            _sendBy(job!.closing!, date),
-            _sendNote(job.closing!),
-          ),
-          // HSC waiting-list offers lapse at 12 noon two working days on.
-          Stage.offer when from == Stage.waitingList => (
-            addWorkingDays(date, 2),
-            'Offer from the waiting list: reply by 12 noon on ${niceDate(addWorkingDays(date, 2))}, '
-                'or it counts as a refusal.',
-          ),
-          Stage.rejected when from == Stage.interview || from == Stage.waitingList => (
-            addDays(date, 3),
-            'Ask the panel for feedback on your interview, and say you would welcome future posts.',
-          ),
-          _ => (followUpFor(stage, date), stage.chaseAfter == null ? '' : _chaseNote(stage)),
-        };
-        await save(
-          db.jobApplications,
-          a.copyWith(
-            stage: stage.id,
-            updated: date,
-            applied: Value(a.applied ?? (stage.index >= Stage.applied.index && stage.open ? date : null)),
-            followUp: Value(followUp),
-            followUpNote: note,
-          ),
-          id,
-        );
-        final kind = eventKinds.entries.where((e) => e.value.$2 == stage).firstOrNull?.key ?? 'note';
-        await _event(id, kind, summary.isNotEmpty ? summary : stage.label, at ?? '${date}T${_clock()}');
-        if (stage == Stage.checks && from != Stage.checks) await startChecks(id, date);
-        if (stage == Stage.accepted) await _flagOthers(a, date);
-        // A journey sent to Vidya hears where the application now stands.
-        if (stage != from) await refreshJobJourney(a.jobId, now: DateTime.now().toUtc().toIso8601String());
-      });
+  /// [eventId] names the timeline entry, so an import that may run twice
+  /// writes it once.
+  Future<void> moveTo(
+    String id,
+    Stage stage, {
+    required String date,
+    String summary = '',
+    String? at,
+    String? eventId,
+  }) => db.transaction(() async {
+    final a = await application(id);
+    final from = Stage.of(a.stage);
+    final job = a.jobId == null
+        ? null
+        : await (db.select(db.jobListings)..where((j) => j.id.equals(a.jobId!))).getSingleOrNull();
+    final (followUp, note) = switch (stage) {
+      Stage.preparing when job?.closing != null => (_sendBy(job!.closing!, date), _sendNote(job.closing!)),
+      // HSC waiting-list offers lapse at 12 noon two working days on.
+      Stage.offer when from == Stage.waitingList => (
+        addWorkingDays(date, 2),
+        'Offer from the waiting list: reply by 12 noon on ${niceDate(addWorkingDays(date, 2))}, '
+            'or it counts as a refusal.',
+      ),
+      Stage.rejected when from == Stage.interview || from == Stage.waitingList => (
+        addDays(date, 3),
+        'Ask the panel for feedback on your interview, and say you would welcome future posts.',
+      ),
+      _ => (followUpFor(stage, date), stage.chaseAfter == null ? '' : _chaseNote(stage)),
+    };
+    await save(
+      db.jobApplications,
+      a.copyWith(
+        stage: stage.id,
+        updated: date,
+        applied: Value(a.applied ?? (stage.index >= Stage.applied.index && stage.open ? date : null)),
+        followUp: Value(followUp),
+        followUpNote: note,
+      ),
+      id,
+    );
+    final kind = eventKinds.entries.where((e) => e.value.$2 == stage).firstOrNull?.key ?? 'note';
+    await _event(
+      id,
+      kind,
+      summary.isNotEmpty ? summary : stage.label,
+      at ?? '${date}T${_clock()}',
+      eventId: eventId,
+    );
+    if (stage == Stage.checks && from != Stage.checks) await startChecks(id, date);
+    if (stage == Stage.accepted) await _flagOthers(a, date);
+    // A journey sent to Vidya hears where the application now stands.
+    if (stage != from) await refreshJobJourney(a.jobId, now: DateTime.now().toUtc().toIso8601String());
+  });
 
   /// When to remind about an unsent application: two days before [closing]
   /// (NHS adverts can close early), never before [today].
@@ -922,8 +938,8 @@ class CareerBook {
 
   static String _clock() => DateTime.now().toIso8601String().substring(11, 16);
 
-  Future<void> _event(String applicationId, String kind, String summary, String at) {
-    final id = newId();
+  Future<void> _event(String applicationId, String kind, String summary, String at, {String? eventId}) {
+    final id = eventId ?? newId();
     return save(
       db.jobEvents,
       JobEventsCompanion.insert(
@@ -939,7 +955,7 @@ class CareerBook {
 
   /// Logs what happened; events that imply a stage move the application on
   /// (never back), and chasing it up sets the next follow-up a week later.
-  Future<void> logEvent(String id, String kind, {required String at, String summary = ''}) =>
+  Future<void> logEvent(String id, String kind, {required String at, String summary = '', String? eventId}) =>
       db.transaction(() async {
         final stage = eventKinds[kind]?.$2;
         final a = await application(id);
@@ -951,10 +967,17 @@ class CareerBook {
             date: date,
             at: at,
             summary: summary.isNotEmpty ? summary : eventKinds[kind]!.$1,
+            eventId: eventId,
           );
           return;
         }
-        await _event(id, kind, summary.isNotEmpty ? summary : eventKinds[kind]?.$1 ?? kind, at);
+        await _event(
+          id,
+          kind,
+          summary.isNotEmpty ? summary : eventKinds[kind]?.$1 ?? kind,
+          at,
+          eventId: eventId,
+        );
         if (kind == 'followup' && Stage.of(a.stage).open) {
           await save(db.jobApplications, a.copyWith(followUp: Value(addDays(date, 7))), id);
         } else if (stage != null && date.compareTo(a.updated) > 0) {

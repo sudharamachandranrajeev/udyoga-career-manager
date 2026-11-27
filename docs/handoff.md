@@ -92,17 +92,20 @@ line, in UTF-8. Udyoga ignores empty lines.
 
 ## Record kinds
 
-| Kind                 | Status                                                              |
-| -------------------- | ------------------------------------------------------------------- |
-| `message`            | Imported.                                                           |
-| `job_alert`          | Reserved. Skipped for now.                                          |
-| `application_status` | Reserved. Skipped for now.                                          |
-| `invite_accepted`    | Reserved. Skipped for now.                                          |
-| `profile_view`       | Reserved. Skipped for now.                                          |
+| Kind                 | Status                                                    |
+| -------------------- | --------------------------------------------------------- |
+| `message`            | Imported into **Conversations** (below).                  |
+| `job_alert`          | Imported as a job (see [Career signals](#career-signals)). |
+| `application_status` | Imported onto an application (see [Career signals](#career-signals)). |
+| `invite_accepted`    | Imported as a contact (see [Career signals](#career-signals)). |
+| `profile_view`       | Imported as a contact (see [Career signals](#career-signals)). |
 
 Udyoga skips any other kind. It also skips any line where `v` is not `1`.
 It does not guess what those lines mean. They stay in the file under
 `done/`.
+
+The fields in the table above are for `message`. The other kinds have
+their own fields.
 
 ## What Udyoga does with a message
 
@@ -123,12 +126,82 @@ It does not guess what those lines mean. They stay in the file under
   The banner lists the signs and says how to check the company yourself.
 - **Reasons.** The thread keeps every reason it was given.
 
+## Career signals
+
+A helper app can also pass on what a social network shows about your job
+search. Vani, for example, reads your LinkedIn applied jobs, notifications
+and profile views two or three times a day. These signals use the same
+files and the same version, `v: 1`. Udyoga ignores fields it does not
+know.
+
+```json
+{"v":1,"kind":"job_alert","source":"linkedin","id":"linkedin:job:4100000101","sentAt":"2026-11-26T08:00:00Z","job":{"id":"4100000101","url":"https://www.linkedin.com/jobs/view/4100000101/","title":"Ward Coordinator","company":"Example Health","location":"Leeds"},"text":"New job for you: Ward Coordinator at Example Health","reasons":["job alert in LinkedIn's notifications"]}
+{"v":1,"kind":"application_status","source":"linkedin","id":"linkedin:application:4100000001:viewed","sentAt":"2026-11-27T12:00:00Z","job":{"id":"4100000001","url":"https://www.linkedin.com/jobs/view/4100000001/","title":"Ward Coordinator","company":"Example Health","location":"Leeds"},"status":"viewed","statusText":"Application viewed","reasons":["LinkedIn shows: Application viewed"]}
+{"v":1,"kind":"invite_accepted","source":"linkedin","id":"linkedin:invite-accepted:sol-example","sentAt":"2026-11-25T12:00:00Z","peer":{"name":"Sol Example","headline":"Ward Manager at Example Health","profileUrl":"https://www.linkedin.com/in/sol-example","company":"Example Health"},"reasons":["accepted your LinkedIn invitation"]}
+{"v":1,"kind":"profile_view","source":"linkedin","id":"linkedin:profile-view:sol-example:2026-11-26","sentAt":"2026-11-26T10:30:00Z","peer":{"name":"Sol Example","headline":"Talent Partner at Example Health","profileUrl":"https://www.linkedin.com/in/sol-example","company":"Example Health"},"reasons":["works at a target employer: Example Health"]}
+```
+
+| Field        | Kinds                                  | Meaning                                                                                       |
+| ------------ | -------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `v`, `kind`, `source`, `id`, `sentAt`, `reasons` | all              | As for a message. `sentAt` is when it happened, or when the helper app first saw it.          |
+| `job`        | `job_alert`, `application_status`      | The job: `id` (the network's job id), `url`, `title`, `company` and `location`.                |
+| `status`     | `application_status`                   | `applied`, `viewed`, `resume_downloaded`, `in_review`, `not_selected`, `closed` or `unknown`.  |
+| `statusText` | `application_status`                   | What the network showed, in its own words. Needed for `unknown`.                              |
+| `peer`       | `invite_accepted`, `profile_view`      | The person: `name` (required), `headline`, `profileUrl` and `company`.                         |
+| `text`       | `job_alert`                            | The notification's line. Optional.                                                            |
+
+What each kind needs, or the line is refused under `rejected/`:
+
+- `job_alert`: a `job` with a `title`, and an `id` or a `url`.
+- `application_status`: a `job` with something to match (`id`, `url` or
+  `title`) and a `status`. An unknown `status` is read as `unknown`.
+- `invite_accepted` and `profile_view`: a `peer` with a `name`.
+
+The helper app decides what to pass on. Vani passes every job alert, every
+status and every accepted invitation, but a profile view only when the
+viewer works at an employer in your career file.
+
+### What Udyoga does with a signal
+
+- **Job alert.** It becomes a job on the **Jobs** page, through the same
+  import as the job boards: the same fit score, and the same check for a
+  job you already have. Its source shows as "LinkedIn alert via helper".
+  A job you dismissed or deleted stays that way.
+- **Application status.** Udyoga looks for the application it is about:
+  - first by the job's `id` or `url`, in the application's link or its
+    job's link;
+  - then by employer and title. The employer must match, and the titles
+    must share at least 75% of their words.
+
+  When it finds one, it adds a timeline entry such as "LinkedIn:
+  Application viewed (via helper app)". `applied` also moves an
+  application you were still preparing to **Applied**. `not_selected`
+  also moves an open application to **Rejected**. Udyoga never moves an
+  application back.
+
+  When no application matches surely enough, nothing changes by itself.
+  The status waits on the **Applications** page under **Updates from a
+  helper app**. You choose the application it is about, add it as a new
+  application, or dismiss it. These choices stay on this device.
+- **Accepted invitation and profile view.** The person becomes a contact,
+  through the same merge as other leads. Udyoga finds a known contact by
+  profile link first, then by a name only one contact has. A known
+  contact gets the profile link if it was missing, and a note. A new
+  contact's source is "LinkedIn (helper app)". A profile view adds the
+  note "Viewed your profile on <date>" and marks the contact as someone
+  who got in touch. Udyoga skips people you marked "do not contact".
+
+Each signal is imported once. Udyoga keeps each status's timeline entry
+under an id made from the signal's `id`, so the same status read twice,
+or on two devices, is one entry.
+
 ## Idempotency
 
 A helper app can write the same item again, for example after a restart.
 This is safe:
 
-- Udyoga skips a message whose `id` is already in the thread.
+- Udyoga skips a message whose `id` is already in the thread, and a
+  signal it has imported before.
 - Every `id` and `threadId` must stay the same each time the helper app
   writes the same item.
 - Two Udyoga copies can read the same folder. Only the first copy moves a

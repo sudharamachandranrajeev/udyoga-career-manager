@@ -12,6 +12,7 @@ import '../db/database.dart';
 import '../domain/calendar.dart';
 import '../domain/pipeline.dart';
 import 'common.dart';
+import 'handoff_suggestions.dart';
 import 'kit/kit.dart';
 import 'look.dart';
 import 'offer_checks.dart';
@@ -98,6 +99,7 @@ class _ApplicationsPageState extends ConsumerState<ApplicationsPage> {
         ],
       ),
       const SizedBox(height: 12),
+      if (open) const SignalSuggestionsCard(),
       AsyncList(
         ref.watch(applicationsProvider),
         builder: (all) {
