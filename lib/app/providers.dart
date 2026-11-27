@@ -14,6 +14,7 @@ import '../domain/bluesky.dart';
 import '../domain/career_file_sync.dart';
 import '../domain/career_handoff.dart';
 import '../domain/helper_drafts.dart';
+import '../domain/helper_posts.dart';
 import '../domain/book.dart';
 import '../domain/career_data.dart';
 import '../domain/ai.dart';
@@ -647,7 +648,7 @@ class HandoffController extends Notifier<String> {
     try {
       final book = ref.read(sessionProvider).book;
       final r = await HandoffFolder(dir).run(book, today: today());
-      final answers = await book.importHelperStatuses(dir);
+      final answers = await book.importHelperStatuses(dir) + await book.importHelperPostStatuses(dir);
       if (r.files > 0) state = 'Last import: $r.';
       if (r.imported > 0 || answers > 0) {
         ref.read(revisionProvider.notifier).bump();

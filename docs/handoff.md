@@ -309,10 +309,12 @@ days.
 The helper app rewrites `status.json` at least once a minute while it runs:
 
 ```json
-{"v":1,"updatedAt":"2026-11-27T12:00:00Z","channels":{"linkedin":{"drafts":true,"state":"ok","budget":{"message":{"dayLeft":37,"dayLimit":40,"weekLeft":147,"weekLimit":150},"invite":{"dayLeft":15,"dayLimit":15,"weekLeft":80,"weekLimit":80}}}}}
+{"v":1,"updatedAt":"2026-11-27T12:00:00Z","channels":{"linkedin":{"drafts":true,"posts":true,"state":"ok","budget":{"invite":{"dayLeft":15,"dayLimit":15,"weekLeft":80,"weekLimit":80},"message":{"dayLeft":37,"dayLimit":40,"weekLeft":147,"weekLimit":150},"post":{"dayLeft":2,"dayLimit":2,"weekLeft":7,"weekLimit":7}}}}}
 ```
 
 - `drafts`: the helper app takes drafts for this network.
+- `posts`: the helper app takes posts for this network (see below). A
+  helper app without posts leaves it out, which reads as `false`.
 - `state`: `ok`, `needs-login`, `halted` or `none`.
 - `budget`: what is left of each kind of action today and this week. A
   limit of `0` (and `-1` left) means no cap.
@@ -320,6 +322,86 @@ The helper app rewrites `status.json` at least once a minute while it runs:
 While the file is less than 5 minutes old, Udyoga shows the helper app's
 budget in place of its own count of messages sent by hand. The helper app
 refuses a message over its budget (`waiting`), so the numbers agree.
+
+## Posting to LinkedIn through a helper app
+
+These are also additions to format version 1. A helper app that can post
+on LinkedIn (Vani is one) can post a finished draft from the LinkedIn
+studio: a post, or a carousel (its caption and its PDF). Udyoga never posts
+anything itself. **Nothing is posted until you check it in the helper app
+and tap Post there.** You can change the text or who sees it first, or
+cancel it.
+
+### Switching it on
+
+1. Switch on the import in **Settings**, **Helper apps** (see above).
+2. Switch on the hand-off in the helper app.
+3. Open a finished post or carousel in the LinkedIn studio. A **Helper
+   app** card shows **Send to helper**. It shows only while the helper
+   app's `status.json` is less than 5 minutes old and says `"posts":true`.
+   Otherwise copy the post by hand, as before.
+4. Choose who sees it (anyone, or your connections only), and if you like
+   a time. The time is a wish: the helper app offers it on its card.
+
+### When it goes out
+
+- **Post now** in the helper app posts it straight away.
+- **A later time**: the helper app either hands it to LinkedIn's own
+  scheduler at that same tap, or, where it cannot, holds it and reminds
+  you at the time to tap Post. Nothing is ever posted on its own.
+- The helper app keeps to its own post budget (in `status.json`). Over the
+  budget, the post waits, with the reason.
+
+### Each post: `files/<id>/` and `outbox/<id>.json`
+
+Udyoga first writes the post's files, each one whole (under `tmp/`, then
+renamed) into `files/<id>/`. Then it writes the post itself into `outbox/`
+the same way. So the helper app never sees a post whose files are not
+there yet.
+
+```json
+{"v":1,"kind":"post","id":"udyoga-post-…-20261127100100","source":"linkedin","createdAt":"2026-11-27T10:01:00Z","text":"Five records habits …","visibility":"connections","attachments":[{"path":"files/udyoga-post-…-20261127100100/carousel.pdf","type":"document","title":"Five records habits"}],"scheduleAt":"2026-11-28T08:30:00Z","report":{"id":"…","tool":"carousel","title":"Five records habits"}}
+```
+
+| Field         | Required | Meaning                                                                                  |
+| ------------- | -------- | ---------------------------------------------------------------------------------------- |
+| `v`           | yes      | Always `1`.                                                                              |
+| `kind`        | yes      | Always `post`.                                                                           |
+| `id`          | yes      | `udyoga-post-`, the studio draft's id and the time it was sent. Letters, digits, `.`, `_` and `-` only. |
+| `source`      | yes      | The network. Always `linkedin` for now.                                                  |
+| `createdAt`   | yes      | When Udyoga wrote it, in UTC (RFC 3339).                                                 |
+| `text`        | yes      | The post, up to 3,000 characters (may be empty when a file is attached).                 |
+| `visibility`  | no       | `anyone` (the default) or `connections`.                                                 |
+| `attachments` | no       | Up to 9 pictures (`image`: PNG or JPEG, 8 MB each) or one `document` (a PDF, 20 MB). `path` is `files/<id>/<name>`, inside the folder. A document may have a `title`. |
+| `scheduleAt`  | no       | When you would like it out, in UTC. A wish only.                                         |
+| `report`      | no       | Which studio draft it came from: `id`, `tool` (`post` or `carousel`) and `title`.        |
+
+The helper app checks each file: inside the folder (no `..`, no link that
+leads out), within the size limit, and really a PNG, JPEG or PDF. It keeps
+its own copy and removes `files/<id>/`. It moves the post to
+`outbox/read/`, or to `outbox/rejected/` when it cannot take it, and then
+answers `failed` with the reason.
+
+### Each answer: `status/<id>.json`
+
+```json
+{"v":1,"id":"udyoga-post-…-20261127100000","kind":"post","state":"posted","updatedAt":"2026-11-27T12:00:00Z","url":"https://www.linkedin.com/feed/update/urn:li:activity:…/","postedAt":"2026-11-27T11:00:00Z","text":"Three things …"}
+```
+
+| `state`     | Meaning                                                                                  |
+| ----------- | ---------------------------------------------------------------------------------------- |
+| `pending`   | Waiting for you in the helper app.                                                       |
+| `waiting`   | Held, with the `reason`: over the budget, signed out, the account is halted, or waiting for you to tap Post at the time (`remindAt`). |
+| `posting`   | You tapped Post; it is going out, or being checked on your profile.                      |
+| `scheduled` | In LinkedIn's own scheduler for `scheduledAt`.                                           |
+| `posted`    | Live, and seen on your own profile. `url` is the post; `text` is what went.              |
+| `failed`    | Not posted, or not showing on your profile, with the `reason`. Check LinkedIn before you send it again. |
+| `cancelled` | You cancelled it in the helper app.                                                      |
+
+What Udyoga does with an answer: the studio draft shows the state. A
+`posted` draft is marked posted on that day, with a link to the post. To
+send a `failed` or `cancelled` draft again, press **Send to helper**
+again; it goes as a new post with a new `id`.
 
 ## Privacy
 
@@ -332,3 +414,5 @@ refuses a message over its budget (`waiting`), so the numbers agree.
 - Udyoga deletes read files and rejected lines after 30 days.
 - Messages in `outbox/` hold only what you wrote and who it is for. The
   helper app sends nothing until you press Send in it.
+- Posts in `outbox/` and their files hold only what you wrote. The helper
+  app posts nothing until you tap Post in it.

@@ -79,36 +79,53 @@ String utcStamp(DateTime d) => '${d.toUtc().toIso8601String().substring(0, 19)}Z
 
 String _join(String folder, List<String> parts) => [folder, ...parts].join(Platform.pathSeparator);
 
-/// Writes [d] to the folder's outbox/ whole: under tmp/ first, then renamed
-/// in, so the helper never reads half a file. Writing the same draft again
-/// leaves the same file.
-Future<void> writeHelperDraft(String folder, HelperDraft d) async {
-  if (!RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$').hasMatch(d.id)) {
-    throw ArgumentError('not a safe draft id: ${d.id}');
-  }
+/// A name the hand-off files may use: an id or a file name.
+final safeHandoffName = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$');
+
+/// Writes [bytes] to [to] (parts under [folder]) whole: under tmp/ first,
+/// then renamed in, so the helper never reads half a file.
+Future<void> writeHandoffFile(String folder, List<String> to, List<int> bytes) async {
   final tmp = Directory(_join(folder, ['tmp']));
-  final outbox = Directory(_join(folder, ['outbox']));
   await tmp.create(recursive: true);
-  await outbox.create(recursive: true);
-  final part = File(_join(folder, ['tmp', '${d.id}.json.${DateTime.now().microsecondsSinceEpoch}.part']));
+  await Directory(_join(folder, to.sublist(0, to.length - 1))).create(recursive: true);
+  final part = File(_join(folder, ['tmp', '${to.last}.${DateTime.now().microsecondsSinceEpoch}.part']));
   try {
-    await part.writeAsString(d.encode(), flush: true);
-    await part.rename(_join(folder, ['outbox', '${d.id}.json']));
+    await part.writeAsBytes(bytes, flush: true);
+    await part.rename(_join(folder, to));
   } finally {
     if (await part.exists()) await part.delete();
   }
+}
+
+/// Writes [d] to the folder's outbox/ whole. Writing the same draft again
+/// leaves the same file.
+Future<void> writeHelperDraft(String folder, HelperDraft d) async {
+  if (!safeHandoffName.hasMatch(d.id)) {
+    throw ArgumentError('not a safe draft id: ${d.id}');
+  }
+  await writeHandoffFile(folder, ['outbox', '${d.id}.json'], utf8.encode(d.encode()));
 }
 
 // ---- the helper's answers ----
 
 /// The helper's state for one network, from status.json.
 class HelperChannel {
-  const HelperChannel({required this.drafts, required this.state, this.messages, this.invites});
+  const HelperChannel({
+    required this.drafts,
+    required this.state,
+    this.posts = false,
+    this.messages,
+    this.invites,
+    this.postBudget,
+  });
   final bool drafts;
+
+  /// Takes finished posts (docs/handoff.md, posts).
+  final bool posts;
 
   /// ok | needs-login | halted | none
   final String state;
-  final Allowance? messages, invites;
+  final Allowance? messages, invites, postBudget;
 }
 
 /// status.json: the helper is alive, and what it has left.
@@ -157,9 +174,11 @@ class HelperStatus {
         final b = c['budget'] is Map ? c['budget'] as Map : const {};
         chans[e.key as String] = HelperChannel(
           drafts: c['drafts'] == true,
+          posts: c['posts'] == true,
           state: c['state'] is String ? c['state'] as String : '',
           messages: budget(b['message']),
           invites: budget(b['invite']),
+          postBudget: budget(b['post']),
         );
       }
     }
@@ -323,7 +342,10 @@ extension HelperDraftsBook on CareerBook {
       } on FormatException {
         continue;
       }
-      if (s == null || !s.id.startsWith(helperDraftPrefix)) continue;
+      // Posts have answers of their own (helper_posts.dart).
+      if (s == null || !s.id.startsWith(helperDraftPrefix) || s.id.startsWith('${helperDraftPrefix}post-')) {
+        continue;
+      }
       if (await applyHelperStatus(s, now: now ?? DateTime.now())) changed++;
     }
     return changed;

@@ -12,6 +12,7 @@ import '../domain/humanizer.dart';
 import '../domain/json.dart';
 import '../domain/linkedin.dart';
 import 'carousel.dart';
+import 'helper_post_card.dart';
 import 'common.dart';
 import 'post_planner.dart';
 import 'kit/kit.dart';
@@ -178,6 +179,7 @@ class _RecentTile extends StatelessWidget {
                       StatusPill(niceDateTime(r.created), icon: Icons.schedule, quiet: true),
                       if (posted.isNotEmpty)
                         StatusPill('Posted ${niceDate(posted)}', status: Status.good, icon: Icons.check),
+                      ?helperPostPill(data),
                     ],
                   ),
                 ],
@@ -403,10 +405,12 @@ class LinkedInResultPage extends ConsumerWidget {
                   StatusPill('After the rewrites: about $after', status: Status.good),
                 if (posted.isNotEmpty)
                   StatusPill('Posted ${niceDate(posted)}', status: Status.good, icon: Icons.check),
+                ?helperPostPill(data),
               ],
             ),
           ],
         ),
+        if (tool == LinkedInTool.post || tool == LinkedInTool.carousel) HelperPostCard(r, slides: slides),
         if (slides.isNotEmpty)
           SectionCard(
             title: 'Carousel PDF',
